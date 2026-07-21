@@ -63,6 +63,16 @@
         }
         #btn-inv-badge:active{background:rgba(255,170,0,0.28);}
 
+        /* SHOP button (in strip) */
+        #btn-shop-hud{
+            background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.22);
+            border-radius:8px;padding:5px 10px;
+            font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);white-space:nowrap;
+            cursor:pointer;flex-shrink:0;font-family:monospace;
+            transition:background 0.15s;
+        }
+        #btn-shop-hud:active{background:rgba(255,255,255,0.2);}
+
         /* Gear / settings button (in strip) */
         #btn-settings-gear{
             width:34px;height:34px;border-radius:8px;flex-shrink:0;
@@ -269,16 +279,6 @@
         }
         #btn-boost:active{background:rgba(255,180,0,0.5);}
 
-        /* SHOP small button */
-        #btn-shop-touch{
-            position:absolute;pointer-events:auto;
-            width:44px;height:44px;border-radius:8px;
-            background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.25);
-            color:rgba(255,255,255,0.6);font-size:9px;font-weight:700;
-            display:flex;align-items:center;justify-content:center;
-            bottom:100px;right:106px;
-        }
-        #btn-shop-touch:active{background:rgba(255,255,255,0.25);}
     </style>
 </head>
 <body>
@@ -331,6 +331,7 @@
         <div class="bar-bg"><div id="cargo-fill" class="bar-fill"></div></div>
     </div>
     <div class="hs-div"></div>
+    <button id="btn-shop-hud">SHOP</button>
     <button id="btn-inv-badge">💎&nbsp;<span id="inv-total-badge">0 Cr</span></button>
     <button id="btn-settings-gear">⚙</button>
 </div>
@@ -370,7 +371,6 @@
     <!-- Action buttons -->
     <div id="btn-laser">LASER</div>
     <div id="btn-boost">BOOST</div>
-    <div id="btn-shop-touch">SHOP</div>
 </div>
 
 <!-- Inventory Modal -->
@@ -1413,6 +1413,7 @@ class GameEngine{
         document.getElementById('btn-upg-engine').onclick=()=>this._upgrade('engine');
         document.getElementById('btn-upg-energy').onclick=()=>this._upgrade('energy');
         document.getElementById('btn-close-modal').onclick=()=>this._toggleShop(false);
+        document.getElementById('btn-shop-hud').onclick=()=>this._toggleShop();
     }
 
     _initTouch(){
@@ -1495,10 +1496,6 @@ class GameEngine{
         hold('btn-laser',  () => this.inp.fire   = true,  () => this.inp.fire   = false);
         hold('btn-boost',  () => this.inp.boost  = true,  () => this.inp.boost  = false);
 
-        // ── Shop tap ──────────────────────────────────────────────────
-        document.getElementById('btn-shop-touch').addEventListener('touchstart', e => {
-            e.preventDefault(); this._toggleShop();
-        }, { passive: false });
 
 
         // ── Inventory badge (already in HUD strip, prevent default on touch) ──
