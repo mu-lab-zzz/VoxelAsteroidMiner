@@ -1729,17 +1729,58 @@ class GameEngine{
 
     _checkCollisions(){
         const SHIP_R=3.5;
+        const S=CFG.CHUNK;
         for(const ast of this.asteroids){
-            if(!ast.group.visible)continue;
-            const dist=ast.group.position.distanceTo(this.ship.pos);
-            const minDist=ast.radius+SHIP_R;
-            if(dist<minDist){
-                MP.v1.copy(this.ship.pos).sub(ast.group.position);
-                if(MP.v1.lengthSq()<0.0001)MP.v1.set(0,1,0);
-                MP.v1.normalize();
-                this.ship.pos.copy(ast.group.position).addScaledVector(MP.v1,minDist);
-                const vDotN=this.ship.vel.dot(MP.v1);
-                if(vDotN<0)this.ship.vel.addScaledVector(MP.v1,-vDotN*1.1);
+            if(!ast.group.visible||!ast.isHighDetail)continue;
+            // Broad phase: skip if clearly too far
+            if(ast.group.position.distanceTo(this.ship.pos)>ast.radius+SHIP_R+4)continue;
+
+            // Fine phase: sphere vs voxel grid
+            // Convert ship world pos to asteroid uncentred chunk coords
+            const lp=MP.v1.copy(this.ship.pos).sub(ast.group.position);
+            const ox=lp.x+ast.offset, oy=lp.y+ast.offset, oz=lp.z+ast.offset;
+            const iR=Math.ceil(SHIP_R)+1;
+            const flX=Math.floor(ox),flY=Math.floor(oy),flZ=Math.floor(oz);
+
+            // Accumulate contact normals weighted by penetration depth
+            let snx=0,sny=0,snz=0,maxPen=0;
+            for(let dx=-iR;dx<=iR;dx++)
+            for(let dy=-iR;dy<=iR;dy++)
+            for(let dz=-iR;dz<=iR;dz++){
+                const vx=flX+dx,vy=flY+dy,vz=flZ+dz;
+                // Closest point on voxel box [vx,vx+1]^3 to ship centre
+                const cpx=vx<ox?(vx+1<ox?vx+1:ox):vx;
+                const cpy=vy<oy?(vy+1<oy?vy+1:oy):vy;
+                const cpz=vz<oz?(vz+1<oz?vz+1:oz):vz;
+                const d2=(ox-cpx)*(ox-cpx)+(oy-cpy)*(oy-cpy)+(oz-cpz)*(oz-cpz);
+                if(d2>=SHIP_R*SHIP_R)continue;
+                const cx=Math.floor(vx/S),cy=Math.floor(vy/S),cz=Math.floor(vz/S);
+                const chunk=ast.chunks.get(`${cx},${cy},${cz}`);
+                if(!chunk)continue;
+                const lx=((vx%S)+S)%S,ly=((vy%S)+S)%S,lz=((vz%S)+S)%S;
+                if(chunk.get(lx,ly,lz)===VT.AIR)continue;
+                const dist=Math.sqrt(d2);
+                const pen=SHIP_R-dist;
+                if(pen<=0)continue;
+                const ilen=dist>0.001?1/dist:0;
+                snx+=(ox-cpx)*ilen*pen;
+                sny+=(oy-cpy)*ilen*pen;
+                snz+=(oz-cpz)*ilen*pen;
+                if(pen>maxPen)maxPen=pen;
+            }
+
+            if(maxPen>0){
+                const sLen=Math.sqrt(snx*snx+sny*sny+snz*snz);
+                if(sLen>0.001){
+                    MP.v2.set(snx/sLen,sny/sLen,snz/sLen);
+                    this.ship.pos.addScaledVector(MP.v2,maxPen);
+                    const vDotN=this.ship.vel.dot(MP.v2);
+                    if(vDotN<0)this.ship.vel.addScaledVector(MP.v2,-vDotN*1.1);
+                }else{
+                    // Degenerate: push up
+                    this.ship.pos.y+=maxPen;
+                    if(this.ship.vel.y<0)this.ship.vel.y=0;
+                }
             }
         }
     }
