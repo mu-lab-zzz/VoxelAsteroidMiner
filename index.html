@@ -1532,6 +1532,11 @@ class GameEngine{
         if(!this.stationOpen)return;
         this.stationOpen=false;
         document.getElementById('station-modal').style.display='none';
+        // Push ship outside auto-dock radius so _checkDocking doesn't re-dock immediately
+        const d=this.ship.pos.length();
+        const dir=d>0.01?this.ship.pos.clone().normalize():new THREE.Vector3(0,0,1);
+        if(d<70) this.ship.pos.copy(dir.multiplyScalar(70));
+        this.ship.vel.copy(dir.normalize().multiplyScalar(8));
         Notify.show('🚀 出発！','info',1500);
     }
 
