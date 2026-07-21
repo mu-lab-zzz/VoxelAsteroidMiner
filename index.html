@@ -154,27 +154,54 @@
         #crosshair.firing::before,#crosshair.firing::after{background:#ff4400;}
         #crosshair.firing .xhair-dot{background:#ffff00;box-shadow:0 0 6px #ffff00;}
 
-        /* ── Upgrade Modal ──────────────────────────────────────── */
-        #upgrade-modal{
-            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-            width:min(340px,95vw);background:rgba(8,14,28,0.97);
-            border:2px solid #00f0ff;border-radius:14px;padding:18px;
-            display:none;flex-direction:column;gap:10px;z-index:100;
-            pointer-events:auto;box-shadow:0 0 40px rgba(0,240,255,0.25);
-        }
         .modal-title{font-size:15px;font-weight:700;color:#00f0ff;text-align:center;
             border-bottom:1px solid rgba(0,240,255,0.25);padding-bottom:8px;}
-        .upg-item{background:rgba(255,255,255,0.04);padding:10px 12px;
-            border-radius:7px;display:flex;justify-content:space-between;align-items:center;}
-        .upg-info{display:flex;flex-direction:column;gap:3px;}
-        .upg-name{font-size:12px;font-weight:700;}
-        .upg-cost{font-size:10px;color:#ffaa00;}
-        .upg-level{font-size:9px;color:#888;}
-        .btn-upg{background:#00f0ff;color:#000;border:none;padding:7px 13px;
-            border-radius:5px;font-weight:700;font-size:11px;cursor:pointer;}
-        .btn-upg:disabled{background:#334;color:#556;cursor:not-allowed;}
         .btn-close-modal{background:#ff3355;color:#fff;border:none;padding:8px;
             border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px;}
+
+        /* ── Station Modal ───────────────────────────────────────── */
+        #station-modal{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:min(390px,96vw);background:rgba(4,12,22,0.97);
+            border:2px solid rgba(0,255,170,0.5);border-radius:14px;padding:18px;
+            display:none;flex-direction:column;gap:10px;z-index:100;
+            pointer-events:auto;box-shadow:0 0 50px rgba(0,255,170,0.18);
+            max-height:90vh;overflow-y:auto;
+        }
+        #station-credits{text-align:center;font-family:monospace;font-size:15px;
+            font-weight:700;color:#ffcc44;
+            background:rgba(255,200,0,0.08);border-radius:7px;padding:6px;}
+        .tab-bar{display:flex;gap:4px;flex-shrink:0;}
+        .tab-btn{flex:1;background:rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.14);color:#99aacc;
+            border-radius:7px;padding:7px 2px;font-size:11px;font-weight:700;
+            cursor:pointer;transition:all 0.15s;}
+        .tab-btn.active{background:rgba(0,255,170,0.16);
+            border-color:rgba(0,255,170,0.5);color:#00ffaa;}
+        .st-row{background:rgba(255,255,255,0.04);border-radius:7px;
+            padding:9px 12px;display:flex;justify-content:space-between;
+            align-items:center;gap:8px;}
+        .st-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+        .st-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;
+            text-overflow:ellipsis;}
+        .st-sub{font-size:10px;color:#667;}
+        .btn-st{border:none;padding:6px 12px;border-radius:5px;
+            font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+        .btn-st.refine{background:#00f0ff;color:#000;}
+        .btn-st.sell{background:#ffcc44;color:#000;}
+        .btn-st.upgrade{background:#aa88ff;color:#000;}
+        .btn-st:disabled{background:#334;color:#556;cursor:not-allowed;}
+        .st-empty{color:#556;font-size:12px;text-align:center;padding:18px;}
+        .btn-st-wide{width:100%;margin-top:4px;padding:8px;font-size:12px;}
+
+        /* ── Dock Prompt ─────────────────────────────────────────── */
+        #dock-prompt{
+            position:absolute;bottom:76px;left:50%;transform:translateX(-50%);
+            background:rgba(0,255,170,0.13);border:1px solid rgba(0,255,170,0.38);
+            border-radius:8px;padding:7px 18px;font-size:12px;font-weight:700;
+            color:#00ffaa;display:none;z-index:20;pointer-events:none;
+            white-space:nowrap;letter-spacing:1px;
+        }
 
         /* ── Settings Modal ─────────────────────────────────────── */
         #settings-modal{
@@ -299,7 +326,7 @@
         <span>[Space]</span><span>採掘レーザー</span>
         <span>[Mouse drag]</span><span>照準</span>
         <span>[Wheel]</span><span>カメラズーム</span>
-        <span>[U]</span><span>アップグレード</span>
+        <span>[B]</span><span>基地ドッキング</span>
     </div>
     <!-- Touch controls -->
     <div class="controls-grid" id="ctrl-touch" style="display:none">
@@ -309,7 +336,7 @@
         <span>↺ / ↻</span><span>ロール回転</span>
         <span>LASER 長押し</span><span>採掘レーザー</span>
         <span>BOOST 長押し</span><span>ブースト加速</span>
-        <span>SHOP</span><span>アップグレード</span>
+        <span>🏭 DOCK</span><span>基地ドッキング</span>
     </div>
     <button id="btn-start">▶ ゲームスタート</button>
 </div>
@@ -331,8 +358,9 @@
         <div class="bar-bg"><div id="cargo-fill" class="bar-fill"></div></div>
     </div>
     <div class="hs-div"></div>
-    <button id="btn-shop-hud">SHOP</button>
-    <button id="btn-inv-badge">💎&nbsp;<span id="inv-total-badge">0 Cr</span></button>
+    <span style="flex-shrink:0;font-size:11px;font-family:monospace;color:#ffcc44;white-space:nowrap">💳<span id="hud-credits">0</span></span>
+    <button id="btn-dock-hud">🏭</button>
+    <button id="btn-inv-badge">📦&nbsp;<span id="inv-total-badge">0</span></button>
     <button id="btn-settings-gear">⚙</button>
 </div>
 
@@ -379,43 +407,24 @@
     <button class="btn-close-modal" id="btn-close-inv" style="margin-top:8px;">✕ 閉じる</button>
 </div>
 
-<!-- Upgrade Modal -->
-<div id="upgrade-modal">
-    <div class="modal-title">⚙ 宇宙船アップグレード</div>
-    <div class="upg-item">
-        <div class="upg-info">
-            <span class="upg-name">採掘パワー</span>
-            <span class="upg-cost">鉄×20 + 銅×10</span>
-            <span class="upg-level" id="lv-laser">Lv.1</span>
-        </div>
-        <button class="btn-upg" id="btn-upg-laser">強化</button>
+<!-- Station Modal -->
+<div id="station-modal">
+    <div class="modal-title" style="color:#00ffaa;border-bottom-color:rgba(0,255,170,0.28);">🏭 採掘基地 Alpha</div>
+    <div id="station-credits">💳 <span id="credits-val">0</span> Cr</div>
+    <div class="tab-bar">
+        <button class="tab-btn active" id="tab-refinery">⚗ 精錬所</button>
+        <button class="tab-btn"        id="tab-market">💹 市場</button>
+        <button class="tab-btn"        id="tab-upgrades">🔧 整備</button>
     </div>
-    <div class="upg-item">
-        <div class="upg-info">
-            <span class="upg-name">貨物スロット拡張</span>
-            <span class="upg-cost">鉄×30 + ニッケル×15</span>
-            <span class="upg-level" id="lv-cargo">+0</span>
-        </div>
-        <button class="btn-upg" id="btn-upg-cargo">拡張</button>
-    </div>
-    <div class="upg-item">
-        <div class="upg-info">
-            <span class="upg-name">エンジン推力</span>
-            <span class="upg-cost">鉄×25 + チタン×10</span>
-            <span class="upg-level" id="lv-engine">Lv.1</span>
-        </div>
-        <button class="btn-upg" id="btn-upg-engine">強化</button>
-    </div>
-    <div class="upg-item">
-        <div class="upg-info">
-            <span class="upg-name">エネルギー容量</span>
-            <span class="upg-cost">銅×20 + ニッケル×20</span>
-            <span class="upg-level" id="lv-energy">Lv.1</span>
-        </div>
-        <button class="btn-upg" id="btn-upg-energy">強化</button>
-    </div>
-    <button class="btn-close-modal" id="btn-close-modal">✕ 閉じる</button>
+    <div id="station-content"></div>
+    <button class="btn-close-modal" id="btn-close-station"
+        style="background:rgba(0,255,170,0.15);color:#00ffaa;border:1px solid rgba(0,255,170,0.3);">
+        🚀 出発
+    </button>
 </div>
+
+<!-- Dock Prompt -->
+<div id="dock-prompt">🏭 基地まで <span id="dock-dist">--</span>m</div>
 
 <!-- Settings Modal -->
 <div id="settings-modal">
@@ -486,6 +495,34 @@ const VPROPS = [
 ];
 
 const VRGB = VPROPS.map(p=>{const c=new THREE.Color(p.hex);return[c.r,c.g,c.b];});
+
+// Refinery recipes: ratio = raw ore needed per 1 refined unit
+const REFINE={
+    [VT.ICE]:     {ratio:4, val:12,  name:'水（冷却材）'},
+    [VT.IRON]:    {ratio:2, val:14,  name:'鉄バー'},
+    [VT.COPPER]:  {ratio:2, val:22,  name:'銅バー'},
+    [VT.NICKEL]:  {ratio:2, val:36,  name:'ニッケル合金'},
+    [VT.TITANIUM]:{ratio:3, val:95,  name:'チタンバー'},
+    [VT.GOLD]:    {ratio:1, val:160, name:'金インゴット'},
+    [VT.PLATINUM]:{ratio:1, val:330, name:'プラチナバー'},
+    [VT.URANIUM]: {ratio:1, val:950, name:'ウラン燃料棒'},
+};
+
+// Credit costs per upgrade level (index = current level - 1 for ships, or current count for cargo)
+const UPGRADES={
+    laser: {name:'採掘レーザー強化',  desc:'採掘力 +0.5',   costs:[600,1800,5000,12000]},
+    cargo: {name:'貨物スロット拡張',  desc:'積載量 +50',    costs:[400,800,1500,2800,5000,9000]},
+    engine:{name:'エンジン推力強化',  desc:'推力 +14',      costs:[700,2000,5500]},
+    energy:{name:'エネルギー容量拡張',desc:'容量 +40',      costs:[350,1000,2800]},
+};
+
+// Returns ore pool for an asteroid at given distance from origin
+function getZonePool(dist){
+    if(dist<380)  return [VT.IRON,VT.COPPER,VT.ICE];
+    if(dist<700)  return [VT.COPPER,VT.NICKEL,VT.TITANIUM];
+    if(dist<1000) return [VT.TITANIUM,VT.GOLD,VT.PLATINUM];
+    return [VT.GOLD,VT.PLATINUM,VT.URANIUM];
+}
 
 // ════════════════════════════════════════════════════════════════
 //  SIMPLEX NOISE  (3D, zero-allocation)
@@ -647,6 +684,89 @@ class Notify{
     static warn(msg){this.show('⚠ '+msg,'warn',3000);}
 }
 
+// ════════════════════════════════════════════════════════════════
+//  BASE STATION
+// ════════════════════════════════════════════════════════════════
+class BaseStation{
+    constructor(scene){
+        this.group=new THREE.Group();
+        scene.add(this.group);
+        this._blinkT=0;
+        this._buildMesh();
+    }
+    _buildMesh(){
+        const metal=new THREE.MeshStandardMaterial({color:0x3a4a5e,metalness:0.78,roughness:0.28});
+        const panel=new THREE.MeshStandardMaterial({color:0x0a1828,metalness:0.35,roughness:0.55});
+        const glass=new THREE.MeshStandardMaterial({color:0x5588cc,transparent:true,opacity:0.82,roughness:0.05});
+
+        // Central hub cylinder
+        this.group.add(new THREE.Mesh(new THREE.CylinderGeometry(9,9,40,16),metal));
+
+        // Upper glass dome
+        const domeG=new THREE.SphereGeometry(9,12,8,0,Math.PI*2,0,Math.PI/2);
+        const dome=new THREE.Mesh(domeG,glass);dome.position.y=20;this.group.add(dome);
+
+        // Equatorial ring
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(25,4,10,32),metal);
+        this.group.add(ring);
+
+        // 4 spokes hub→ring
+        for(let i=0;i<4;i++){
+            const a=i*Math.PI/2;
+            const spokeG=new THREE.CylinderGeometry(0.9,0.9,16,6);spokeG.rotateZ(Math.PI/2);
+            const spoke=new THREE.Mesh(spokeG,metal);
+            spoke.position.set(Math.cos(a)*17,0,Math.sin(a)*17);
+            spoke.rotation.y=a;this.group.add(spoke);
+        }
+
+        // Solar boom (along X)
+        const boomG=new THREE.CylinderGeometry(0.7,0.7,100,6);boomG.rotateZ(Math.PI/2);
+        const boom=new THREE.Mesh(boomG,metal);boom.position.y=10;this.group.add(boom);
+
+        // Solar panels (2 per side)
+        for(const sx of[-1,1]){
+            for(const pz of[-8,8]){
+                const pg=new THREE.BoxGeometry(28,0.35,11);
+                const pm=new THREE.Mesh(pg,panel);
+                pm.position.set(sx*42,10,pz);this.group.add(pm);
+            }
+        }
+
+        // Docking collar (bottom)
+        const collarG=new THREE.TorusGeometry(7,1.5,8,20);
+        const collar=new THREE.Mesh(collarG,metal);
+        collar.rotation.x=Math.PI/2;collar.position.y=-22;this.group.add(collar);
+
+        // Docking lights (4 green spheres)
+        const glowMat=new THREE.MeshBasicMaterial({color:0x00ffaa});
+        for(let i=0;i<4;i++){
+            const a=i*Math.PI/2+Math.PI/4;
+            const lt=new THREE.Mesh(new THREE.SphereGeometry(0.9,6,6),glowMat);
+            lt.position.set(Math.cos(a)*8.5,-22,Math.sin(a)*8.5);this.group.add(lt);
+        }
+
+        // Antenna
+        const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,16,5),metal);
+        ant.position.y=36;this.group.add(ant);
+        this._antTip=new THREE.Mesh(new THREE.SphereGeometry(1.1,6,6),
+            new THREE.MeshBasicMaterial({color:0xff2200}));
+        this._antTip.position.y=45;this.group.add(this._antTip);
+
+        // Lights
+        const stL=new THREE.PointLight(0x4488cc,0.9,300);this.group.add(stL);
+        const dockL=new THREE.PointLight(0x00ffaa,1.6,90);dockL.position.y=-22;this.group.add(dockL);
+        this._antLight=new THREE.PointLight(0xff2200,0.8,40);
+        this._antLight.position.y=45;this.group.add(this._antLight);
+    }
+    update(dt){
+        this.group.rotation.y+=dt*0.038;
+        this._blinkT+=dt;
+        const on=Math.sin(this._blinkT*2.4)>0.4;
+        this._antLight.intensity=on?0.8:0;
+        this._antTip.visible=on;
+    }
+}
+
 class Asteroid{
     constructor(id,scene,x,y,z,sizeType,seed){
         this.id=id;this.scene=scene;this.seed=seed;
@@ -657,6 +777,12 @@ class Asteroid{
         if(sizeType==='small')       this.radius=20+Math.floor(Math.random()*12);
         else if(sizeType==='medium') this.radius=38+Math.floor(Math.random()*18);
         else                         this.radius=58+Math.floor(Math.random()*22);
+
+        // Assign 1-2 ore types based on distance from origin (base station)
+        const dist=Math.sqrt(x*x+y*y+z*z);
+        const pool=getZonePool(dist);
+        const nPick=Math.random()<0.5?1:2;
+        this.oreTypes=[...pool].sort(()=>Math.random()-0.5).slice(0,nPick);
 
         this._buildMesh();
     }
@@ -686,16 +812,11 @@ class Asteroid{
 
             const nOre=SN.n3((x-seed)*0.058,(y-seed)*0.058,(z-seed)*0.058);
             let vt=VT.STONE;
-            if(nOre>0.42){
+            const oreNonIce=this.oreTypes.filter(t=>t!==VT.ICE);
+            if(nOre>0.42&&oreNonIce.length>0){
                 const r=Math.abs(SN.n3(x*0.1,y*0.1,z*0.1));
-                if(r>0.83)      vt=VT.URANIUM;
-                else if(r>0.73) vt=VT.PLATINUM;
-                else if(r>0.61) vt=VT.GOLD;
-                else if(r>0.49) vt=VT.TITANIUM;
-                else if(r>0.36) vt=VT.NICKEL;
-                else if(r>0.21) vt=VT.COPPER;
-                else            vt=VT.IRON;
-            }else if(SN.n3(x*0.03+seed,y*0.03+seed,z*0.03+seed)<-0.38){
+                vt=oreNonIce[Math.floor(r*oreNonIce.length)%oreNonIce.length];
+            }else if(this.oreTypes.includes(VT.ICE)&&SN.n3(x*0.03+seed,y*0.03+seed,z*0.03+seed)<-0.38){
                 vt=VT.ICE;
             }
             const c3=VRGB[vt];
@@ -780,16 +901,11 @@ class Asteroid{
             const seed=this.seed;
             const nOre=SN.n3((lp.x-seed)*0.058,(lp.y-seed)*0.058,(lp.z-seed)*0.058);
             let vt=VT.STONE;
-            if(nOre>0.42){
+            const oreNonIce=this.oreTypes.filter(t=>t!==VT.ICE);
+            if(nOre>0.42&&oreNonIce.length>0){
                 const r=Math.abs(SN.n3(lp.x*0.1,lp.y*0.1,lp.z*0.1));
-                if(r>0.83)      vt=VT.URANIUM;
-                else if(r>0.73) vt=VT.PLATINUM;
-                else if(r>0.61) vt=VT.GOLD;
-                else if(r>0.49) vt=VT.TITANIUM;
-                else if(r>0.36) vt=VT.NICKEL;
-                else if(r>0.21) vt=VT.COPPER;
-                else            vt=VT.IRON;
-            }else if(SN.n3(lp.x*0.03,lp.y*0.03,lp.z*0.03)<-0.38){
+                vt=oreNonIce[Math.floor(r*oreNonIce.length)%oreNonIce.length];
+            }else if(this.oreTypes.includes(VT.ICE)&&SN.n3(lp.x*0.03,lp.y*0.03,lp.z*0.03)<-0.38){
                 vt=VT.ICE;
             }
             onMined(vt);
@@ -1047,10 +1163,14 @@ class GameEngine{
         this.camDist=CFG.CAM_DEFAULT;
         this.cameraTarget=new THREE.Vector3();
         this.isLocked=false;
-        this.shopOpen=false;
+        this.stationOpen=false;
         this.settingsOpen=false;
         this.inventoryOpen=false;
         this.settings={pitchInvert:true,showDebug:false};
+        this.credits=0;
+        this.refined={};
+        for(const k of Object.values(VT)) this.refined[k]=0;
+        this.activeStationTab='refinery';
 
         this.inp={
             forward:false,backward:false,left:false,right:false,
@@ -1145,6 +1265,9 @@ class GameEngine{
         this.sparks=new ParticleEngine(this.scene,CFG.SPARKS_MAX,null,0.7);
         this.ship=new MiningShip(this.scene);
         this.exhaust=new ExhaustEmitter(this.scene,this.ship);
+        this.station=new BaseStation(this.scene);
+        // Start ship near station docking collar, facing outward
+        this.ship.pos.set(0,0,90);
 
         const types=['small','small','small','medium','medium','large'];
         let placed=0;
@@ -1164,7 +1287,7 @@ class GameEngine{
 
         // Pointer lock
         canvas.addEventListener('click',()=>{
-            if(!this.shopOpen && !this.settingsOpen && !this.inventoryOpen) canvas.requestPointerLock();
+            if(!this.stationOpen && !this.settingsOpen && !this.inventoryOpen) canvas.requestPointerLock();
         });
         document.addEventListener('pointerlockchange',()=>{
             this.isLocked=document.pointerLockElement===canvas;
@@ -1210,10 +1333,10 @@ class GameEngine{
                 case'KeyE':this.inp.roll=1;break;
                 case'ShiftLeft':case'ShiftRight':this.inp.boost=true;break;
                 case'Space':e.preventDefault();this.inp.fire=true;break;
-                case'KeyU':this._toggleShop();break;
+                case'KeyB':this._toggleStation();break;
                 case'KeyG':this._toggleSettings();break;
                 case'Escape':
-                    if(this.shopOpen) this._toggleShop(false);
+                    if(this.stationOpen) this._closeStation();
                     else if(this.settingsOpen) this._toggleSettings(false);
                     else if(this.inventoryOpen) this._toggleInventory(false);
                     break;
@@ -1245,13 +1368,7 @@ class GameEngine{
             this._initTouch();
         }
 
-        // Upgrade buttons
-        document.getElementById('btn-upg-laser').onclick=()=>this._upgrade('laser');
-        document.getElementById('btn-upg-cargo').onclick=()=>this._upgrade('cargo');
-        document.getElementById('btn-upg-engine').onclick=()=>this._upgrade('engine');
-        document.getElementById('btn-upg-energy').onclick=()=>this._upgrade('energy');
-        document.getElementById('btn-close-modal').onclick=()=>this._toggleShop(false);
-        document.getElementById('btn-shop-hud').onclick=()=>this._toggleShop();
+        document.getElementById('btn-dock-hud').onclick=()=>this._toggleStation();
     }
 
     _initTouch(){
@@ -1364,6 +1481,12 @@ class GameEngine{
         document.getElementById('btn-inv-badge').addEventListener('click',()=>this._toggleInventory());
         document.getElementById('btn-close-inv').addEventListener('click',()=>this._toggleInventory(false));
 
+        // Station modal tabs
+        document.getElementById('tab-refinery').addEventListener('click',()=>this._renderStationTab('refinery'));
+        document.getElementById('tab-market').addEventListener('click',()=>this._renderStationTab('market'));
+        document.getElementById('tab-upgrades').addEventListener('click',()=>this._renderStationTab('upgrades'));
+        document.getElementById('btn-close-station').addEventListener('click',()=>this._closeStation());
+
         // Settings
         document.getElementById('btn-settings-gear').addEventListener('click',()=>this._toggleSettings());
         document.getElementById('btn-close-settings').addEventListener('click',()=>this._toggleSettings(false));
@@ -1381,53 +1504,218 @@ class GameEngine{
         });
     }
 
-    _toggleShop(force){
-        const modal=document.getElementById('upgrade-modal');
-        this.shopOpen=force!==undefined?force:!this.shopOpen;
-        modal.style.display=this.shopOpen?'flex':'none';
-        if(this.shopOpen) this._updateShopUI();
-    }
-
-    _updateShopUI(){
-        const s=this.ship.stats,inv=this.ship.inventory;
-        const iron=inv[VT.IRON]||0,copper=inv[VT.COPPER]||0;
-        const nickel=inv[VT.NICKEL]||0,titanium=inv[VT.TITANIUM]||0;
-        document.getElementById('lv-laser').textContent=`Lv.${s.laserLv}  (採掘力: ${s.miningPow.toFixed(1)})`;
-        document.getElementById('lv-cargo').textContent=`+${s.cargoUpg*50} (最大: ${s.maxCargo})`;
-        document.getElementById('lv-engine').textContent=`Lv.${s.engineLv}  (推力: ${s.thrust.toFixed(0)})`;
-        document.getElementById('lv-energy').textContent=`Lv.${s.energyLv}  (容量: ${s.maxEnergy})`;
-        document.getElementById('btn-upg-laser').disabled=!(iron>=20&&copper>=10);
-        document.getElementById('btn-upg-cargo').disabled=!(iron>=30&&nickel>=15);
-        document.getElementById('btn-upg-engine').disabled=!(iron>=25&&titanium>=10);
-        document.getElementById('btn-upg-energy').disabled=!(copper>=20&&nickel>=20);
-    }
-
-    _upgrade(type){
-        const s=this.ship.stats,inv=this.ship.inventory;
-        const spend=(res,n)=>{const used=Math.min(inv[res]||0,n);inv[res]-=used;this.ship.stats.cargo-=used;};
-        if(type==='laser'&&(inv[VT.IRON]||0)>=20&&(inv[VT.COPPER]||0)>=10){
-            spend(VT.IRON,20);spend(VT.COPPER,10);
-            s.miningPow+=0.5;s.laserLv++;
-            Notify.upgrade('採掘パワー強化！');
-        }else if(type==='cargo'&&(inv[VT.IRON]||0)>=30&&(inv[VT.NICKEL]||0)>=15){
-            spend(VT.IRON,30);spend(VT.NICKEL,15);
-            s.maxCargo+=50;s.cargoUpg++;
-            Notify.upgrade('貨物スロット拡張！');
-        }else if(type==='engine'&&(inv[VT.IRON]||0)>=25&&(inv[VT.TITANIUM]||0)>=10){
-            spend(VT.IRON,25);spend(VT.TITANIUM,10);
-            s.thrust+=12;s.engineLv++;
-            Notify.upgrade('エンジン推力強化！');
-        }else if(type==='energy'&&(inv[VT.COPPER]||0)>=20&&(inv[VT.NICKEL]||0)>=20){
-            spend(VT.COPPER,20);spend(VT.NICKEL,20);
-            s.maxEnergy+=40;s.energyLv++;
-            Notify.upgrade('エネルギー容量拡張！');
-        }else{
-            Notify.warn('資源が不足しています');
-            this._updateShopUI();return;
+    // ── Station System ──────────────────────────────────────────────
+    _toggleStation(){
+        if(this.stationOpen) this._closeStation();
+        else {
+            const dist=this.ship.pos.length();
+            if(dist<160) this._openStation();
+            else Notify.warn('基地に近づいてください（160m以内）');
         }
+    }
+
+    _openStation(){
+        if(this.stationOpen)return;
+        this.stationOpen=true;
+        this.ship.vel.set(0,0,0);
+        this.ship.angVel.set(0,0,0);
+        this.inp.fire=false;
+        this.ship.laserMesh.visible=false;
+        Sound.stopLaser();
+        document.getElementById('station-modal').style.display='flex';
+        this._updateCreditsUI();
+        this._renderStationTab('refinery');
+        Notify.show('🏭 ドッキング完了','success',2000);
+    }
+
+    _closeStation(){
+        if(!this.stationOpen)return;
+        this.stationOpen=false;
+        document.getElementById('station-modal').style.display='none';
+        Notify.show('🚀 出発！','info',1500);
+    }
+
+    _checkDocking(){
+        const dist=this.ship.pos.length();
+        const prompt=document.getElementById('dock-prompt');
+        const distEl=document.getElementById('dock-dist');
+        if(dist<65){
+            if(prompt)prompt.style.display='none';
+            if(!this.stationOpen)this._openStation();
+        }else{
+            if(this.stationOpen)this._closeStation();
+            if(dist<160){
+                if(prompt)prompt.style.display='block';
+                if(distEl)distEl.textContent=Math.round(dist);
+            }else{
+                if(prompt)prompt.style.display='none';
+            }
+        }
+    }
+
+    _updateCreditsUI(){
+        const v=document.getElementById('credits-val');
+        if(v)v.textContent=this.credits.toLocaleString();
+        const h=document.getElementById('hud-credits');
+        if(h)h.textContent=this.credits.toLocaleString();
+    }
+
+    _renderStationTab(tab){
+        this.activeStationTab=tab;
+        ['refinery','market','upgrades'].forEach(t=>{
+            const b=document.getElementById(`tab-${t}`);
+            if(b)b.classList.toggle('active',t===tab);
+        });
+        const el=document.getElementById('station-content');
+        if(!el)return;
+        el.innerHTML='';
+        if(tab==='refinery')  this._renderRefinery(el);
+        else if(tab==='market')    this._renderMarket(el);
+        else                       this._renderUpgradesTab(el);
+    }
+
+    _renderRefinery(el){
+        const inv=this.ship.inventory;
+        let any=false;
+        for(const [vtKey,recipe] of Object.entries(REFINE)){
+            const vt=parseInt(vtKey);
+            const raw=inv[vt]||0;
+            if(raw<recipe.ratio)continue;
+            any=true;
+            const out=Math.floor(raw/recipe.ratio);
+            const row=document.createElement('div');row.className='st-row';
+            row.innerHTML=`<div class="st-info"><span class="st-name">${VPROPS[vt].name} × ${raw}</span>`+
+                `<span class="st-sub">→ ${recipe.name} × ${out}　(${out*recipe.val} Cr 相当)</span></div>`+
+                `<button class="btn-st refine" id="brf-${vt}">精錬</button>`;
+            el.appendChild(row);
+            el.querySelector(`#brf-${vt}`).onclick=()=>this._refine(vt);
+        }
+        if(!any){el.innerHTML='<div class="st-empty">精錬できる資源がありません</div>';return;}
+        const btn=document.createElement('button');
+        btn.className='btn-st refine btn-st-wide';btn.textContent='全精錬';
+        btn.onclick=()=>this._refineAll();el.appendChild(btn);
+    }
+
+    _renderMarket(el){
+        const ref=this.refined;
+        let any=false,totalCr=0;
+        for(const [vtKey,recipe] of Object.entries(REFINE)){
+            const vt=parseInt(vtKey);
+            const qty=ref[vt]||0;
+            if(qty<=0)continue;
+            any=true;
+            const cr=qty*recipe.val;totalCr+=cr;
+            const row=document.createElement('div');row.className='st-row';
+            row.innerHTML=`<div class="st-info"><span class="st-name">${recipe.name} × ${qty}</span>`+
+                `<span class="st-sub">${cr.toLocaleString()} Cr</span></div>`+
+                `<button class="btn-st sell" id="bsell-${vt}">売却</button>`;
+            el.appendChild(row);
+            el.querySelector(`#bsell-${vt}`).onclick=()=>this._sell(vt);
+        }
+        if(!any){el.innerHTML='<div class="st-empty">売却できる精錬品がありません</div>';return;}
+        const btn=document.createElement('button');
+        btn.className='btn-st sell btn-st-wide';
+        btn.textContent=`全売却 (合計 ${totalCr.toLocaleString()} Cr)`;
+        btn.onclick=()=>this._sellAll();el.appendChild(btn);
+    }
+
+    _renderUpgradesTab(el){
+        const s=this.ship.stats;
+        const defs=[
+            {key:'laser', name:'採掘レーザー強化',
+             subFn:()=>`採掘力 ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`,
+             lvFn:()=>s.laserLv, maxLv:5,
+             costFn:()=>UPGRADES.laser.costs[s.laserLv-1]??null,
+             apply:()=>{s.miningPow+=0.5;s.laserLv++;}},
+            {key:'cargo', name:'貨物スロット拡張',
+             subFn:()=>`積載量 ${s.maxCargo} → ${s.maxCargo+50}`,
+             lvFn:()=>s.cargoUpg, maxLv:6,
+             costFn:()=>UPGRADES.cargo.costs[s.cargoUpg]??null,
+             apply:()=>{s.maxCargo+=50;s.cargoUpg++;}},
+            {key:'engine',name:'エンジン推力強化',
+             subFn:()=>`推力 ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`,
+             lvFn:()=>s.engineLv, maxLv:4,
+             costFn:()=>UPGRADES.engine.costs[s.engineLv-1]??null,
+             apply:()=>{s.thrust+=14;s.engineLv++;}},
+            {key:'energy',name:'エネルギー容量拡張',
+             subFn:()=>`容量 ${s.maxEnergy} → ${s.maxEnergy+40}`,
+             lvFn:()=>s.energyLv, maxLv:4,
+             costFn:()=>UPGRADES.energy.costs[s.energyLv-1]??null,
+             apply:()=>{s.maxEnergy+=40;s.energyLv++;}},
+        ];
+        for(const u of defs){
+            const lv=u.lvFn(),cost=u.costFn(),maxed=cost===null||lv>=u.maxLv;
+            const canBuy=!maxed&&this.credits>=cost;
+            const row=document.createElement('div');row.className='st-row';
+            row.innerHTML=`<div class="st-info"><span class="st-name">${u.name}</span>`+
+                `<span class="st-sub">${maxed?'MAX':u.subFn()+` ─ ${cost.toLocaleString()} Cr`}</span></div>`+
+                `<button class="btn-st upgrade" id="bupg-${u.key}" ${(!canBuy||maxed)?'disabled':''}>強化</button>`;
+            el.appendChild(row);
+            if(canBuy&&!maxed) el.querySelector(`#bupg-${u.key}`).onclick=()=>this._buyUpgrade(u);
+        }
+    }
+
+    _buyUpgrade(u){
+        const cost=u.costFn();
+        if(cost===null||this.credits<cost){Notify.warn('クレジットが不足しています');return;}
+        this.credits-=cost;
+        u.apply();
         Sound.playPickup(3);
-        this._updateShopUI();
+        Notify.upgrade(u.name+'！');
         this._saveSave();
+        this._renderStationTab('upgrades');
+        this._updateCreditsUI();
+    }
+
+    _refine(vt){
+        const recipe=REFINE[vt];if(!recipe)return;
+        const inv=this.ship.inventory;
+        const raw=inv[vt]||0,out=Math.floor(raw/recipe.ratio);
+        if(out<=0)return;
+        const used=out*recipe.ratio;
+        inv[vt]-=used;this.ship.stats.cargo-=used;
+        this.refined[vt]=(this.refined[vt]||0)+out;
+        Sound.playPickup(VPROPS[vt].rar);
+        Notify.show(`${VPROPS[vt].name} → ${recipe.name} × ${out}`,'resource',2000);
+        this._renderStationTab('refinery');
+    }
+
+    _refineAll(){
+        let cnt=0;
+        for(const vtKey of Object.keys(REFINE)){
+            const vt=parseInt(vtKey),recipe=REFINE[vt];
+            const inv=this.ship.inventory,raw=inv[vt]||0;
+            const out=Math.floor(raw/recipe.ratio);
+            if(out<=0)continue;
+            const used=out*recipe.ratio;
+            inv[vt]-=used;this.ship.stats.cargo-=used;
+            this.refined[vt]=(this.refined[vt]||0)+out;cnt++;
+        }
+        if(cnt>0){Sound.playPickup(2);Notify.show('全精錬完了！','success',2000);}
+        this._renderStationTab('refinery');
+    }
+
+    _sell(vt){
+        const qty=this.refined[vt]||0;if(qty<=0)return;
+        const earned=qty*(REFINE[vt]?.val||0);
+        this.credits+=earned;this.refined[vt]=0;
+        Sound.playPickup(VPROPS[vt].rar);
+        Notify.show(`💳 +${earned.toLocaleString()} Cr`,'success',2000);
+        this._saveSave();this._renderStationTab('market');this._updateCreditsUI();
+    }
+
+    _sellAll(){
+        let total=0;
+        for(const [vtKey,recipe] of Object.entries(REFINE)){
+            const vt=parseInt(vtKey),qty=this.refined[vt]||0;
+            if(qty<=0)continue;total+=qty*recipe.val;this.refined[vt]=0;
+        }
+        if(total>0){
+            this.credits+=total;Sound.playPickup(3);
+            Notify.show(`💳 +${total.toLocaleString()} Cr`,'success',3000);
+            this._saveSave();
+        }
+        this._renderStationTab('market');this._updateCreditsUI();
     }
 
     _updateCamera(){
@@ -1461,6 +1749,19 @@ class GameEngine{
             else ctx.fillStyle='#667788';
             ctx.beginPath();ctx.arc(R+dx,R+dz,2,0,Math.PI*2);ctx.fill();
         }
+        // Station indicator (green diamond)
+        const sdx=(this.station.group.position.x-this.ship.pos.x)*S;
+        const sdz=(this.station.group.position.z-this.ship.pos.z)*S;
+        const sl=Math.sqrt(sdx*sdx+sdz*sdz);
+        const maxR=R-5;
+        const sx2=sl>maxR?sdx/sl*maxR:sdx;
+        const sz2=sl>maxR?sdz/sl*maxR:sdz;
+        ctx.save();
+        ctx.translate(R+sx2,R+sz2);
+        ctx.fillStyle=sl>maxR?'#ffdd00':'#00ffaa';
+        ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();
+        ctx.restore();
+        // Ship dot
         ctx.fillStyle='#00f0ff';
         ctx.beginPath();ctx.arc(R,R,3,0,Math.PI*2);ctx.fill();
     }
@@ -1494,7 +1795,7 @@ class GameEngine{
         document.getElementById('inv-total-badge').textContent=
             `${totalVal} Cr`;
 
-        if(this.shopOpen) this._updateShopUI();
+        this._updateCreditsUI();
     }
 
     _toggleInventory(force){
@@ -1543,7 +1844,8 @@ class GameEngine{
 
     _saveSave(){
         localStorage.setItem('vam_save',JSON.stringify({
-            stats:this.ship.stats,inventory:this.ship.inventory}));
+            stats:this.ship.stats,inventory:this.ship.inventory,
+            credits:this.credits,refined:this.refined}));
     }
     _loadSave(){
         try{
@@ -1552,6 +1854,8 @@ class GameEngine{
                 const d=JSON.parse(raw);
                 Object.assign(this.ship.stats,d.stats);
                 Object.assign(this.ship.inventory,d.inventory);
+                if(d.credits!=null) this.credits=d.credits;
+                if(d.refined) Object.assign(this.refined,d.refined);
             }
         }catch(e){}
     }
@@ -1583,7 +1887,9 @@ class GameEngine{
 
         // Start screen guard
         if(document.getElementById('start-screen').style.display==='none'){
-            this.ship.update(dt,this.inp);
+            this.station.update(dt);
+            this._checkDocking();
+            if(!this.stationOpen) this.ship.update(dt,this.inp);
             this._checkCollisions();
 
             if(this.inp.fire){
