@@ -114,7 +114,7 @@
 
         /* Minimap (repositioned: bottom-right, absolute) */
         #minimap-wrap{
-            position:absolute;bottom:10px;right:10px;z-index:12;
+            position:absolute;top:64px;left:10px;z-index:12;
             width:90px;height:90px;border-radius:50%;
             overflow:hidden;border:2px solid rgba(0,240,255,0.38);
             background:rgba(0,8,18,0.88);pointer-events:none;
@@ -262,7 +262,7 @@
             border:2.5px solid #00f0ff;
             color:#fff;font-size:10px;font-weight:900;letter-spacing:1px;
             display:flex;align-items:center;justify-content:center;
-            bottom:162px;right:20px;
+            bottom:84px;left:50%;transform:translateX(-68px);
             box-shadow:0 0 16px rgba(0,240,255,0.3);
         }
         #btn-laser:active{background:rgba(0,220,255,0.6);
@@ -275,7 +275,7 @@
             background:rgba(255,180,0,0.18);border:2px solid #ffaa00;
             color:#ffcc44;font-size:9px;font-weight:700;
             display:flex;align-items:center;justify-content:center;
-            bottom:172px;right:104px;
+            bottom:84px;left:50%;transform:translateX(5px);
         }
         #btn-boost:active{background:rgba(255,180,0,0.5);}
 
@@ -1219,7 +1219,7 @@ class GameEngine{
         this.shopOpen=false;
         this.settingsOpen=false;
         this.inventoryOpen=false;
-        this.settings={pitchInvert:false,showDebug:false};
+        this.settings={pitchInvert:true,showDebug:false};
 
         this.inp={
             forward:false,backward:false,left:false,right:false,
