@@ -137,6 +137,48 @@
         .btn-close-modal{background:#ff3355;color:#fff;border:none;padding:8px;
             border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px;}
 
+        /* ── Settings Modal ─────────────────────────────────────── */
+        #settings-modal{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:min(320px,95vw);background:rgba(8,14,28,0.97);
+            border:2px solid #00f0ff;border-radius:14px;padding:18px;
+            display:none;flex-direction:column;gap:12px;z-index:100;
+            pointer-events:auto;box-shadow:0 0 40px rgba(0,240,255,0.25);
+        }
+        .settings-row{
+            background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:7px;
+            display:flex;justify-content:space-between;align-items:center;gap:10px;
+        }
+        .settings-label{font-size:12px;font-weight:700;color:#dde;line-height:1.4;}
+        .settings-sub{font-size:9px;color:#668;margin-top:3px;}
+        .toggle-group{display:flex;gap:5px;flex-shrink:0;}
+        .toggle-btn{
+            background:rgba(255,255,255,0.07);color:#99aacc;
+            border:1.5px solid rgba(255,255,255,0.18);
+            padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;
+            transition:background 0.15s,color 0.15s,border-color 0.15s;
+        }
+        .toggle-btn.active{background:#00f0ff;color:#000;border-color:#00f0ff;}
+        /* Gear button inside sys-stats panel */
+        #btn-settings-gear{
+            background:rgba(0,240,255,0.1);color:#00f0ff;
+            border:1px solid rgba(0,240,255,0.3);border-radius:5px;
+            font-size:10px;font-weight:700;padding:4px 8px;cursor:pointer;
+            margin-top:6px;width:100%;letter-spacing:1px;
+            border-top:1px solid rgba(0,240,255,0.15);padding-top:6px;
+        }
+        #btn-settings-gear:active{background:rgba(0,240,255,0.3);}
+        /* Settings touch button (inside #touch-controls) */
+        #btn-settings-touch{
+            position:absolute;pointer-events:auto;
+            width:40px;height:40px;border-radius:8px;
+            background:rgba(0,240,255,0.08);border:1px solid rgba(0,240,255,0.3);
+            color:rgba(0,240,255,0.8);font-size:16px;
+            display:flex;align-items:center;justify-content:center;
+            top:16px;right:16px;
+        }
+        #btn-settings-touch:active{background:rgba(0,240,255,0.25);}
+
         /* ── Touch Controls (Dual Joystick) ────────────────────── */
         #touch-controls{
             display:none;
@@ -298,6 +340,7 @@
             <div>VOXELS: <span id="voxels-val">0</span></div>
             <div>POS: <span id="pos-val">0,0,0</span></div>
             <div id="lock-indicator">🔒 MOUSE LOCKED</div>
+            <button id="btn-settings-gear">⚙ 設定</button>
         </div>
     </div>
 
@@ -345,6 +388,7 @@
     <div id="btn-laser">LASER</div>
     <div id="btn-boost">BOOST</div>
     <div id="btn-shop-touch">SHOP</div>
+    <div id="btn-settings-touch">⚙</div>
 </div>
 
 <!-- Upgrade Modal -->
@@ -383,6 +427,22 @@
         <button class="btn-upg" id="btn-upg-energy">強化</button>
     </div>
     <button class="btn-close-modal" id="btn-close-modal">✕ 閉じる</button>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal">
+    <div class="modal-title">⚙ 設定</div>
+    <div class="settings-row">
+        <div>
+            <div class="settings-label">視点縦操作（ピッチ）</div>
+            <div class="settings-sub">右スティック上下 / マウス上下の向き</div>
+        </div>
+        <div class="toggle-group">
+            <button class="toggle-btn active" id="btn-pitch-normal">通常</button>
+            <button class="toggle-btn"        id="btn-pitch-invert">リバース</button>
+        </div>
+    </div>
+    <button class="btn-close-modal" id="btn-close-settings">✕ 閉じる</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1146,6 +1206,8 @@ class GameEngine{
         this.cameraTarget=new THREE.Vector3();
         this.isLocked=false;
         this.shopOpen=false;
+        this.settingsOpen=false;
+        this.settings={pitchInvert:false};
 
         this.inp={
             forward:false,backward:false,left:false,right:false,
@@ -1158,6 +1220,7 @@ class GameEngine{
         this._initInputs();
         this._initUI();
         this._loadSave();
+        this._loadSettings();
 
         window.addEventListener('resize',()=>this._onResize());
         this._animate();
@@ -1258,7 +1321,7 @@ class GameEngine{
 
         // Pointer lock
         canvas.addEventListener('click',()=>{
-            if(!this.shopOpen) canvas.requestPointerLock();
+            if(!this.shopOpen && !this.settingsOpen) canvas.requestPointerLock();
         });
         document.addEventListener('pointerlockchange',()=>{
             this.isLocked=document.pointerLockElement===canvas;
@@ -1281,7 +1344,7 @@ class GameEngine{
             else if(mouseDown){dx=e.clientX-prevX;dy=e.clientY-prevY;prevX=e.clientX;prevY=e.clientY;}
             else return;
             this.inp.yaw=dx*0.004;
-            this.inp.pitch=dy*0.004;
+            this.inp.pitch=(this.settings.pitchInvert?-1:1)*dy*0.004;
         });
 
         // Scroll zoom
@@ -1305,7 +1368,11 @@ class GameEngine{
                 case'ShiftLeft':case'ShiftRight':this.inp.boost=true;break;
                 case'Space':e.preventDefault();this.inp.fire=true;break;
                 case'KeyU':this._toggleShop();break;
-                case'Escape':if(this.shopOpen)this._toggleShop(false);break;
+                case'KeyG':this._toggleSettings();break;
+                case'Escape':
+                    if(this.shopOpen) this._toggleShop(false);
+                    else if(this.settingsOpen) this._toggleSettings(false);
+                    break;
             }
         });
         window.addEventListener('keyup',e=>{
@@ -1405,7 +1472,7 @@ class GameEngine{
             document.getElementById('vjoy-r'),
             (_dx, _dy, nx, ny) => {
                 this.inp.yaw   =  nx * LOOK_SENS;
-                this.inp.pitch =  ny * LOOK_SENS;
+                this.inp.pitch =  (this.settings.pitchInvert?-1:1) * ny * LOOK_SENS;
             },
             () => { this.inp.yaw = 0; this.inp.pitch = 0; }
         );
@@ -1427,6 +1494,11 @@ class GameEngine{
         // ── Shop tap ──────────────────────────────────────────────────
         document.getElementById('btn-shop-touch').addEventListener('touchstart', e => {
             e.preventDefault(); this._toggleShop();
+        }, { passive: false });
+
+        // ── Settings tap ──────────────────────────────────────────────
+        document.getElementById('btn-settings-touch').addEventListener('touchstart', e => {
+            e.preventDefault(); this._toggleSettings();
         }, { passive: false });
     }
 
@@ -1451,6 +1523,16 @@ class GameEngine{
         document.getElementById('btn-start').addEventListener('click',()=>{
             Sound.init();Sound.resume();
             document.getElementById('start-screen').style.display='none';
+        });
+
+        // Settings
+        document.getElementById('btn-settings-gear').addEventListener('click',()=>this._toggleSettings());
+        document.getElementById('btn-close-settings').addEventListener('click',()=>this._toggleSettings(false));
+        document.getElementById('btn-pitch-normal').addEventListener('click',()=>{
+            this.settings.pitchInvert=false; this._applySettings(); this._saveSettings();
+        });
+        document.getElementById('btn-pitch-invert').addEventListener('click',()=>{
+            this.settings.pitchInvert=true; this._applySettings(); this._saveSettings();
         });
     }
 
@@ -1566,6 +1648,33 @@ class GameEngine{
         }
         document.getElementById('total-value').textContent=totalVal>0?`総価値: ${totalVal} Cr`:'';
         if(this.shopOpen) this._updateShopUI();
+    }
+
+    _saveSettings(){
+        localStorage.setItem('vam_settings',JSON.stringify(this.settings));
+    }
+    _loadSettings(){
+        try{
+            const raw=localStorage.getItem('vam_settings');
+            if(raw) Object.assign(this.settings,JSON.parse(raw));
+        }catch(e){}
+        this._applySettings();
+    }
+    _applySettings(){
+        const n=document.getElementById('btn-pitch-normal');
+        const v=document.getElementById('btn-pitch-invert');
+        if(!n||!v)return;
+        if(this.settings.pitchInvert){
+            n.classList.remove('active'); v.classList.add('active');
+        }else{
+            n.classList.add('active'); v.classList.remove('active');
+        }
+    }
+    _toggleSettings(force){
+        const modal=document.getElementById('settings-modal');
+        this.settingsOpen=force!==undefined?force:!this.settingsOpen;
+        modal.style.display=this.settingsOpen?'flex':'none';
+        if(this.settingsOpen) this._applySettings();
     }
 
     _saveSave(){
