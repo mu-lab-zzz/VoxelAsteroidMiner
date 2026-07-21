@@ -138,9 +138,17 @@
             border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px;}
 
         /* ── Touch Controls (Dual Joystick) ────────────────────── */
-        #touch-controls{display:none;position:absolute;inset:0;pointer-events:none;
-            /* safe area insets for notch phones */
-            padding-bottom:env(safe-area-inset-bottom);}
+        #touch-controls{
+            display:none;
+            position:absolute;inset:0;
+            pointer-events:none;
+            z-index:15;               /* must exceed canvas z-index:1 */
+            padding-bottom:env(safe-area-inset-bottom);
+        }
+        /* Show automatically on touch/coarse-pointer screens */
+        @media (pointer:coarse){
+            #touch-controls{ display:block !important; }
+        }
 
         /* shared joystick base */
         .vjoy-base{
@@ -1317,8 +1325,11 @@ class GameEngine{
             }
         });
 
-        // Touch
-        if('ontouchstart' in window){
+        // Touch — detect via multiple signals for broad device compatibility
+        const hasTouch = 'ontouchstart' in window
+                      || navigator.maxTouchPoints > 0
+                      || window.matchMedia('(pointer:coarse)').matches;
+        if(hasTouch){
             document.getElementById('touch-controls').style.display='block';
             this._initTouch();
         }
