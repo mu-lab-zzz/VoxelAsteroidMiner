@@ -231,29 +231,18 @@
         }
 
         /* Vertical movement buttons – left of left joystick */
+        /* Up/Down buttons – center bottom, side by side */
         #btn-up,#btn-down{
             position:absolute;pointer-events:auto;
-            width:48px;height:48px;border-radius:50%;
-            background:rgba(0,240,255,0.12);border:1.5px solid rgba(0,240,255,0.4);
-            color:#fff;font-size:16px;font-weight:700;
-            display:flex;align-items:center;justify-content:center;
-        }
-        #btn-up  {bottom:100px;left:152px;}
-        #btn-down{bottom:44px; left:152px;}
-        #btn-up:active,#btn-down:active{background:rgba(0,240,255,0.4);}
-
-        /* Roll buttons – center bottom */
-        #btn-roll-l,#btn-roll-r{
-            position:absolute;pointer-events:auto;
             width:52px;height:52px;border-radius:10px;
-            background:rgba(180,100,255,0.15);border:1.5px solid rgba(180,100,255,0.45);
-            color:#cc88ff;font-size:18px;font-weight:700;
+            background:rgba(0,240,255,0.12);border:1.5px solid rgba(0,240,255,0.4);
+            color:#fff;font-size:18px;font-weight:700;
             display:flex;align-items:center;justify-content:center;
             bottom:24px;
         }
-        #btn-roll-l{left:50%;transform:translateX(-58px);}
-        #btn-roll-r{left:50%;transform:translateX(6px);}
-        #btn-roll-l:active,#btn-roll-r:active{background:rgba(180,100,255,0.45);}
+        #btn-up  {left:50%;transform:translateX(-58px);}
+        #btn-down{left:50%;transform:translateX(6px);}
+        #btn-up:active,#btn-down:active{background:rgba(0,240,255,0.4);}
 
         /* LASER button – large, above right joystick */
         #btn-laser{
@@ -373,9 +362,6 @@
     <!-- Vertical movement buttons -->
     <div id="btn-up">▲</div>
     <div id="btn-down">▼</div>
-    <!-- Roll buttons (center) -->
-    <div id="btn-roll-l">↺</div>
-    <div id="btn-roll-r">↻</div>
     <!-- Right joystick: look/aim (yaw/pitch) -->
     <div id="vjoy-r" class="vjoy-base">
         <div class="vjoy-knob"></div>
@@ -1502,8 +1488,6 @@ class GameEngine{
         };
         hold('btn-up',     () => this.inp.up     = true,  () => this.inp.up     = false);
         hold('btn-down',   () => this.inp.down   = true,  () => this.inp.down   = false);
-        hold('btn-roll-l', () => this.inp.roll   = -1,    () => this.inp.roll   = 0);
-        hold('btn-roll-r', () => this.inp.roll   =  1,    () => this.inp.roll   = 0);
         hold('btn-laser',  () => this.inp.fire   = true,  () => this.inp.fire   = false);
         hold('btn-boost',  () => this.inp.boost  = true,  () => this.inp.boost  = false);
 
