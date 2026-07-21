@@ -56,14 +56,12 @@
         /* Resource badge */
         #btn-inv-badge{
             background:rgba(255,170,0,0.12);border:1px solid rgba(255,170,0,0.36);
-            border-radius:8px;padding:4px 9px;
+            border-radius:8px;padding:5px 10px;
             font-size:11px;font-weight:700;color:#ffaa00;white-space:nowrap;
             cursor:pointer;flex-shrink:0;font-family:monospace;
-            display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.2;
             transition:background 0.15s;
         }
         #btn-inv-badge:active{background:rgba(255,170,0,0.28);}
-        #inv-badge-hint{font-size:7px;opacity:0.55;font-weight:400;font-family:sans-serif;}
 
         /* Gear / settings button (in strip) */
         #btn-settings-gear{
@@ -199,16 +197,6 @@
             border-top:1px solid rgba(0,240,255,0.15);padding-top:6px;
         }
         #btn-settings-gear:active{background:rgba(0,240,255,0.3);}
-        /* Settings touch button (inside #touch-controls) */
-        #btn-settings-touch{
-            position:absolute;pointer-events:auto;
-            width:40px;height:40px;border-radius:8px;
-            background:rgba(0,240,255,0.08);border:1px solid rgba(0,240,255,0.3);
-            color:rgba(0,240,255,0.8);font-size:16px;
-            display:flex;align-items:center;justify-content:center;
-            top:16px;right:16px;
-        }
-        #btn-settings-touch:active{background:rgba(0,240,255,0.25);}
 
         /* ── Touch Controls (Dual Joystick) ────────────────────── */
         #touch-controls{
@@ -363,10 +351,7 @@
         <div class="bar-bg"><div id="cargo-fill" class="bar-fill"></div></div>
     </div>
     <div class="hs-div"></div>
-    <button id="btn-inv-badge">
-        💎 <span id="inv-total-badge">0 Cr</span>
-        <span id="inv-badge-hint">▼ タップ</span>
-    </button>
+    <button id="btn-inv-badge">💎&nbsp;<span id="inv-total-badge">0 Cr</span></button>
     <button id="btn-settings-gear">⚙</button>
 </div>
 
@@ -409,7 +394,6 @@
     <div id="btn-laser">LASER</div>
     <div id="btn-boost">BOOST</div>
     <div id="btn-shop-touch">SHOP</div>
-    <div id="btn-settings-touch">⚙</div>
 </div>
 
 <!-- Inventory Modal -->
@@ -1537,10 +1521,6 @@ class GameEngine{
             e.preventDefault(); this._toggleShop();
         }, { passive: false });
 
-        // ── Settings tap ──────────────────────────────────────────────
-        document.getElementById('btn-settings-touch').addEventListener('touchstart', e => {
-            e.preventDefault(); this._toggleSettings();
-        }, { passive: false });
 
         // ── Inventory badge (already in HUD strip, prevent default on touch) ──
         document.getElementById('btn-inv-badge').addEventListener('touchstart', e => {
