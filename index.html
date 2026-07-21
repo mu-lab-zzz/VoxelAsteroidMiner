@@ -765,8 +765,9 @@ class Chunk{
         const geom=GMesher.build(this.voxels);
         if(geom){
             this.mesh=new THREE.Mesh(geom,mat);
+            const off=this.ast.offset;
             this.mesh.position.set(
-                this.cx*CFG.CHUNK,this.cy*CFG.CHUNK,this.cz*CFG.CHUNK);
+                this.cx*CFG.CHUNK-off,this.cy*CFG.CHUNK-off,this.cz*CFG.CHUNK-off);
             this.mesh.castShadow=true;
             this.ast.group.add(this.mesh);
             this.empty=false;
@@ -925,13 +926,16 @@ class Asteroid{
     mine(worldPt, radius, onMined){
         if(!this.isHighDetail)return;
         const lp=MP.v1.copy(worldPt).sub(this.group.position);
+        // Meshes are centred at group origin (positioned at cx*S-offset),
+        // so add offset back to recover uncentred chunk-array coordinates.
+        const ox=lp.x+this.offset, oy=lp.y+this.offset, oz=lp.z+this.offset;
         const S=CFG.CHUNK;
-        const minX=Math.floor(lp.x-radius);
-        const maxX=Math.ceil( lp.x+radius);
-        const minY=Math.floor(lp.y-radius);
-        const maxY=Math.ceil( lp.y+radius);
-        const minZ=Math.floor(lp.z-radius);
-        const maxZ=Math.ceil( lp.z+radius);
+        const minX=Math.floor(ox-radius);
+        const maxX=Math.ceil( ox+radius);
+        const minY=Math.floor(oy-radius);
+        const maxY=Math.ceil( oy+radius);
+        const minZ=Math.floor(oz-radius);
+        const maxZ=Math.ceil( oz+radius);
 
         const dirtySet=new Set();
         for(let x=minX;x<=maxX;x++){
