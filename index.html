@@ -476,53 +476,125 @@ const CFG = {
 };
 
 // ════════════════════════════════════════════════════════════════
-//  VOXEL TYPES
+//  LOCALIZATION
 // ════════════════════════════════════════════════════════════════
-const VT = {AIR:0,STONE:1,IRON:2,COPPER:3,NICKEL:4,
-             TITANIUM:5,GOLD:6,PLATINUM:7,URANIUM:8,ICE:9};
-
-const VPROPS = [
-    {name:'Air',      hex:0x000000,hard:0,val:0,  rar:0},
-    {name:'石',       hex:0x777788,hard:2,val:1,  rar:0},
-    {name:'鉄',       hex:0x995533,hard:3,val:5,  rar:1},
-    {name:'銅',       hex:0xb87333,hard:3,val:8,  rar:1},
-    {name:'ニッケル', hex:0x88a898,hard:4,val:12, rar:2},
-    {name:'チタン',   hex:0x435560,hard:6,val:25, rar:2},
-    {name:'金',       hex:0xffd700,hard:2,val:50, rar:3},
-    {name:'プラチナ', hex:0xe5e4e2,hard:5,val:100,rar:3},
-    {name:'ウラン',   hex:0x39ff14,hard:8,val:250,rar:4},
-    {name:'氷',       hex:0x88ddff,hard:1,val:3,  rar:0},
-];
-
-const VRGB = VPROPS.map(p=>{const c=new THREE.Color(p.hex);return[c.r,c.g,c.b];});
-
-// Refinery recipes: ratio = raw ore needed per 1 refined unit
-const REFINE={
-    [VT.ICE]:     {ratio:4, val:12,  name:'水（冷却材）'},
-    [VT.IRON]:    {ratio:2, val:14,  name:'鉄バー'},
-    [VT.COPPER]:  {ratio:2, val:22,  name:'銅バー'},
-    [VT.NICKEL]:  {ratio:2, val:36,  name:'ニッケル合金'},
-    [VT.TITANIUM]:{ratio:3, val:95,  name:'チタンバー'},
-    [VT.GOLD]:    {ratio:1, val:160, name:'金インゴット'},
-    [VT.PLATINUM]:{ratio:1, val:330, name:'プラチナバー'},
-    [VT.URANIUM]: {ratio:1, val:950, name:'ウラン燃料棒'},
+let LOCALE='ja'; // switch to 'en' for English
+const LANG={
+    ja:{
+        ores:{air:'Air',stone:'石',iron:'鉄',copper:'銅',nickel:'ニッケル',
+              titanium:'チタン',gold:'金',platinum:'プラチナ',uranium:'ウラン',ice:'氷'},
+        refined:{ice:'水（冷却材）',iron:'鉄バー',copper:'銅バー',nickel:'ニッケル合金',
+                 titanium:'チタンバー',gold:'金インゴット',platinum:'プラチナバー',uranium:'ウラン燃料棒'},
+        upgrades:{
+            laser:{name:'採掘レーザー強化',desc:(s)=>`採掘力 ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`},
+            cargo:{name:'貨物スロット拡張', desc:(s)=>`積載量 ${s.maxCargo} → ${s.maxCargo+50}`},
+            engine:{name:'エンジン推力強化',desc:(s)=>`推力 ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`},
+            energy:{name:'エネルギー容量拡張',desc:(s)=>`容量 ${s.maxEnergy} → ${s.maxEnergy+40}`},
+        },
+        ui:{
+            dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（160m以内）',
+            refineBtn:'精錬',refineAll:'全精錬',refineAllDone:'全精錬完了！',
+            sellBtn:'売却',sellAll:'全売却',
+            noCredit:'クレジットが不足しています',maxed:'MAX',upgraded:(n)=>`${n}！`,
+            tabRefinery:'⚗ 精錬所',tabMarket:'💹 市場',tabUpgrades:'🔧 整備',
+            stationName:'🏭 採掘基地 Alpha',invTitle:'💎 採取済み資源',
+            close:'✕ 閉じる',departBtn:'🚀 出発',
+            baseDist:(d)=>`🏭 基地まで ${d}m`,emptyRefine:'精錬できる資源がありません',
+            emptySell:'売却できる精錬品がありません',upgradeBtn:'強化',
+        },
+    },
+    en:{
+        ores:{air:'Air',stone:'Stone',iron:'Iron',copper:'Copper',nickel:'Nickel',
+              titanium:'Titanium',gold:'Gold',platinum:'Platinum',uranium:'Uranium',ice:'Ice'},
+        refined:{ice:'Coolant',iron:'Iron Bar',copper:'Copper Bar',nickel:'Nickel Alloy',
+                 titanium:'Titanium Bar',gold:'Gold Ingot',platinum:'Platinum Bar',uranium:'Uranium Rod'},
+        upgrades:{
+            laser:{name:'Mining Laser Upgrade',desc:(s)=>`Power ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`},
+            cargo:{name:'Cargo Expansion',      desc:(s)=>`Capacity ${s.maxCargo} → ${s.maxCargo+50}`},
+            engine:{name:'Engine Thrust Upgrade',desc:(s)=>`Thrust ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`},
+            energy:{name:'Energy Capacity Upgrade',desc:(s)=>`Energy ${s.maxEnergy} → ${s.maxEnergy+40}`},
+        },
+        ui:{
+            dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 160m)',
+            refineBtn:'Refine',refineAll:'Refine All',refineAllDone:'All refined!',
+            sellBtn:'Sell',sellAll:'Sell All',
+            noCredit:'Insufficient credits',maxed:'MAX',upgraded:(n)=>`${n} upgraded!`,
+            tabRefinery:'⚗ Refinery',tabMarket:'💹 Market',tabUpgrades:'🔧 Upgrades',
+            stationName:'🏭 Mining Base Alpha',invTitle:'💎 Cargo Hold',
+            close:'✕ Close',departBtn:'🚀 Depart',
+            baseDist:(d)=>`🏭 Base: ${d}m`,emptyRefine:'No ore to refine',
+            emptySell:'No refined goods to sell',upgradeBtn:'Upgrade',
+        },
+    },
 };
-
-// Credit costs per upgrade level (index = current level - 1 for ships, or current count for cargo)
-const UPGRADES={
-    laser: {name:'採掘レーザー強化',  desc:'採掘力 +0.5',   costs:[600,1800,5000,12000]},
-    cargo: {name:'貨物スロット拡張',  desc:'積載量 +50',    costs:[400,800,1500,2800,5000,9000]},
-    engine:{name:'エンジン推力強化',  desc:'推力 +14',      costs:[700,2000,5500]},
-    energy:{name:'エネルギー容量拡張',desc:'容量 +40',      costs:[350,1000,2800]},
-};
-
-// Returns ore pool for an asteroid at given distance from origin
-function getZonePool(dist){
-    if(dist<380)  return [VT.IRON,VT.COPPER,VT.ICE];
-    if(dist<700)  return [VT.COPPER,VT.NICKEL,VT.TITANIUM];
-    if(dist<1000) return [VT.TITANIUM,VT.GOLD,VT.PLATINUM];
-    return [VT.GOLD,VT.PLATINUM,VT.URANIUM];
+// L('ui.dock') → string, L('upgrades.laser.desc',stats) → string via function
+function L(path,...args){
+    const parts=path.split('.');
+    let o=LANG[LOCALE];
+    for(const p of parts) o=o?.[p];
+    return typeof o==='function'?o(...args):o??path;
 }
+
+// ════════════════════════════════════════════════════════════════
+//  VOXEL TYPES  (numeric IDs — used as typed-array indices and save keys)
+// ════════════════════════════════════════════════════════════════
+const VT={AIR:0,STONE:1,IRON:2,COPPER:3,NICKEL:4,
+           TITANIUM:5,GOLD:6,PLATINUM:7,URANIUM:8,ICE:9};
+
+// Master ore database — single source of truth
+// refineRatio: raw units needed per 1 refined unit; null = not refinable
+const ORES={
+    [VT.AIR]:     {color:0x000000,hard:0,rar:0,baseVal:0,   refineRatio:null,refineVal:0,  nameKey:'air'},
+    [VT.STONE]:   {color:0x777788,hard:2,rar:0,baseVal:1,   refineRatio:null,refineVal:0,  nameKey:'stone'},
+    [VT.IRON]:    {color:0x995533,hard:3,rar:1,baseVal:5,   refineRatio:2,   refineVal:14, nameKey:'iron'},
+    [VT.COPPER]:  {color:0xb87333,hard:3,rar:1,baseVal:8,   refineRatio:2,   refineVal:22, nameKey:'copper'},
+    [VT.NICKEL]:  {color:0x88a898,hard:4,rar:2,baseVal:12,  refineRatio:2,   refineVal:36, nameKey:'nickel'},
+    [VT.TITANIUM]:{color:0x435560,hard:6,rar:2,baseVal:25,  refineRatio:3,   refineVal:95, nameKey:'titanium'},
+    [VT.GOLD]:    {color:0xffd700,hard:2,rar:3,baseVal:50,  refineRatio:1,   refineVal:160,nameKey:'gold'},
+    [VT.PLATINUM]:{color:0xe5e4e2,hard:5,rar:3,baseVal:100, refineRatio:1,   refineVal:330,nameKey:'platinum'},
+    [VT.URANIUM]: {color:0x39ff14,hard:8,rar:4,baseVal:250, refineRatio:1,   refineVal:950,nameKey:'uranium'},
+    [VT.ICE]:     {color:0x88ddff,hard:1,rar:0,baseVal:3,   refineRatio:4,   refineVal:12, nameKey:'ice'},
+};
+
+// Derived tables — computed once from ORES
+// VPROPS[vt]: .name (localized), .val, .rar, .hard
+const VPROPS=Object.fromEntries(Object.entries(ORES).map(([vt,o])=>[vt,{
+    get name(){return L(`ores.${o.nameKey}`);},
+    val:o.baseVal,rar:o.rar,hard:o.hard,
+}]));
+
+// VRGB[vt]: [r,g,b] floats for vertex color attribute
+const VRGB=[];
+for(const[vt,o]of Object.entries(ORES)){
+    const c=new THREE.Color(o.color);VRGB[+vt]=[c.r,c.g,c.b];
+}
+
+// REFINE[vt]: {ratio, val, name} — only ores with refineRatio set
+const REFINE=Object.fromEntries(
+    Object.entries(ORES)
+        .filter(([,o])=>o.refineRatio!=null)
+        .map(([vt,o])=>[vt,{
+            ratio:o.refineRatio,val:o.refineVal,
+            get name(){return L(`refined.${o.nameKey}`);}
+        }])
+);
+
+// Upgrade cost tables (names/descs live in LANG.*.upgrades)
+const UPGRADES={
+    laser: {costs:[600,1800,5000,12000]},
+    cargo: {costs:[400,800,1500,2800,5000,9000]},
+    engine:{costs:[700,2000,5500]},
+    energy:{costs:[350,1000,2800]},
+};
+
+// Zone definitions — ore pools by distance from base
+const ZONES=[
+    {maxDist:  380, pool:[VT.IRON,VT.COPPER,VT.ICE]},
+    {maxDist:  700, pool:[VT.COPPER,VT.NICKEL,VT.TITANIUM]},
+    {maxDist: 1000, pool:[VT.TITANIUM,VT.GOLD,VT.PLATINUM]},
+    {maxDist:Infinity, pool:[VT.GOLD,VT.PLATINUM,VT.URANIUM]},
+];
+function getZonePool(dist){return ZONES.find(z=>dist<z.maxDist).pool;}
 
 // ════════════════════════════════════════════════════════════════
 //  SIMPLEX NOISE  (3D, zero-allocation)
@@ -1510,7 +1582,7 @@ class GameEngine{
         else {
             const dist=this.ship.pos.length();
             if(dist<160) this._openStation();
-            else Notify.warn('基地に近づいてください（160m以内）');
+            else Notify.warn(L('ui.tooFar'));
         }
     }
 
@@ -1525,7 +1597,7 @@ class GameEngine{
         document.getElementById('station-modal').style.display='flex';
         this._updateCreditsUI();
         this._renderStationTab('refinery');
-        Notify.show('🏭 ドッキング完了','success',2000);
+        Notify.show(L('ui.dock'),'success',2000);
     }
 
     _closeStation(){
@@ -1537,7 +1609,7 @@ class GameEngine{
         const dir=d>0.01?this.ship.pos.clone().normalize():new THREE.Vector3(0,0,1);
         if(d<70) this.ship.pos.copy(dir.multiplyScalar(70));
         this.ship.vel.copy(dir.normalize().multiplyScalar(8));
-        Notify.show('🚀 出発！','info',1500);
+        Notify.show(L('ui.depart'),'info',1500);
     }
 
     _checkDocking(){
@@ -1567,9 +1639,10 @@ class GameEngine{
 
     _renderStationTab(tab){
         this.activeStationTab=tab;
+        const tabLabels={refinery:L('ui.tabRefinery'),market:L('ui.tabMarket'),upgrades:L('ui.tabUpgrades')};
         ['refinery','market','upgrades'].forEach(t=>{
             const b=document.getElementById(`tab-${t}`);
-            if(b)b.classList.toggle('active',t===tab);
+            if(b){b.classList.toggle('active',t===tab);b.textContent=tabLabels[t];}
         });
         const el=document.getElementById('station-content');
         if(!el)return;
@@ -1590,14 +1663,14 @@ class GameEngine{
             const out=Math.floor(raw/recipe.ratio);
             const row=document.createElement('div');row.className='st-row';
             row.innerHTML=`<div class="st-info"><span class="st-name">${VPROPS[vt].name} × ${raw}</span>`+
-                `<span class="st-sub">→ ${recipe.name} × ${out}　(${out*recipe.val} Cr 相当)</span></div>`+
-                `<button class="btn-st refine" id="brf-${vt}">精錬</button>`;
+                `<span class="st-sub">→ ${recipe.name} × ${out}　(${out*recipe.val} Cr)</span></div>`+
+                `<button class="btn-st refine" id="brf-${vt}">${L('ui.refineBtn')}</button>`;
             el.appendChild(row);
             el.querySelector(`#brf-${vt}`).onclick=()=>this._refine(vt);
         }
-        if(!any){el.innerHTML='<div class="st-empty">精錬できる資源がありません</div>';return;}
+        if(!any){el.innerHTML=`<div class="st-empty">${L('ui.emptyRefine')}</div>`;return;}
         const btn=document.createElement('button');
-        btn.className='btn-st refine btn-st-wide';btn.textContent='全精錬';
+        btn.className='btn-st refine btn-st-wide';btn.textContent=L('ui.refineAll');
         btn.onclick=()=>this._refineAll();el.appendChild(btn);
     }
 
@@ -1613,48 +1686,42 @@ class GameEngine{
             const row=document.createElement('div');row.className='st-row';
             row.innerHTML=`<div class="st-info"><span class="st-name">${recipe.name} × ${qty}</span>`+
                 `<span class="st-sub">${cr.toLocaleString()} Cr</span></div>`+
-                `<button class="btn-st sell" id="bsell-${vt}">売却</button>`;
+                `<button class="btn-st sell" id="bsell-${vt}">${L('ui.sellBtn')}</button>`;
             el.appendChild(row);
             el.querySelector(`#bsell-${vt}`).onclick=()=>this._sell(vt);
         }
-        if(!any){el.innerHTML='<div class="st-empty">売却できる精錬品がありません</div>';return;}
+        if(!any){el.innerHTML=`<div class="st-empty">${L('ui.emptySell')}</div>`;return;}
         const btn=document.createElement('button');
         btn.className='btn-st sell btn-st-wide';
-        btn.textContent=`全売却 (合計 ${totalCr.toLocaleString()} Cr)`;
+        btn.textContent=`${L('ui.sellAll')} (${totalCr.toLocaleString()} Cr)`;
         btn.onclick=()=>this._sellAll();el.appendChild(btn);
     }
 
     _renderUpgradesTab(el){
         const s=this.ship.stats;
         const defs=[
-            {key:'laser', name:'採掘レーザー強化',
-             subFn:()=>`採掘力 ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`,
-             lvFn:()=>s.laserLv, maxLv:5,
+            {key:'laser', lvFn:()=>s.laserLv, maxLv:5,
              costFn:()=>UPGRADES.laser.costs[s.laserLv-1]??null,
              apply:()=>{s.miningPow+=0.5;s.laserLv++;}},
-            {key:'cargo', name:'貨物スロット拡張',
-             subFn:()=>`積載量 ${s.maxCargo} → ${s.maxCargo+50}`,
-             lvFn:()=>s.cargoUpg, maxLv:6,
+            {key:'cargo', lvFn:()=>s.cargoUpg, maxLv:6,
              costFn:()=>UPGRADES.cargo.costs[s.cargoUpg]??null,
              apply:()=>{s.maxCargo+=50;s.cargoUpg++;}},
-            {key:'engine',name:'エンジン推力強化',
-             subFn:()=>`推力 ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`,
-             lvFn:()=>s.engineLv, maxLv:4,
+            {key:'engine',lvFn:()=>s.engineLv, maxLv:4,
              costFn:()=>UPGRADES.engine.costs[s.engineLv-1]??null,
              apply:()=>{s.thrust+=14;s.engineLv++;}},
-            {key:'energy',name:'エネルギー容量拡張',
-             subFn:()=>`容量 ${s.maxEnergy} → ${s.maxEnergy+40}`,
-             lvFn:()=>s.energyLv, maxLv:4,
+            {key:'energy',lvFn:()=>s.energyLv, maxLv:4,
              costFn:()=>UPGRADES.energy.costs[s.energyLv-1]??null,
              apply:()=>{s.maxEnergy+=40;s.energyLv++;}},
         ];
         for(const u of defs){
             const lv=u.lvFn(),cost=u.costFn(),maxed=cost===null||lv>=u.maxLv;
             const canBuy=!maxed&&this.credits>=cost;
+            const name=L(`upgrades.${u.key}.name`);
+            const sub=maxed?L('ui.maxed'):L(`upgrades.${u.key}.desc`,s)+` ─ ${cost.toLocaleString()} Cr`;
             const row=document.createElement('div');row.className='st-row';
-            row.innerHTML=`<div class="st-info"><span class="st-name">${u.name}</span>`+
-                `<span class="st-sub">${maxed?'MAX':u.subFn()+` ─ ${cost.toLocaleString()} Cr`}</span></div>`+
-                `<button class="btn-st upgrade" id="bupg-${u.key}" ${(!canBuy||maxed)?'disabled':''}>強化</button>`;
+            row.innerHTML=`<div class="st-info"><span class="st-name">${name}</span>`+
+                `<span class="st-sub">${sub}</span></div>`+
+                `<button class="btn-st upgrade" id="bupg-${u.key}" ${(!canBuy||maxed)?'disabled':''}>${L('ui.upgradeBtn')}</button>`;
             el.appendChild(row);
             if(canBuy&&!maxed) el.querySelector(`#bupg-${u.key}`).onclick=()=>this._buyUpgrade(u);
         }
@@ -1662,11 +1729,11 @@ class GameEngine{
 
     _buyUpgrade(u){
         const cost=u.costFn();
-        if(cost===null||this.credits<cost){Notify.warn('クレジットが不足しています');return;}
+        if(cost===null||this.credits<cost){Notify.warn(L('ui.noCredit'));return;}
         this.credits-=cost;
         u.apply();
         Sound.playPickup(3);
-        Notify.upgrade(u.name+'！');
+        Notify.upgrade(L('ui.upgraded',L(`upgrades.${u.key}.name`)));
         this._saveSave();
         this._renderStationTab('upgrades');
         this._updateCreditsUI();
@@ -1696,7 +1763,7 @@ class GameEngine{
             inv[vt]-=used;this.ship.stats.cargo-=used;
             this.refined[vt]=(this.refined[vt]||0)+out;cnt++;
         }
-        if(cnt>0){Sound.playPickup(2);Notify.show('全精錬完了！','success',2000);}
+        if(cnt>0){Sound.playPickup(2);Notify.show(L('ui.refineAllDone'),'success',2000);}
         this._renderStationTab('refinery');
     }
 
