@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Voxel Asteroid Miner</title>
+    <style>
+        *{box-sizing:border-box;user-select:none;-webkit-user-select:none;margin:0;padding:0;}
+        html,body{width:100%;height:100%;overflow:hidden;background:#000005;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#fff;}
+        #canvas-container{width:100%;height:100%;position:absolute;top:0;left:0;z-index:1;}
+
+        /* ── Start Screen ───────────────────────────────────────── */
+        #start-screen{
+            position:absolute;inset:0;z-index:200;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            background:radial-gradient(ellipse at center,#0a1525 0%,#000005 100%);
+        }
+        #start-screen h1{
+            font-size:clamp(24px,6vw,42px);font-weight:900;letter-spacing:3px;
+            color:#00f0ff;text-shadow:0 0 30px #00f0ff,0 0 60px #0088cc;margin-bottom:8px;
+        }
+        #start-screen p.subtitle{font-size:13px;color:#667;letter-spacing:2px;margin-bottom:40px;}
+        #start-screen .controls-grid{
+            display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;
+            font-size:12px;color:#aab;margin-bottom:40px;max-width:360px;width:90%;
+        }
+        #start-screen .controls-grid span:nth-child(odd){color:#00f0ff;font-family:monospace;}
+        #btn-start{
+            background:linear-gradient(135deg,#00b4cc,#0066aa);
+            border:none;color:#fff;padding:16px 48px;border-radius:30px;
+            font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;
+            box-shadow:0 0 30px rgba(0,180,204,0.5);
+        }
+        #btn-start:active{transform:scale(0.97);}
+
+        /* ── UI Layer ───────────────────────────────────────────── */
+        #ui-layer{
+            position:absolute;inset:0;z-index:10;pointer-events:none;
+            display:flex;flex-direction:column;justify-content:space-between;padding:12px;
+        }
+        .hud-panel{
+            background:rgba(8,12,24,0.78);border:1px solid rgba(0,240,255,0.25);
+            border-radius:8px;padding:10px 12px;backdrop-filter:blur(4px);
+            pointer-events:auto;box-shadow:0 0 12px rgba(0,240,255,0.08);
+        }
+        .hud-header{font-size:10px;font-weight:700;color:#00f0ff;
+            text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;}
+
+        /* ── Stat Bars ──────────────────────────────────────────── */
+        .stat-row{margin-bottom:5px;}
+        .stat-label{display:flex;justify-content:space-between;font-size:10px;
+            margin-bottom:2px;color:#99aacc;}
+        .bar-bg{width:100%;height:5px;background:rgba(255,255,255,0.1);
+            border-radius:3px;overflow:hidden;}
+        .bar-fill{height:100%;width:100%;transition:width 0.12s linear;}
+        #hp-fill{background:linear-gradient(90deg,#cc2244,#ff3355);}
+        #energy-fill{background:linear-gradient(90deg,#0088cc,#00f0ff);}
+        #cargo-fill{background:linear-gradient(90deg,#cc7700,#ffaa00);}
+
+        /* ── Top Bar ────────────────────────────────────────────── */
+        #top-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+        #ship-stats{min-width:190px;}
+        #sys-stats{text-align:right;font-family:monospace;font-size:10px;color:#00ffaa;line-height:1.7;}
+        #lock-indicator{font-size:9px;color:#ffaa00;display:none;}
+
+        /* ── Inventory Panel ────────────────────────────────────── */
+        #inventory-panel{position:absolute;right:12px;top:108px;width:170px;}
+        .res-row{display:flex;justify-content:space-between;align-items:center;
+            font-size:10px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+        .res-name{color:#bbc;}
+        .res-val{font-family:monospace;font-weight:700;}
+        .res-value{font-family:monospace;font-size:9px;color:#ffaa44;}
+        #total-value{font-size:10px;color:#ffcc44;margin-top:6px;text-align:right;
+            border-top:1px solid rgba(255,200,0,0.2);padding-top:4px;}
+
+        /* ── Bottom Bar ─────────────────────────────────────────── */
+        #bottom-bar{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;}
+        #controls-hint{font-size:9px;color:rgba(255,255,255,0.5);line-height:1.6;}
+        #minimap-wrap{width:110px;height:110px;position:relative;border-radius:50%;
+            overflow:hidden;border:2px solid rgba(0,240,255,0.4);
+            background:rgba(0,8,18,0.88);}
+        #minimap-canvas{width:100%;height:100%;}
+
+        /* ── Notifications ──────────────────────────────────────── */
+        #notifications{
+            position:absolute;top:16px;left:50%;transform:translateX(-50%);
+            z-index:50;display:flex;flex-direction:column;gap:6px;
+            align-items:center;pointer-events:none;width:280px;
+        }
+        .notif{
+            background:rgba(10,20,36,0.92);border-radius:6px;padding:7px 14px;
+            font-size:12px;font-weight:600;border-left:3px solid #00f0ff;
+            opacity:0;transform:translateY(-8px);
+            transition:opacity 0.25s,transform 0.25s;white-space:nowrap;
+        }
+        .notif.show{opacity:1;transform:translateY(0);}
+        .notif.success{border-color:#00ff88;color:#00ff88;}
+        .notif.warn{border-color:#ffaa00;color:#ffaa00;}
+        .notif.resource{border-color:#ffd700;color:#ffd700;}
+        .notif.info{border-color:#00f0ff;color:#00f0ff;}
+
+        /* ── Crosshair ──────────────────────────────────────────── */
+        #crosshair{
+            position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);
+            width:22px;height:22px;pointer-events:none;z-index:11;
+        }
+        #crosshair::before,#crosshair::after{
+            content:'';position:absolute;background:rgba(0,240,255,0.8);}
+        #crosshair::before{top:10px;left:0;width:22px;height:2px;}
+        #crosshair::after{top:0;left:10px;width:2px;height:22px;}
+        .xhair-dot{position:absolute;top:9px;left:9px;width:4px;height:4px;
+            background:#ff0055;border-radius:50%;}
+        #crosshair.firing::before,#crosshair.firing::after{background:#ff4400;}
+        #crosshair.firing .xhair-dot{background:#ffff00;box-shadow:0 0 6px #ffff00;}
+
+        /* ── Upgrade Modal ──────────────────────────────────────── */
+        #upgrade-modal{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:min(340px,95vw);background:rgba(8,14,28,0.97);
+            border:2px solid #00f0ff;border-radius:14px;padding:18px;
+            display:none;flex-direction:column;gap:10px;z-index:100;
+            pointer-events:auto;box-shadow:0 0 40px rgba(0,240,255,0.25);
+        }
+        .modal-title{font-size:15px;font-weight:700;color:#00f0ff;text-align:center;
+            border-bottom:1px solid rgba(0,240,255,0.25);padding-bottom:8px;}
+        .upg-item{background:rgba(255,255,255,0.04);padding:10px 12px;
+            border-radius:7px;display:flex;justify-content:space-between;align-items:center;}
+        .upg-info{display:flex;flex-direction:column;gap:3px;}
+        .upg-name{font-size:12px;font-weight:700;}
+        .upg-cost{font-size:10px;color:#ffaa00;}
+        .upg-level{font-size:9px;color:#888;}
+        .btn-upg{background:#00f0ff;color:#000;border:none;padding:7px 13px;
+            border-radius:5px;font-weight:700;font-size:11px;cursor:pointer;}
+        .btn-upg:disabled{background:#334;color:#556;cursor:not-allowed;}
+        .btn-close-modal{background:#ff3355;color:#fff;border:none;padding:8px;
+            border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px;}
+
+        /* ── Touch Controls ─────────────────────────────────────── */
+        #touch-controls{display:none;position:absolute;inset:0;pointer-events:none;}
+        .touch-zone{position:absolute;pointer-events:auto;}
+        #vjoy{bottom:28px;left:28px;width:115px;height:115px;border-radius:50%;
+            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.18);}
+        #vjoy-knob{width:38px;height:38px;border-radius:50%;
+            background:rgba(0,240,255,0.45);position:absolute;top:38px;left:38px;}
+        #action-btns{bottom:28px;right:28px;display:flex;flex-direction:column;gap:10px;}
+        .btn-touch{width:56px;height:56px;border-radius:50%;
+            background:rgba(0,240,255,0.18);border:2px solid #00f0ff;
+            color:#fff;font-size:9px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;pointer-events:auto;}
+        .btn-touch:active{background:rgba(0,240,255,0.55);}
+        #btn-look-area{position:absolute;top:0;right:0;width:55%;height:70%;
+            pointer-events:auto;background:transparent;}
+    </style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<!-- Start Screen -->
+<div id="start-screen">
+    <h1>VOXEL ASTEROID MINER</h1>
+    <p class="subtitle">ボクセル小惑星採鉱シミュレーター</p>
+    <div class="controls-grid">
+        <span>[W/S]</span><span>前進 / 後退</span>
+        <span>[A/D]</span><span>左右旋回 (Yaw)</span>
+        <span>[Q/E]</span><span>ロール回転</span>
+        <span>[R/F]</span><span>上昇 / 下降</span>
+        <span>[Shift]</span><span>ブースト加速</span>
+        <span>[Space]</span><span>採掘レーザー</span>
+        <span>[Mouse]</span><span>クリックでマウスロック</span>
+        <span>[Wheel]</span><span>カメラズーム</span>
+        <span>[U]</span><span>アップグレードショップ</span>
+    </div>
+    <button id="btn-start">▶ ゲームスタート</button>
+</div>
+
+<div id="crosshair"><div class="xhair-dot"></div></div>
+
+<div id="ui-layer">
+    <div id="top-bar">
+        <div id="ship-stats" class="hud-panel">
+            <div class="hud-header">宇宙船ステータス</div>
+            <div class="stat-row">
+                <div class="stat-label"><span>機体耐久</span><span id="hp-text">100/100</span></div>
+                <div class="bar-bg"><div id="hp-fill" class="bar-fill"></div></div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label"><span>レーザーエネルギー</span><span id="energy-text">100/100</span></div>
+                <div class="bar-bg"><div id="energy-fill" class="bar-fill"></div></div>
+            </div>
+            <div class="stat-row">
+                <div class="stat-label"><span>貨物容量</span><span id="cargo-text">0/100</span></div>
+                <div class="bar-bg"><div id="cargo-fill" class="bar-fill"></div></div>
+            </div>
+        </div>
+        <div id="sys-stats" class="hud-panel">
+            <div>FPS: <span id="fps-val">60</span></div>
+            <div>CHUNKS: <span id="chunks-val">0</span></div>
+            <div>VOXELS: <span id="voxels-val">0</span></div>
+            <div>POS: <span id="pos-val">0,0,0</span></div>
+            <div id="lock-indicator">🔒 MOUSE LOCKED</div>
+        </div>
+    </div>
+
+    <div id="inventory-panel" class="hud-panel">
+        <div class="hud-header">採取済み資源</div>
+        <div id="resource-list"></div>
+        <div id="total-value"></div>
+    </div>
+
+    <div id="bottom-bar">
+        <div class="hud-panel" style="max-width:200px;">
+            <div class="hud-header">操作ガイド</div>
+            <div id="controls-hint">
+                [W/S] 前進/後退<br>
+                [A/D] 左右旋回<br>
+                [Q/E] ロール<br>
+                [R/F] 上昇/下降<br>
+                [Shift] ブースト<br>
+                [Space] レーザー<br>
+                [U] アップグレード
+            </div>
+        </div>
+        <div id="minimap-wrap">
+            <canvas id="minimap-canvas"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications -->
+<div id="notifications"></div>
+
+<!-- Touch Controls -->
+<div id="touch-controls">
+    <div id="vjoy" class="touch-zone">
+        <div id="vjoy-knob"></div>
+    </div>
+    <div id="action-btns" class="touch-zone">
+        <div id="btn-fire" class="btn-touch">LASER</div>
+        <div id="btn-boost" class="btn-touch">BOOST</div>
+        <div id="btn-up" class="btn-touch">UP</div>
+        <div id="btn-down" class="btn-touch">DOWN</div>
+        <div id="btn-shop" class="btn-touch">SHOP</div>
+    </div>
+    <div id="btn-look-area"></div>
+</div>
+
+<!-- Upgrade Modal -->
+<div id="upgrade-modal">
+    <div class="modal-title">⚙ 宇宙船アップグレード</div>
+    <div class="upg-item">
+        <div class="upg-info">
+            <span class="upg-name">採掘パワー</span>
+            <span class="upg-cost">鉄×20 + 銅×10</span>
+            <span class="upg-level" id="lv-laser">Lv.1</span>
+        </div>
+        <button class="btn-upg" id="btn-upg-laser">強化</button>
+    </div>
+    <div class="upg-item">
+        <div class="upg-info">
+            <span class="upg-name">貨物スロット拡張</span>
+            <span class="upg-cost">鉄×30 + ニッケル×15</span>
+            <span class="upg-level" id="lv-cargo">+0</span>
+        </div>
+        <button class="btn-upg" id="btn-upg-cargo">拡張</button>
+    </div>
+    <div class="upg-item">
+        <div class="upg-info">
+            <span class="upg-name">エンジン推力</span>
+            <span class="upg-cost">鉄×25 + チタン×10</span>
+            <span class="upg-level" id="lv-engine">Lv.1</span>
+        </div>
+        <button class="btn-upg" id="btn-upg-engine">強化</button>
+    </div>
+    <div class="upg-item">
+        <div class="upg-info">
+            <span class="upg-name">エネルギー容量</span>
+            <span class="upg-cost">銅×20 + ニッケル×20</span>
+            <span class="upg-level" id="lv-energy">Lv.1</span>
+        </div>
+        <button class="btn-upg" id="btn-upg-energy">強化</button>
+    </div>
+    <button class="btn-close-modal" id="btn-close-modal">✕ 閉じる</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════
+//  CONFIGURATION
+// ════════════════════════════════════════════════════════════════
+const CFG = {
+    CHUNK:       16,
+    CHUNK_SQ:    256,
+    CHUNK_CU:    4096,
+    LOD_VOXEL:   180,      // switch to voxels inside this distance
+    LOD_GEN:     260,      // begin generating inside this distance
+    LOD_IMPOSTOR:1100,     // hide impostor beyond this distance
+    CHUNKS_PER_FRAME: 5,   // max chunks generated per game-loop tick
+    CAM_DEFAULT: 13,
+    CAM_MIN:     4,
+    CAM_MAX:     32,
+    CAM_LERP:    0.14,
+    SPARKS_MAX:  1200,
+    EXHAUST_MAX: 300,
+    DEBRIS_MAX:  80,
+    AUTO_SAVE:   30,       // seconds between auto-saves
+    ASTEROID_N:  30,
+    WORLD_R:     1800,
+};
+
+// ════════════════════════════════════════════════════════════════
+//  VOXEL TYPES
+// ════════════════════════════════════════════════════════════════
+const VT = {AIR:0,STONE:1,IRON:2,COPPER:3,NICKEL:4,
+             TITANIUM:5,GOLD:6,PLATINUM:7,URANIUM:8,ICE:9};
+
+const VPROPS = [
+    {name:'Air',      hex:0x000000,hard:0,val:0,  rar:0},
+    {name:'石',       hex:0x777788,hard:2,val:1,  rar:0},
+    {name:'鉄',       hex:0x995533,hard:3,val:5,  rar:1},
+    {name:'銅',       hex:0xb87333,hard:3,val:8,  rar:1},
+    {name:'ニッケル', hex:0x88a898,hard:4,val:12, rar:2},
+    {name:'チタン',   hex:0x435560,hard:6,val:25, rar:2},
+    {name:'金',       hex:0xffd700,hard:2,val:50, rar:3},
+    {name:'プラチナ', hex:0xe5e4e2,hard:5,val:100,rar:3},
+    {name:'ウラン',   hex:0x39ff14,hard:8,val:250,rar:4},
+    {name:'氷',       hex:0x88ddff,hard:1,val:3,  rar:0},
+];
+
+const VRGB = VPROPS.map(p=>{const c=new THREE.Color(p.hex);return[c.r,c.g,c.b];});
+
+// ════════════════════════════════════════════════════════════════
+//  SIMPLEX NOISE  (3D, zero-allocation)
+// ════════════════════════════════════════════════════════════════
+const SN = (()=>{
+    const F3=1/3,G3=1/6;
+    const src=new Uint8Array(256);
+    for(let i=0;i<256;i++) src[i]=i;
+    for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[src[i],src[j]]=[src[j],src[i]];}
+    const pm=new Uint8Array(512),pm12=new Uint8Array(512);
+    for(let i=0;i<512;i++){pm[i]=src[i&255];pm12[i]=pm[i]%12;}
+    const g3=new Float32Array([1,1,0,-1,1,0,1,-1,0,-1,-1,0,1,0,1,-1,0,1,1,0,-1,-1,0,-1,0,1,1,0,-1,1,0,1,-1,0,-1,-1]);
+    return{n3(xi,yi,zi){
+        let n0,n1,n2,n3;
+        const s=(xi+yi+zi)*F3;
+        const i=Math.floor(xi+s),j=Math.floor(yi+s),k=Math.floor(zi+s);
+        const t=(i+j+k)*G3;
+        const x0=xi-i+t,y0=yi-j+t,z0=zi-k+t;
+        let i1,j1,k1,i2,j2,k2;
+        if(x0>=y0){if(y0>=z0){i1=1;j1=0;k1=0;i2=1;j2=1;k2=0;}
+          else if(x0>=z0){i1=1;j1=0;k1=0;i2=1;j2=0;k2=1;}
+          else{i1=0;j1=0;k1=1;i2=1;j2=0;k2=1;}}
+        else{if(y0<z0){i1=0;j1=0;k1=1;i2=0;j2=1;k2=1;}
+          else if(x0<z0){i1=0;j1=1;k1=0;i2=0;j2=1;k2=1;}
+          else{i1=0;j1=1;k1=0;i2=1;j2=1;k2=0;}}
+        const x1=x0-i1+G3,y1=y0-j1+G3,z1=z0-k1+G3;
+        const x2=x0-i2+2*G3,y2=y0-j2+2*G3,z2=z0-k2+2*G3;
+        const x3=x0-1+3*G3,y3=y0-1+3*G3,z3=z0-1+3*G3;
+        const ii=i&255,jj=j&255,kk=k&255;
+        let t0=0.6-x0*x0-y0*y0-z0*z0;
+        if(t0<0)n0=0;else{const g=pm12[ii+pm[jj+pm[kk]]]*3;t0*=t0;n0=t0*t0*(g3[g]*x0+g3[g+1]*y0+g3[g+2]*z0);}
+        let t1=0.6-x1*x1-y1*y1-z1*z1;
+        if(t1<0)n1=0;else{const g=pm12[ii+i1+pm[jj+j1+pm[kk+k1]]]*3;t1*=t1;n1=t1*t1*(g3[g]*x1+g3[g+1]*y1+g3[g+2]*z1);}
+        let t2=0.6-x2*x2-y2*y2-z2*z2;
+        if(t2<0)n2=0;else{const g=pm12[ii+i2+pm[jj+j2+pm[kk+k2]]]*3;t2*=t2;n2=t2*t2*(g3[g]*x2+g3[g+1]*y2+g3[g+2]*z2);}
+        let t3=0.6-x3*x3-y3*y3-z3*z3;
+        if(t3<0)n3=0;else{const g=pm12[ii+1+pm[jj+1+pm[kk+1]]]*3;t3*=t3;n3=t3*t3*(g3[g]*x3+g3[g+1]*y3+g3[g+2]*z3);}
+        return 32*(n0+n1+n2+n3);
+    }};
+})();
+
+// ════════════════════════════════════════════════════════════════
+//  MATH POOL  (prevents GC pressure in hot path)
+// ════════════════════════════════════════════════════════════════
+const MP={
+    v1:new THREE.Vector3(),v2:new THREE.Vector3(),
+    v3:new THREE.Vector3(),v4:new THREE.Vector3(),
+    q1:new THREE.Quaternion(),m1:new THREE.Matrix4(),
+    ray:new THREE.Raycaster(),
+};
+
+// ════════════════════════════════════════════════════════════════
+//  SOUND ENGINE  (Web Audio API, procedural synthesis)
+// ════════════════════════════════════════════════════════════════
+class SoundEngine{
+    constructor(){
+        this.ctx=null;this.master=null;
+        this._engGain=null;this._engOsc=null;
+        this._laserNodes=null;
+        this.ready=false;
+    }
+    init(){
+        if(this.ready)return;
+        try{
+            this.ctx=new(window.AudioContext||window.webkitAudioContext)();
+            this.master=this.ctx.createGain();
+            this.master.gain.value=0.55;
+            this.master.connect(this.ctx.destination);
+            this._setupEngine();
+            this.ready=true;
+        }catch(e){console.warn('WebAudio unavailable');}
+    }
+    resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();}
+    _setupEngine(){
+        const osc=this.ctx.createOscillator();
+        const flt=this.ctx.createBiquadFilter();
+        const g=this.ctx.createGain();
+        osc.type='sawtooth';osc.frequency.value=48;
+        flt.type='lowpass';flt.frequency.value=160;
+        g.gain.value=0;
+        osc.connect(flt);flt.connect(g);g.connect(this.master);
+        osc.start();
+        this._engOsc=osc;this._engGain=g;
+    }
+    setThrust(norm){
+        if(!this.ready)return;
+        const v=Math.max(0,Math.min(1,norm));
+        const t=this.ctx.currentTime;
+        this._engGain.gain.linearRampToValueAtTime(v*0.11,t+0.12);
+        this._engOsc.frequency.linearRampToValueAtTime(48+v*55,t+0.12);
+    }
+    startLaser(){
+        if(!this.ready||this._laserNodes)return;
+        const o1=this.ctx.createOscillator(),o2=this.ctx.createOscillator();
+        const flt=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+        o1.type='sine';o1.frequency.value=1760;
+        o2.type='sine';o2.frequency.value=880;
+        flt.type='bandpass';flt.frequency.value=1200;flt.Q.value=3;
+        g.gain.value=0.07;
+        o1.connect(flt);o2.connect(flt);flt.connect(g);g.connect(this.master);
+        o1.start();o2.start();
+        this._laserNodes={o1,o2,flt,g};
+    }
+    stopLaser(){
+        if(!this.ready||!this._laserNodes)return;
+        const n=this._laserNodes;this._laserNodes=null;
+        n.g.gain.linearRampToValueAtTime(0,this.ctx.currentTime+0.06);
+        setTimeout(()=>{try{n.o1.stop();n.o2.stop();}catch(e){}},120);
+    }
+    playHit(){
+        if(!this.ready)return;
+        const sr=this.ctx.sampleRate,dur=0.065;
+        const buf=this.ctx.createBuffer(1,Math.ceil(sr*dur),sr);
+        const d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.8);
+        const src=this.ctx.createBufferSource(),flt=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+        src.buffer=buf;flt.type='highpass';flt.frequency.value=1600;g.gain.value=0.28;
+        src.connect(flt);flt.connect(g);g.connect(this.master);src.start();
+    }
+    playPickup(rarity=0){
+        if(!this.ready)return;
+        const base=440+rarity*88;
+        [base,base*1.25,base*1.5].forEach((f,i)=>{
+            const delay=i*0.075;
+            const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+            o.type='sine';o.frequency.value=f;
+            const t=this.ctx.currentTime+delay;
+            g.gain.setValueAtTime(0,t);
+            g.gain.linearRampToValueAtTime(0.1,t+0.02);
+            g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+            o.connect(g);g.connect(this.master);
+            o.start(t);o.stop(t+0.3);
+        });
+    }
+}
+const Sound=new SoundEngine();
+
+// ════════════════════════════════════════════════════════════════
+//  NOTIFICATION SYSTEM
+// ════════════════════════════════════════════════════════════════
+class Notify{
+    static show(msg,type='info',ms=2400){
+        const c=document.getElementById('notifications');
+        const d=document.createElement('div');
+        d.className=`notif ${type}`;
+        d.textContent=msg;
+        c.appendChild(d);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('show')));
+        setTimeout(()=>{
+            d.classList.remove('show');
+            setTimeout(()=>d.remove(),300);
+        },ms);
+    }
+    static resource(name,count,val){
+        const total=count*val;
+        this.show(`+${count} ${name}　(+${total} Cr)`,total>=500?'success':total>=100?'resource':'info',2000);
+    }
+    static upgrade(msg){this.show('⬆ '+msg,'success',3000);}
+    static warn(msg){this.show('⚠ '+msg,'warn',3000);}
+}
+
+// ════════════════════════════════════════════════════════════════
+//  GREEDY MESHER
+// ════════════════════════════════════════════════════════════════
+class GreedyMesher{
+    constructor(){
+        const maxV=CFG.CHUNK_CU*36;
+        this.pos=new Float32Array(maxV*3);
+        this.nor=new Float32Array(maxV*3);
+        this.col=new Float32Array(maxV*3);
+        this.idx=new Uint32Array(maxV*1.5);
+        this.mask=new Int32Array(CFG.CHUNK_SQ);
+        this.mCol=new Int32Array(CFG.CHUNK_SQ);
+    }
+    build(voxels){
+        let vc=0,ic=0;
+        const S=CFG.CHUNK,S2=CFG.CHUNK_SQ;
+        for(let d=0;d<3;d++){
+            const u=(d+1)%3,v=(d+2)%3;
+            const x=[0,0,0],q=[0,0,0];
+            q[d]=1;
+            for(x[d]=-1;x[d]<S;){
+                let n=0;
+                for(x[v]=0;x[v]<S;++x[v])
+                    for(x[u]=0;x[u]<S;++x[u]){
+                        const bC=x[d]>=0?voxels[x[0]+x[1]*S+x[2]*S2]:0;
+                        const bN=x[d]<S-1?voxels[(x[0]+q[0])+(x[1]+q[1])*S+(x[2]+q[2])*S2]:0;
+                        const sC=bC!==0,sN=bN!==0;
+                        if(sC===sN){this.mask[n]=0;this.mCol[n]=0;}
+                        else if(sC){this.mask[n]=1;this.mCol[n]=bC;}
+                        else{this.mask[n]=-1;this.mCol[n]=bN;}
+                        n++;
+                    }
+                x[d]++;n=0;
+                for(let j=0;j<S;++j)for(let i=0;i<S;){
+                    const c=this.mask[n],col=this.mCol[n];
+                    if(c!==0){
+                        let w=1;
+                        while(i+w<S&&this.mask[n+w]===c&&this.mCol[n+w]===col)w++;
+                        let h=1,done=false;
+                        for(;j+h<S;++h){
+                            for(let k=0;k<w;++k)
+                                if(this.mask[n+k+h*S]!==c||this.mCol[n+k+h*S]!==col){done=true;break;}
+                            if(done)break;
+                        }
+                        x[u]=i;x[v]=j;
+                        const du=[0,0,0],dv=[0,0,0];
+                        du[u]=w;dv[v]=h;
+                        const rgb=VRGB[col]||[0.5,0.5,0.5];
+                        const vi=vc;
+                        this._vtx(x[0],x[1],x[2],d,c,rgb,vc++);
+                        this._vtx(x[0]+du[0],x[1]+du[1],x[2]+du[2],d,c,rgb,vc++);
+                        this._vtx(x[0]+du[0]+dv[0],x[1]+du[1]+dv[1],x[2]+du[2]+dv[2],d,c,rgb,vc++);
+                        this._vtx(x[0]+dv[0],x[1]+dv[1],x[2]+dv[2],d,c,rgb,vc++);
+                        if(c>0){
+                            this.idx[ic++]=vi;this.idx[ic++]=vi+1;this.idx[ic++]=vi+2;
+                            this.idx[ic++]=vi;this.idx[ic++]=vi+2;this.idx[ic++]=vi+3;
+                        }else{
+                            this.idx[ic++]=vi;this.idx[ic++]=vi+2;this.idx[ic++]=vi+1;
+                            this.idx[ic++]=vi;this.idx[ic++]=vi+3;this.idx[ic++]=vi+2;
+                        }
+                        for(let l=0;l<h;l++)for(let k=0;k<w;k++) this.mask[n+k+l*S]=0;
+                        i+=w;n+=w;
+                    }else{i++;n++;}
+                }
+            }
+        }
+        if(vc===0)return null;
+        const g=new THREE.BufferGeometry();
+        g.setAttribute('position',new THREE.BufferAttribute(this.pos.slice(0,vc*3),3));
+        g.setAttribute('normal',  new THREE.BufferAttribute(this.nor.slice(0,vc*3),3));
+        g.setAttribute('color',   new THREE.BufferAttribute(this.col.slice(0,vc*3),3));
+        g.setIndex(new THREE.BufferAttribute(this.idx.slice(0,ic),1));
+        return g;
+    }
+    _vtx(px,py,pz,axis,dir,rgb,idx){
+        const i3=idx*3;
+        this.pos[i3]=px;this.pos[i3+1]=py;this.pos[i3+2]=pz;
+        let nx=0,ny=0,nz=0;
+        if(axis===0)nx=dir;else if(axis===1)ny=dir;else nz=dir;
+        this.nor[i3]=nx;this.nor[i3+1]=ny;this.nor[i3+2]=nz;
+        this.col[i3]=rgb[0];this.col[i3+1]=rgb[1];this.col[i3+2]=rgb[2];
+    }
+}
+const GMesher=new GreedyMesher();
+
+// ════════════════════════════════════════════════════════════════
+//  CHUNK
+// ════════════════════════════════════════════════════════════════
+class Chunk{
+    constructor(ast,cx,cy,cz){
+        this.ast=ast;this.cx=cx;this.cy=cy;this.cz=cz;
+        this.voxels=new Uint8Array(CFG.CHUNK_CU);
+        this.mesh=null;this.dirty=false;this.empty=true;
+    }
+    get(x,y,z){
+        if(x<0||x>=CFG.CHUNK||y<0||y>=CFG.CHUNK||z<0||z>=CFG.CHUNK)return 0;
+        return this.voxels[x+y*CFG.CHUNK+z*CFG.CHUNK_SQ];
+    }
+    set(x,y,z,t){
+        if(x<0||x>=CFG.CHUNK||y<0||y>=CFG.CHUNK||z<0||z>=CFG.CHUNK)return;
+        const idx=x+y*CFG.CHUNK+z*CFG.CHUNK_SQ;
+        if(this.voxels[idx]!==t){this.voxels[idx]=t;this.dirty=true;}
+    }
+    rebuildMesh(mat){
+        if(this.mesh){
+            this.ast.group.remove(this.mesh);
+            this.mesh.geometry.dispose();
+            this.mesh=null;
+        }
+        const geom=GMesher.build(this.voxels);
+        if(geom){
+            this.mesh=new THREE.Mesh(geom,mat);
+            this.mesh.position.set(
+                this.cx*CFG.CHUNK,this.cy*CFG.CHUNK,this.cz*CFG.CHUNK);
+            this.mesh.castShadow=true;
+            this.ast.group.add(this.mesh);
+            this.empty=false;
+        }else{this.empty=true;}
+        this.dirty=false;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ASTEROID
+// ════════════════════════════════════════════════════════════════
+class Asteroid{
+    constructor(id,scene,x,y,z,sizeType,seed){
+        this.id=id;this.scene=scene;this.seed=seed;
+        this.group=new THREE.Group();
+        this.group.position.set(x,y,z);
+        scene.add(this.group);
+
+        // Choose radius by size type
+        if(sizeType==='small')       this.radius=20+Math.floor(Math.random()*12);
+        else if(sizeType==='medium') this.radius=38+Math.floor(Math.random()*18);
+        else                         this.radius=58+Math.floor(Math.random()*22);
+
+        this.chunkDim=Math.ceil((this.radius*2)/CFG.CHUNK)+2;
+        this.offset=Math.floor(this.chunkDim*CFG.CHUNK/2);
+
+        this.chunks=new Map();
+        this.pendingChunks=[];      // queue for progressive generation
+        this.isGenerating=false;
+        this.isGenerated=false;
+        this.isHighDetail=false;
+
+        this.mat=new THREE.MeshStandardMaterial({
+            vertexColors:true,roughness:0.82,metalness:0.18});
+
+        this._buildImpostor();
+    }
+
+    _buildImpostor(){
+        const g=new THREE.DodecahedronGeometry(this.radius,1);
+        const pos=g.attributes.position;
+        for(let i=0;i<pos.count;i++){
+            MP.v1.fromBufferAttribute(pos,i);
+            const n=SN.n3(
+                (MP.v1.x+this.seed)*0.022,
+                (MP.v1.y+this.seed)*0.022,
+                (MP.v1.z+this.seed)*0.022);
+            MP.v1.multiplyScalar(1+n*0.22);
+            pos.setXYZ(i,MP.v1.x,MP.v1.y,MP.v1.z);
+        }
+        g.computeVertexNormals();
+        this.impostor=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+            color:0x5a5a6a,roughness:0.9,metalness:0.1,flatShading:true}));
+        this.group.add(this.impostor);
+    }
+
+    startGeneration(){
+        if(this.isGenerated||this.isGenerating)return;
+        this.isGenerating=true;
+        const half=this.chunkDim/2;
+        const queue=[];
+        for(let cx=0;cx<this.chunkDim;cx++)
+            for(let cy=0;cy<this.chunkDim;cy++)
+                for(let cz=0;cz<this.chunkDim;cz++){
+                    // quick sphere-AABB cull: skip chunks fully outside asteroid sphere
+                    const lx=(cx-half)*CFG.CHUNK,ly=(cy-half)*CFG.CHUNK,lz=(cz-half)*CFG.CHUNK;
+                    const dx=Math.max(0,Math.abs(lx+CFG.CHUNK/2)-this.radius);
+                    const dy=Math.max(0,Math.abs(ly+CFG.CHUNK/2)-this.radius);
+                    const dz=Math.max(0,Math.abs(lz+CFG.CHUNK/2)-this.radius);
+                    if(dx*dx+dy*dy+dz*dz<=(this.radius*0.5)*(this.radius*0.5))
+                        queue.push({cx,cy,cz});
+                }
+        // sort: center-out
+        queue.sort((a,b)=>{
+            const da=Math.abs(a.cx-half)+Math.abs(a.cy-half)+Math.abs(a.cz-half);
+            const db=Math.abs(b.cx-half)+Math.abs(b.cy-half)+Math.abs(b.cz-half);
+            return da-db;
+        });
+        this.pendingChunks=queue;
+    }
+
+    processChunks(maxN){
+        if(!this.isGenerating)return;
+        for(let i=0;i<maxN&&this.pendingChunks.length>0;i++){
+            const {cx,cy,cz}=this.pendingChunks.shift();
+            this._genChunk(cx,cy,cz);
+        }
+        if(this.pendingChunks.length===0){
+            this.isGenerated=true;
+            this.isGenerating=false;
+        }
+    }
+
+    _genChunk(cx,cy,cz){
+        const S=CFG.CHUNK,sq=CFG.CHUNK_SQ;
+        let chunk=null;
+        const R=this.radius,R2=R*R;
+        const seed=this.seed;
+
+        for(let lx=0;lx<S;lx++)
+            for(let ly=0;ly<S;ly++)
+                for(let lz=0;lz<S;lz++){
+                    const vx=cx*S+lx-this.offset;
+                    const vy=cy*S+ly-this.offset;
+                    const vz=cz*S+lz-this.offset;
+                    const d2=vx*vx+vy*vy+vz*vz;
+                    if(d2>R2*1.35)continue;
+
+                    const nBase=SN.n3((vx+seed)*0.024,(vy+seed)*0.024,(vz+seed)*0.024);
+                    const nCave=SN.n3((vx+seed*2)*0.048,(vy+seed*2)*0.048,(vz+seed*2)*0.048);
+                    const surf=R+nBase*11;
+                    const dist=Math.sqrt(d2);
+
+                    if(dist<=surf&&nCave<0.62){
+                        if(!chunk){
+                            chunk=new Chunk(this,cx,cy,cz);
+                            this.chunks.set(`${cx},${cy},${cz}`,chunk);
+                        }
+                        let vt=VT.STONE;
+                        const nOre=SN.n3((vx-seed)*0.058,(vy-seed)*0.058,(vz-seed)*0.058);
+                        if(nOre>0.42){
+                            const r=Math.abs(SN.n3(vx*0.1,vy*0.1,vz*0.1));
+                            if(r>0.83)      vt=VT.URANIUM;
+                            else if(r>0.73) vt=VT.PLATINUM;
+                            else if(r>0.61) vt=VT.GOLD;
+                            else if(r>0.49) vt=VT.TITANIUM;
+                            else if(r>0.36) vt=VT.NICKEL;
+                            else if(r>0.21) vt=VT.COPPER;
+                            else            vt=VT.IRON;
+                        }else if(nCave<-0.38) vt=VT.ICE;
+                        chunk.voxels[lx+ly*S+lz*sq]=vt;
+                    }
+                }
+        if(chunk) chunk.rebuildMesh(this.mat);
+    }
+
+    updateLOD(playerPos){
+        const dist=this.group.position.distanceTo(playerPos);
+        const visible=dist<CFG.LOD_IMPOSTOR;
+        this.group.visible=visible;
+        if(!visible)return;
+
+        if(dist<CFG.LOD_VOXEL){
+            if(!this.isGenerating&&!this.isGenerated) this.startGeneration();
+            this.isHighDetail=true;
+            // impostor visible until generation done
+            this.impostor.visible=!this.isGenerated;
+            this.chunks.forEach(c=>{if(c.mesh)c.mesh.visible=true;});
+        }else{
+            this.isHighDetail=false;
+            this.impostor.visible=true;
+            this.chunks.forEach(c=>{if(c.mesh)c.mesh.visible=false;});
+        }
+    }
+
+    mine(worldPt, radius, onMined){
+        if(!this.isHighDetail)return;
+        const lp=MP.v1.copy(worldPt).sub(this.group.position);
+        const S=CFG.CHUNK;
+        const minX=Math.floor(lp.x-radius)+this.offset;
+        const maxX=Math.ceil( lp.x+radius)+this.offset;
+        const minY=Math.floor(lp.y-radius)+this.offset;
+        const maxY=Math.ceil( lp.y+radius)+this.offset;
+        const minZ=Math.floor(lp.z-radius)+this.offset;
+        const maxZ=Math.ceil( lp.z+radius)+this.offset;
+
+        const dirtySet=new Set();
+        for(let x=minX;x<=maxX;x++){
+            for(let y=minY;y<=maxY;y++){
+                for(let z=minZ;z<=maxZ;z++){
+                    const cx=Math.floor(x/S),cy=Math.floor(y/S),cz=Math.floor(z/S);
+                    const chunk=this.chunks.get(`${cx},${cy},${cz}`);
+                    if(!chunk)continue;
+                    const lx=((x%S)+S)%S,ly=((y%S)+S)%S,lz=((z%S)+S)%S;
+                    const vt=chunk.get(lx,ly,lz);
+                    if(vt!==VT.AIR){
+                        chunk.set(lx,ly,lz,VT.AIR);
+                        onMined(vt);
+                        dirtySet.add(chunk);
+                    }
+                }
+            }
+        }
+        dirtySet.forEach(c=>c.rebuildMesh(this.mat));
+    }
+
+    countVoxels(){
+        let n=0;
+        this.chunks.forEach(c=>{if(c.mesh)n+=c.voxels.reduce((a,v)=>a+(v>0?1:0),0);});
+        return n;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MINING SHIP
+// ════════════════════════════════════════════════════════════════
+class MiningShip{
+    constructor(scene){
+        this.scene=scene;
+        this.root=new THREE.Group();
+        scene.add(this.root);
+        this.pos=this.root.position;
+        this.vel=new THREE.Vector3();
+        this.angVel=new THREE.Vector3();
+        this.quat=this.root.quaternion;
+
+        this.stats={
+            hp:100,maxHp:100,
+            energy:100,maxEnergy:100,
+            cargo:0,maxCargo:100,
+            thrust:44,boost:2.1,
+            miningPow:1.0,laserCost:14,
+            laserLv:1,cargoUpg:0,engineLv:1,energyLv:1,
+        };
+        this.inventory={};
+        for(const k of Object.values(VT)) this.inventory[k]=0;
+
+        this._buildMesh();
+        this._buildLaser();
+    }
+
+    _buildMesh(){
+        const bodyG=new THREE.ConeGeometry(1.1,4.2,6);bodyG.rotateX(Math.PI/2);
+        const mat=new THREE.MeshStandardMaterial({color:0x1a3a5c,metalness:0.85,roughness:0.2});
+        const body=new THREE.Mesh(bodyG,mat);
+        this.root.add(body);
+
+        const glassG=new THREE.SphereGeometry(0.55,8,8);
+        const glass=new THREE.Mesh(glassG,
+            new THREE.MeshStandardMaterial({color:0x00e8ff,roughness:0.05,metalness:0.3}));
+        glass.position.set(0,0.4,0.6);this.root.add(glass);
+
+        const wingG=new THREE.BoxGeometry(4.8,0.08,1.4);
+        const wing=new THREE.Mesh(wingG,mat);wing.position.set(0,0,-0.3);
+        this.root.add(wing);
+
+        // engine nozzle
+        const nozG=new THREE.CylinderGeometry(0.3,0.5,0.6,8);nozG.rotateX(Math.PI/2);
+        const noz=new THREE.Mesh(nozG,new THREE.MeshStandardMaterial({color:0x223355,roughness:0.6}));
+        noz.position.set(0,0,1.8);this.root.add(noz);
+    }
+
+    _buildLaser(){
+        const g=new THREE.CylinderGeometry(0.08,0.16,1,7);g.rotateX(Math.PI/2);
+        this.laserMesh=new THREE.Mesh(g,
+            new THREE.MeshBasicMaterial({color:0x00f0ff,transparent:true,opacity:0.85}));
+        this.laserMesh.visible=false;
+        this.scene.add(this.laserMesh);
+    }
+
+    update(dt,inp){
+        const thrust=this.stats.thrust*(inp.boost?this.stats.boost:1);
+        MP.v1.set(0,0,0);
+        if(inp.forward)  MP.v1.z-=thrust;
+        if(inp.backward) MP.v1.z+=thrust;
+        if(inp.left)     MP.v1.x-=thrust*0.7;
+        if(inp.right)    MP.v1.x+=thrust*0.7;
+        if(inp.up)       MP.v1.y+=thrust*0.7;
+        if(inp.down)     MP.v1.y-=thrust*0.7;
+        MP.v1.applyQuaternion(this.quat);
+        this.vel.addScaledVector(MP.v1,dt);
+        this.vel.multiplyScalar(Math.pow(0.84,dt*60));
+        this.pos.addScaledVector(this.vel,dt);
+
+        const tr=2.0;
+        if(inp.yaw!==0) this.angVel.y=-inp.yaw*tr; else this.angVel.y*=0.88;
+        if(inp.pitch!==0) this.angVel.x=inp.pitch*tr; else this.angVel.x*=0.88;
+        if(inp.roll!==0) this.angVel.z=inp.roll*tr*1.4; else this.angVel.z*=0.88;
+
+        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.angVel.y*dt);
+        this.quat.multiply(MP.q1);
+        MP.v2.set(1,0,0).applyQuaternion(this.quat);
+        MP.q1.setFromAxisAngle(MP.v2,this.angVel.x*dt);
+        this.quat.premultiply(MP.q1);
+        MP.v2.set(0,0,1).applyQuaternion(this.quat);
+        MP.q1.setFromAxisAngle(MP.v2,this.angVel.z*dt);
+        this.quat.premultiply(MP.q1);
+
+        // energy regen
+        if(this.stats.energy<this.stats.maxEnergy)
+            this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+9*dt);
+
+        // sound
+        const spd=this.vel.length();
+        Sound.setThrust(spd/80);
+    }
+
+    fireLaser(asteroids,sparks,dt){
+        if(this.stats.energy<2){this.laserMesh.visible=false;Sound.stopLaser();return;}
+        this.stats.energy=Math.max(0,this.stats.energy-this.stats.laserCost*dt);
+        Sound.startLaser();
+
+        MP.v1.set(0,0,-1).applyQuaternion(this.quat);
+        MP.ray.set(this.pos,MP.v1);
+        MP.ray.far=85;
+
+        let hitPt=null,hitAst=null;
+        for(const ast of asteroids){
+            if(!ast.isHighDetail)continue;
+            if(ast.group.position.distanceTo(this.pos)-ast.radius>85)continue;
+            const meshes=[];
+            ast.chunks.forEach(c=>{if(c.mesh&&c.mesh.visible)meshes.push(c.mesh);});
+            if(meshes.length===0)continue;
+            const hits=MP.ray.intersectObjects(meshes,false);
+            if(hits.length>0){hitPt=hits[0].point;hitAst=ast;break;}
+        }
+
+        // draw beam
+        const endPt=hitPt||MP.v2.copy(this.pos).addScaledVector(MP.v1,85);
+        const midPt=MP.v3.copy(this.pos).add(endPt).multiplyScalar(0.5);
+        const beamLen=this.pos.distanceTo(endPt);
+        this.laserMesh.position.copy(midPt);
+        this.laserMesh.scale.set(1,1,beamLen);
+        this.laserMesh.lookAt(endPt);
+        this.laserMesh.visible=true;
+
+        if(hitPt&&hitAst){
+            const mineR=1.6*this.stats.miningPow;
+            let didMine=false;
+            hitAst.mine(hitPt,mineR,(vt)=>{
+                this.addResource(vt,1);
+                sparks.spawnMine(hitPt,vt);
+                didMine=true;
+            });
+            if(didMine) Sound.playHit();
+        }
+    }
+
+    addResource(vt,n){
+        const sp=this.stats.maxCargo-this.stats.cargo;
+        if(sp<=0)return false;
+        const add=Math.min(sp,n);
+        this.inventory[vt]=(this.inventory[vt]||0)+add;
+        this.stats.cargo+=add;
+        return true;
+    }
+
+    totalValue(){
+        let v=0;
+        for(const[k,c] of Object.entries(this.inventory)) v+=c*VPROPS[k].val;
+        return v;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MULTI-PURPOSE PARTICLE ENGINE
+// ════════════════════════════════════════════════════════════════
+class ParticleEngine{
+    constructor(scene,max,color,size,blend){
+        this.max=max;
+        this.pos=new Float32Array(max*3);
+        this.vel=new Float32Array(max*3);
+        this.life=new Float32Array(max);
+        this.colArr=new Float32Array(max*3);
+        this.head=0;
+        const g=new THREE.BufferGeometry();
+        g.setAttribute('position',new THREE.BufferAttribute(this.pos,3));
+        g.setAttribute('color',new THREE.BufferAttribute(this.colArr,3));
+        this.sys=new THREE.Points(g,new THREE.PointsMaterial({
+            size,vertexColors:true,transparent:true,
+            blending:blend||THREE.AdditiveBlending,depthWrite:false}));
+        scene.add(this.sys);
+    }
+    spawn(pos,vel,life,r,gg,b){
+        const i=(this.head%this.max);
+        const i3=i*3;
+        this.pos[i3]=pos.x;this.pos[i3+1]=pos.y;this.pos[i3+2]=pos.z;
+        this.vel[i3]=vel.x;this.vel[i3+1]=vel.y;this.vel[i3+2]=vel.z;
+        this.life[i]=life;
+        this.colArr[i3]=r;this.colArr[i3+1]=gg;this.colArr[i3+2]=b;
+        this.head++;
+    }
+    spawnMine(pt,vt){
+        const c=VRGB[vt]||[1,0.6,0];
+        const n=6;
+        for(let i=0;i<n;i++){
+            const v=MP.v1.set((Math.random()-.5)*18,(Math.random()-.5)*18,(Math.random()-.5)*18);
+            this.spawn(pt,v,0.25+Math.random()*0.35,c[0],c[1],c[2]);
+        }
+    }
+    update(dt){
+        const p=this.pos,v=this.vel,l=this.life;
+        const active=Math.min(this.head,this.max);
+        for(let i=0;i<active;i++){
+            if(l[i]>0){
+                l[i]-=dt;
+                const i3=i*3;
+                p[i3]+=v[i3]*dt;p[i3+1]+=v[i3+1]*dt;p[i3+2]+=v[i3+2]*dt;
+            }
+        }
+        this.sys.geometry.attributes.position.needsUpdate=true;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ENGINE EXHAUST
+// ════════════════════════════════════════════════════════════════
+class ExhaustEmitter{
+    constructor(scene,ship){
+        this.ship=ship;
+        this.pe=new ParticleEngine(scene,CFG.EXHAUST_MAX,null,0.9);
+        this.timer=0;
+    }
+    update(dt,inp){
+        const thrusting=inp.forward||inp.backward||inp.left||inp.right||inp.up||inp.down;
+        if(thrusting){
+            this.timer+=dt;
+            if(this.timer>0.016){
+                this.timer=0;
+                // spawn behind engine nozzle
+                MP.v1.set(0,0,2.2).applyQuaternion(this.ship.quat).add(this.ship.pos);
+                const spd=inp.boost?22:14;
+                MP.v2.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd);
+                MP.v2.x+=(Math.random()-.5)*3;
+                MP.v2.y+=(Math.random()-.5)*3;
+                MP.v2.z+=(Math.random()-.5)*3;
+                const t=0.18+Math.random()*0.12;
+                // cyan-to-blue gradient
+                const r=0,gg=0.5+Math.random()*0.5,b=1;
+                this.pe.spawn(MP.v1,MP.v2,t,r,gg,b);
+            }
+        }
+        this.pe.update(dt);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MAIN GAME ENGINE
+// ════════════════════════════════════════════════════════════════
+class GameEngine{
+    constructor(){
+        this.clock=new THREE.Clock();
+        this.asteroids=[];
+        this.fpsFrames=0;this.fpsTick=0;
+        this.autoSaveTick=0;
+        this.camDist=CFG.CAM_DEFAULT;
+        this.cameraTarget=new THREE.Vector3();
+        this.isLocked=false;
+        this.shopOpen=false;
+
+        this.inp={
+            forward:false,backward:false,left:false,right:false,
+            up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,
+        };
+
+        this._initRenderer();
+        this._initScene();
+        this._initEntities();
+        this._initInputs();
+        this._initUI();
+        this._loadSave();
+
+        window.addEventListener('resize',()=>this._onResize());
+        this._animate();
+    }
+
+    _initRenderer(){
+        this.renderer=new THREE.WebGLRenderer({
+            antialias:false,powerPreference:'high-performance',stencil:false});
+        this.renderer.setSize(window.innerWidth,window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.6));
+        this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure=1.2;
+        document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+        this.scene=new THREE.Scene();
+        this.scene.fog=new THREE.FogExp2(0x000008,0.00072);
+        this.camera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,0.1,3000);
+    }
+
+    _initScene(){
+        // Lighting
+        const sun=new THREE.DirectionalLight(0xffeedd,1.6);
+        sun.position.set(600,250,400);this.scene.add(sun);
+        this.scene.add(new THREE.AmbientLight(0x112233,0.55));
+        const fill=new THREE.PointLight(0x4488ff,0.4,800);
+        fill.position.set(-400,100,-200);this.scene.add(fill);
+
+        // Starfield
+        const nStars=3500;
+        const sPos=new Float32Array(nStars*3);
+        const sCols=new Float32Array(nStars*3);
+        for(let i=0;i<nStars;i++){
+            const i3=i*3;
+            sPos[i3]=(Math.random()-.5)*2600;
+            sPos[i3+1]=(Math.random()-.5)*2600;
+            sPos[i3+2]=(Math.random()-.5)*2600;
+            const bri=0.5+Math.random()*0.5;
+            const warm=Math.random()>0.8;
+            sCols[i3]=bri*(warm?1.0:0.9);
+            sCols[i3+1]=bri*(warm?0.9:0.95);
+            sCols[i3+2]=bri*(warm?0.7:1.0);
+        }
+        const sg=new THREE.BufferGeometry();
+        sg.setAttribute('position',new THREE.BufferAttribute(sPos,3));
+        sg.setAttribute('color',new THREE.BufferAttribute(sCols,3));
+        this.scene.add(new THREE.Points(sg,new THREE.PointsMaterial({
+            size:1.4,vertexColors:true,sizeAttenuation:false})));
+
+        // Nebula glow (large back sphere)
+        const nebG=new THREE.SphereGeometry(1400,16,16);
+        const nebM=new THREE.MeshBasicMaterial({
+            color:0x1a0830,side:THREE.BackSide,transparent:true,opacity:0.55});
+        this.scene.add(new THREE.Mesh(nebG,nebM));
+
+        // Distant planet
+        const pG=new THREE.SphereGeometry(55,24,24);
+        const pPos=pG.attributes.position;
+        const pCol=new Float32Array(pPos.count*3);
+        for(let i=0;i<pPos.count;i++){
+            const px=pPos.getX(i),py=pPos.getY(i),pz=pPos.getZ(i);
+            const n=SN.n3(px*0.025,py*0.025,pz*0.025);
+            const n2=SN.n3(px*0.08,py*0.08,pz*0.08);
+            const i3=i*3;
+            // Mars-like orange/brown with some blue
+            const base=0.3+n*0.25;
+            const stripe=Math.sin(py*0.15+n2*3)*0.5+0.5;
+            pCol[i3]=0.55+base*0.35+stripe*0.1;
+            pCol[i3+1]=0.25+base*0.15;
+            pCol[i3+2]=0.1+stripe*0.25;
+        }
+        pG.setAttribute('color',new THREE.BufferAttribute(pCol,3));
+        const pMesh=new THREE.Mesh(pG,new THREE.MeshStandardMaterial({
+            vertexColors:true,roughness:0.9,metalness:0.0}));
+        pMesh.position.set(900,-180,-1100);
+        this.scene.add(pMesh);
+        this.planet=pMesh;
+    }
+
+    _initEntities(){
+        this.sparks=new ParticleEngine(this.scene,CFG.SPARKS_MAX,null,0.7);
+        this.ship=new MiningShip(this.scene);
+        this.exhaust=new ExhaustEmitter(this.scene,this.ship);
+
+        const types=['small','small','small','medium','medium','large'];
+        let placed=0;
+        const seed=Date.now();
+        for(let i=0;i<200&&placed<CFG.ASTEROID_N;i++){
+            const a=(seed+i*377)%1000/1000,b=(seed+i*631)%1000/1000,c=(seed+i*919)%1000/1000;
+            const x=(a-.5)*CFG.WORLD_R,y=(b-.5)*(CFG.WORLD_R*0.28),z=(c-.5)*CFG.WORLD_R;
+            if(x*x+y*y+z*z<160*160)continue;
+            const sz=types[Math.floor(Math.random()*types.length)];
+            this.asteroids.push(new Asteroid(placed,this.scene,x,y,z,sz,Math.random()*99999));
+            placed++;
+        }
+    }
+
+    _initInputs(){
+        const canvas=this.renderer.domElement;
+
+        // Pointer lock
+        canvas.addEventListener('click',()=>{
+            if(!this.shopOpen) canvas.requestPointerLock();
+        });
+        document.addEventListener('pointerlockchange',()=>{
+            this.isLocked=document.pointerLockElement===canvas;
+            document.getElementById('lock-indicator').style.display=this.isLocked?'block':'none';
+        });
+
+        // Mouse move (works both locked + unlocked for look)
+        let prevX=0,prevY=0,mouseDown=false;
+        window.addEventListener('mousedown',e=>{
+            if(e.target===canvas){mouseDown=true;prevX=e.clientX;prevY=e.clientY;}
+        });
+        window.addEventListener('mouseup',()=>{
+            mouseDown=false;
+            if(!this.isLocked){this.inp.yaw=0;this.inp.pitch=0;}
+        });
+        window.addEventListener('mousemove',e=>{
+            Sound.resume();
+            let dx,dy;
+            if(this.isLocked){dx=e.movementX;dy=e.movementY;}
+            else if(mouseDown){dx=e.clientX-prevX;dy=e.clientY-prevY;prevX=e.clientX;prevY=e.clientY;}
+            else return;
+            this.inp.yaw=dx*0.004;
+            this.inp.pitch=dy*0.004;
+        });
+
+        // Scroll zoom
+        window.addEventListener('wheel',e=>{
+            this.camDist=Math.max(CFG.CAM_MIN,Math.min(CFG.CAM_MAX,
+                this.camDist+e.deltaY*0.012));
+        },{passive:true});
+
+        // Keys
+        window.addEventListener('keydown',e=>{
+            Sound.resume();Sound.init();
+            switch(e.code){
+                case'KeyW':this.inp.forward=true;break;
+                case'KeyS':this.inp.backward=true;break;
+                case'KeyA':this.inp.left=true;break;
+                case'KeyD':this.inp.right=true;break;
+                case'KeyR':this.inp.up=true;break;
+                case'KeyF':this.inp.down=true;break;
+                case'KeyQ':this.inp.roll=-1;break;
+                case'KeyE':this.inp.roll=1;break;
+                case'ShiftLeft':case'ShiftRight':this.inp.boost=true;break;
+                case'Space':e.preventDefault();this.inp.fire=true;break;
+                case'KeyU':this._toggleShop();break;
+                case'Escape':if(this.shopOpen)this._toggleShop(false);break;
+            }
+        });
+        window.addEventListener('keyup',e=>{
+            switch(e.code){
+                case'KeyW':this.inp.forward=false;break;
+                case'KeyS':this.inp.backward=false;break;
+                case'KeyA':this.inp.left=false;break;
+                case'KeyD':this.inp.right=false;break;
+                case'KeyR':this.inp.up=false;break;
+                case'KeyF':this.inp.down=false;break;
+                case'KeyQ':case'KeyE':this.inp.roll=0;break;
+                case'ShiftLeft':case'ShiftRight':this.inp.boost=false;break;
+                case'Space':this.inp.fire=false;break;
+            }
+            if(!this.isLocked){
+                if(e.code==='KeyA'||e.code==='KeyD') this.inp.yaw=0;
+            }
+        });
+
+        // Touch
+        if('ontouchstart' in window){
+            document.getElementById('touch-controls').style.display='block';
+            this._initTouch();
+        }
+
+        // Upgrade buttons
+        document.getElementById('btn-upg-laser').onclick=()=>this._upgrade('laser');
+        document.getElementById('btn-upg-cargo').onclick=()=>this._upgrade('cargo');
+        document.getElementById('btn-upg-engine').onclick=()=>this._upgrade('engine');
+        document.getElementById('btn-upg-energy').onclick=()=>this._upgrade('energy');
+        document.getElementById('btn-close-modal').onclick=()=>this._toggleShop(false);
+    }
+
+    _initTouch(){
+        const joystick=document.getElementById('vjoy');
+        const knob=document.getElementById('vjoy-knob');
+        let jId=null,jSx=0,jSy=0;
+        joystick.addEventListener('touchstart',e=>{
+            const t=e.changedTouches[0];jId=t.identifier;jSx=t.clientX;jSy=t.clientY;
+        },{passive:true});
+        joystick.addEventListener('touchmove',e=>{
+            for(const t of e.changedTouches) if(t.identifier===jId){
+                const dx=t.clientX-jSx,dy=t.clientY-jSy;
+                const d=Math.min(Math.sqrt(dx*dx+dy*dy),38);
+                const a=Math.atan2(dy,dx);
+                knob.style.transform=`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`;
+                this.inp.forward=dy<-10;this.inp.backward=dy>10;
+                this.inp.left=dx<-10;this.inp.right=dx>10;
+            }
+        },{passive:true});
+        const reset=()=>{jId=null;knob.style.transform='';
+            this.inp.forward=this.inp.backward=this.inp.left=this.inp.right=false;};
+        joystick.addEventListener('touchend',reset);joystick.addEventListener('touchcancel',reset);
+
+        // Look area
+        const look=document.getElementById('btn-look-area');
+        let lId=null,lpx=0,lpy=0;
+        look.addEventListener('touchstart',e=>{const t=e.changedTouches[0];lId=t.identifier;lpx=t.clientX;lpy=t.clientY;},{passive:true});
+        look.addEventListener('touchmove',e=>{
+            for(const t of e.changedTouches) if(t.identifier===lId){
+                this.inp.yaw=(t.clientX-lpx)*0.006;
+                this.inp.pitch=(t.clientY-lpy)*0.006;
+                lpx=t.clientX;lpy=t.clientY;
+            }
+        },{passive:true});
+        const resetLook=()=>{lId=null;this.inp.yaw=0;this.inp.pitch=0;};
+        look.addEventListener('touchend',resetLook);look.addEventListener('touchcancel',resetLook);
+
+        const bind=(id,start,end)=>{
+            const el=document.getElementById(id);
+            el.addEventListener('touchstart',e=>{e.preventDefault();start();},{passive:false});
+            el.addEventListener('touchend',e=>{e.preventDefault();end();},{passive:false});
+        };
+        bind('btn-fire',()=>this.inp.fire=true,()=>this.inp.fire=false);
+        bind('btn-boost',()=>this.inp.boost=true,()=>this.inp.boost=false);
+        bind('btn-up',()=>this.inp.up=true,()=>this.inp.up=false);
+        bind('btn-down',()=>this.inp.down=true,()=>this.inp.down=false);
+        bind('btn-shop',()=>this._toggleShop(),()=>{});
+    }
+
+    _initUI(){
+        this.minimapCanvas=document.getElementById('minimap-canvas');
+        this.minimapCtx=this.minimapCanvas.getContext('2d');
+        this.minimapCanvas.width=110;this.minimapCanvas.height=110;
+
+        // Start button
+        document.getElementById('btn-start').addEventListener('click',()=>{
+            Sound.init();Sound.resume();
+            document.getElementById('start-screen').style.display='none';
+        });
+    }
+
+    _toggleShop(force){
+        const modal=document.getElementById('upgrade-modal');
+        this.shopOpen=force!==undefined?force:!this.shopOpen;
+        modal.style.display=this.shopOpen?'flex':'none';
+        if(this.shopOpen) this._updateShopUI();
+    }
+
+    _updateShopUI(){
+        const s=this.ship.stats,inv=this.ship.inventory;
+        const iron=inv[VT.IRON]||0,copper=inv[VT.COPPER]||0;
+        const nickel=inv[VT.NICKEL]||0,titanium=inv[VT.TITANIUM]||0;
+        document.getElementById('lv-laser').textContent=`Lv.${s.laserLv}  (採掘力: ${s.miningPow.toFixed(1)})`;
+        document.getElementById('lv-cargo').textContent=`+${s.cargoUpg*50} (最大: ${s.maxCargo})`;
+        document.getElementById('lv-engine').textContent=`Lv.${s.engineLv}  (推力: ${s.thrust.toFixed(0)})`;
+        document.getElementById('lv-energy').textContent=`Lv.${s.energyLv}  (容量: ${s.maxEnergy})`;
+        document.getElementById('btn-upg-laser').disabled=!(iron>=20&&copper>=10);
+        document.getElementById('btn-upg-cargo').disabled=!(iron>=30&&nickel>=15);
+        document.getElementById('btn-upg-engine').disabled=!(iron>=25&&titanium>=10);
+        document.getElementById('btn-upg-energy').disabled=!(copper>=20&&nickel>=20);
+    }
+
+    _upgrade(type){
+        const s=this.ship.stats,inv=this.ship.inventory;
+        const spend=(res,n)=>{const used=Math.min(inv[res]||0,n);inv[res]-=used;this.ship.stats.cargo-=used;};
+        if(type==='laser'&&(inv[VT.IRON]||0)>=20&&(inv[VT.COPPER]||0)>=10){
+            spend(VT.IRON,20);spend(VT.COPPER,10);
+            s.miningPow+=0.5;s.laserLv++;
+            Notify.upgrade('採掘パワー強化！');
+        }else if(type==='cargo'&&(inv[VT.IRON]||0)>=30&&(inv[VT.NICKEL]||0)>=15){
+            spend(VT.IRON,30);spend(VT.NICKEL,15);
+            s.maxCargo+=50;s.cargoUpg++;
+            Notify.upgrade('貨物スロット拡張！');
+        }else if(type==='engine'&&(inv[VT.IRON]||0)>=25&&(inv[VT.TITANIUM]||0)>=10){
+            spend(VT.IRON,25);spend(VT.TITANIUM,10);
+            s.thrust+=12;s.engineLv++;
+            Notify.upgrade('エンジン推力強化！');
+        }else if(type==='energy'&&(inv[VT.COPPER]||0)>=20&&(inv[VT.NICKEL]||0)>=20){
+            spend(VT.COPPER,20);spend(VT.NICKEL,20);
+            s.maxEnergy+=40;s.energyLv++;
+            Notify.upgrade('エネルギー容量拡張！');
+        }else{
+            Notify.warn('資源が不足しています');
+            this._updateShopUI();return;
+        }
+        Sound.playPickup(3);
+        this._updateShopUI();
+        this._saveSave();
+    }
+
+    _updateCamera(){
+        // Smooth follow camera
+        MP.v1.set(0,3.2,this.camDist).applyQuaternion(this.ship.quat);
+        const tgt=MP.v2.copy(this.ship.pos).add(MP.v1);
+        this.camera.position.lerp(tgt,CFG.CAM_LERP);
+
+        // Look ahead
+        const ahead=MP.v3.copy(this.ship.pos).add(
+            MP.v4.set(0,0,-8).applyQuaternion(this.ship.quat));
+        this.camera.lookAt(ahead);
+    }
+
+    _renderMinimap(){
+        const ctx=this.minimapCtx;
+        const R=55,S=0.09;
+        ctx.clearRect(0,0,110,110);
+        ctx.strokeStyle='rgba(0,240,255,0.18)';
+        ctx.beginPath();ctx.arc(R,R,R-2,0,Math.PI*2);ctx.stroke();
+        ctx.strokeStyle='rgba(0,240,255,0.08)';
+        ctx.beginPath();ctx.arc(R,R,(R-2)/2,0,Math.PI*2);ctx.stroke();
+
+        for(const ast of this.asteroids){
+            const dx=(ast.group.position.x-this.ship.pos.x)*S;
+            const dz=(ast.group.position.z-this.ship.pos.z)*S;
+            if(dx*dx+dz*dz>(R-4)*(R-4))continue;
+            const d=ast.group.position.distanceTo(this.ship.pos);
+            if(d<CFG.LOD_VOXEL) ctx.fillStyle='#00ffaa';
+            else if(d<CFG.LOD_GEN) ctx.fillStyle='#ffaa00';
+            else ctx.fillStyle='#667788';
+            ctx.beginPath();ctx.arc(R+dx,R+dz,ast.isHighDetail?3:2,0,Math.PI*2);ctx.fill();
+        }
+        ctx.fillStyle='#00f0ff';
+        ctx.beginPath();ctx.arc(R,R,3,0,Math.PI*2);ctx.fill();
+    }
+
+    _updateHUD(){
+        const s=this.ship.stats;
+        document.getElementById('hp-fill').style.width=`${(s.hp/s.maxHp)*100}%`;
+        document.getElementById('hp-text').textContent=`${Math.round(s.hp)}/${s.maxHp}`;
+        document.getElementById('energy-fill').style.width=`${(s.energy/s.maxEnergy)*100}%`;
+        document.getElementById('energy-text').textContent=`${Math.round(s.energy)}/${s.maxEnergy}`;
+        document.getElementById('cargo-fill').style.width=`${(s.cargo/s.maxCargo)*100}%`;
+        document.getElementById('cargo-text').textContent=`${s.cargo}/${s.maxCargo}`;
+
+        const p=this.ship.pos;
+        document.getElementById('pos-val').textContent=
+            `${Math.round(p.x)},${Math.round(p.y)},${Math.round(p.z)}`;
+
+        const rl=document.getElementById('resource-list');
+        rl.innerHTML='';
+        let totalVal=0;
+        for(const[k,c] of Object.entries(this.ship.inventory)){
+            if(c<=0)continue;
+            const prop=VPROPS[k];
+            const val=c*prop.val;totalVal+=val;
+            const row=document.createElement('div');row.className='res-row';
+            row.innerHTML=`<span class="res-name">${prop.name}</span>`+
+                `<span class="res-val">${c}</span>`+
+                `<span class="res-value">${val}Cr</span>`;
+            rl.appendChild(row);
+        }
+        document.getElementById('total-value').textContent=totalVal>0?`総価値: ${totalVal} Cr`:'';
+        if(this.shopOpen) this._updateShopUI();
+    }
+
+    _saveSave(){
+        localStorage.setItem('vam_save',JSON.stringify({
+            stats:this.ship.stats,inventory:this.ship.inventory}));
+    }
+    _loadSave(){
+        try{
+            const raw=localStorage.getItem('vam_save');
+            if(raw){
+                const d=JSON.parse(raw);
+                Object.assign(this.ship.stats,d.stats);
+                Object.assign(this.ship.inventory,d.inventory);
+            }
+        }catch(e){}
+    }
+
+    _onResize(){
+        this.camera.aspect=window.innerWidth/window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth,window.innerHeight);
+    }
+
+    _animate(){
+        requestAnimationFrame(()=>this._animate());
+        const dt=Math.min(this.clock.getDelta(),0.1);
+
+        // Start screen guard
+        if(document.getElementById('start-screen').style.display==='none'){
+            this.ship.update(dt,this.inp);
+
+            if(this.inp.fire){
+                this.ship.fireLaser(this.asteroids,this.sparks,dt);
+                document.getElementById('crosshair').classList.add('firing');
+            }else{
+                this.ship.laserMesh.visible=false;
+                Sound.stopLaser();
+                document.getElementById('crosshair').classList.remove('firing');
+            }
+
+            this.sparks.update(dt);
+            this.exhaust.update(dt,this.inp);
+
+            // Progressive chunk generation
+            let activeChunks=0;
+            for(const ast of this.asteroids){
+                ast.updateLOD(this.ship.pos);
+                if(ast.isGenerating) ast.processChunks(CFG.CHUNKS_PER_FRAME);
+                if(ast.isHighDetail) activeChunks+=ast.chunks.size;
+            }
+
+            // Rotate planet slowly
+            if(this.planet) this.planet.rotation.y+=dt*0.008;
+
+            this._updateCamera();
+
+            // Auto-save
+            this.autoSaveTick+=dt;
+            if(this.autoSaveTick>=CFG.AUTO_SAVE){
+                this.autoSaveTick=0;
+                this._saveSave();
+            }
+
+            // FPS counter
+            this.fpsFrames++;this.fpsTick+=dt;
+            if(this.fpsTick>=1){
+                document.getElementById('fps-val').textContent=this.fpsFrames;
+                document.getElementById('chunks-val').textContent=activeChunks;
+                this.fpsFrames=0;this.fpsTick=0;
+                this._updateHUD();
+            }
+        }
+
+        this.renderer.render(this.scene,this.camera);
+        this._renderMinimap();
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  BOOTSTRAP
+// ════════════════════════════════════════════════════════════════
+let Game=null;
+window.addEventListener('DOMContentLoaded',()=>{Game=new GameEngine();});
+</script>
+</body>
+</html>
