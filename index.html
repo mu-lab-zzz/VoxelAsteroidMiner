@@ -137,21 +137,99 @@
         .btn-close-modal{background:#ff3355;color:#fff;border:none;padding:8px;
             border-radius:6px;font-weight:700;cursor:pointer;margin-top:4px;}
 
-        /* ── Touch Controls ─────────────────────────────────────── */
-        #touch-controls{display:none;position:absolute;inset:0;pointer-events:none;}
-        .touch-zone{position:absolute;pointer-events:auto;}
-        #vjoy{bottom:28px;left:28px;width:115px;height:115px;border-radius:50%;
-            background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.18);}
-        #vjoy-knob{width:38px;height:38px;border-radius:50%;
-            background:rgba(0,240,255,0.45);position:absolute;top:38px;left:38px;}
-        #action-btns{bottom:28px;right:28px;display:flex;flex-direction:column;gap:10px;}
-        .btn-touch{width:56px;height:56px;border-radius:50%;
-            background:rgba(0,240,255,0.18);border:2px solid #00f0ff;
-            color:#fff;font-size:9px;font-weight:700;
-            display:flex;align-items:center;justify-content:center;pointer-events:auto;}
-        .btn-touch:active{background:rgba(0,240,255,0.55);}
-        #btn-look-area{position:absolute;top:0;right:0;width:55%;height:70%;
-            pointer-events:auto;background:transparent;}
+        /* ── Touch Controls (Dual Joystick) ────────────────────── */
+        #touch-controls{display:none;position:absolute;inset:0;pointer-events:none;
+            /* safe area insets for notch phones */
+            padding-bottom:env(safe-area-inset-bottom);}
+
+        /* shared joystick base */
+        .vjoy-base{
+            position:absolute;pointer-events:auto;
+            width:120px;height:120px;border-radius:50%;
+            background:rgba(255,255,255,0.04);
+            border:1.5px solid rgba(255,255,255,0.18);
+        }
+        .vjoy-knob{
+            width:42px;height:42px;border-radius:50%;
+            position:absolute;top:39px;left:39px;
+            background:rgba(0,240,255,0.45);
+            border:1.5px solid rgba(0,240,255,0.7);
+            box-shadow:0 0 8px rgba(0,240,255,0.3);
+            transition:background 0.1s;
+        }
+        /* Left joystick – bottom left */
+        #vjoy-l{bottom:24px;left:20px;}
+        /* Right joystick – bottom right (look/aim) */
+        #vjoy-r{bottom:24px;right:20px;}
+        #vjoy-r .vjoy-knob{background:rgba(255,120,0,0.4);
+            border-color:rgba(255,160,0,0.7);}
+        /* Label under each joystick */
+        .vjoy-label{
+            position:absolute;bottom:-18px;width:100%;
+            text-align:center;font-size:9px;color:rgba(255,255,255,0.35);
+            letter-spacing:1px;
+        }
+
+        /* Vertical movement buttons – left of left joystick */
+        #btn-up,#btn-down{
+            position:absolute;pointer-events:auto;
+            width:48px;height:48px;border-radius:50%;
+            background:rgba(0,240,255,0.12);border:1.5px solid rgba(0,240,255,0.4);
+            color:#fff;font-size:16px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+        }
+        #btn-up  {bottom:100px;left:152px;}
+        #btn-down{bottom:44px; left:152px;}
+        #btn-up:active,#btn-down:active{background:rgba(0,240,255,0.4);}
+
+        /* Roll buttons – center bottom */
+        #btn-roll-l,#btn-roll-r{
+            position:absolute;pointer-events:auto;
+            width:52px;height:52px;border-radius:10px;
+            background:rgba(180,100,255,0.15);border:1.5px solid rgba(180,100,255,0.45);
+            color:#cc88ff;font-size:18px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+            bottom:24px;
+        }
+        #btn-roll-l{left:50%;transform:translateX(-58px);}
+        #btn-roll-r{left:50%;transform:translateX(6px);}
+        #btn-roll-l:active,#btn-roll-r:active{background:rgba(180,100,255,0.45);}
+
+        /* LASER button – large, above right joystick */
+        #btn-laser{
+            position:absolute;pointer-events:auto;
+            width:72px;height:72px;border-radius:50%;
+            background:rgba(0,220,255,0.22);
+            border:2.5px solid #00f0ff;
+            color:#fff;font-size:10px;font-weight:900;letter-spacing:1px;
+            display:flex;align-items:center;justify-content:center;
+            bottom:162px;right:20px;
+            box-shadow:0 0 16px rgba(0,240,255,0.3);
+        }
+        #btn-laser:active{background:rgba(0,220,255,0.6);
+            box-shadow:0 0 28px rgba(0,240,255,0.6);}
+
+        /* BOOST button – beside LASER */
+        #btn-boost{
+            position:absolute;pointer-events:auto;
+            width:54px;height:54px;border-radius:50%;
+            background:rgba(255,180,0,0.18);border:2px solid #ffaa00;
+            color:#ffcc44;font-size:9px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+            bottom:172px;right:104px;
+        }
+        #btn-boost:active{background:rgba(255,180,0,0.5);}
+
+        /* SHOP small button */
+        #btn-shop-touch{
+            position:absolute;pointer-events:auto;
+            width:44px;height:44px;border-radius:8px;
+            background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.25);
+            color:rgba(255,255,255,0.6);font-size:9px;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+            bottom:100px;right:106px;
+        }
+        #btn-shop-touch:active{background:rgba(255,255,255,0.25);}
     </style>
 </head>
 <body>
@@ -162,16 +240,27 @@
 <div id="start-screen">
     <h1>VOXEL ASTEROID MINER</h1>
     <p class="subtitle">ボクセル小惑星採鉱シミュレーター</p>
-    <div class="controls-grid">
+    <!-- PC controls -->
+    <div class="controls-grid" id="ctrl-pc">
         <span>[W/S]</span><span>前進 / 後退</span>
-        <span>[A/D]</span><span>左右旋回 (Yaw)</span>
-        <span>[Q/E]</span><span>ロール回転</span>
+        <span>[A/D]</span><span>左右旋回</span>
+        <span>[Q/E]</span><span>ロール</span>
         <span>[R/F]</span><span>上昇 / 下降</span>
-        <span>[Shift]</span><span>ブースト加速</span>
+        <span>[Shift]</span><span>ブースト</span>
         <span>[Space]</span><span>採掘レーザー</span>
-        <span>[Mouse]</span><span>クリックでマウスロック</span>
+        <span>[Mouse drag]</span><span>照準</span>
         <span>[Wheel]</span><span>カメラズーム</span>
-        <span>[U]</span><span>アップグレードショップ</span>
+        <span>[U]</span><span>アップグレード</span>
+    </div>
+    <!-- Touch controls -->
+    <div class="controls-grid" id="ctrl-touch" style="display:none">
+        <span>左スティック</span><span>前後左右移動</span>
+        <span>右スティック</span><span>照準 / 旋回</span>
+        <span>▲ / ▼</span><span>上昇 / 下降</span>
+        <span>↺ / ↻</span><span>ロール回転</span>
+        <span>LASER 長押し</span><span>採掘レーザー</span>
+        <span>BOOST 長押し</span><span>ブースト加速</span>
+        <span>SHOP</span><span>アップグレード</span>
     </div>
     <button id="btn-start">▶ ゲームスタート</button>
 </div>
@@ -214,13 +303,7 @@
         <div class="hud-panel" style="max-width:200px;">
             <div class="hud-header">操作ガイド</div>
             <div id="controls-hint">
-                [W/S] 前進/後退<br>
-                [A/D] 左右旋回<br>
-                [Q/E] ロール<br>
-                [R/F] 上昇/下降<br>
-                [Shift] ブースト<br>
-                [Space] レーザー<br>
-                [U] アップグレード
+                <!-- filled dynamically by _initUI() -->
             </div>
         </div>
         <div id="minimap-wrap">
@@ -232,19 +315,28 @@
 <!-- Notifications -->
 <div id="notifications"></div>
 
-<!-- Touch Controls -->
+<!-- Touch Controls (Dual Joystick) -->
 <div id="touch-controls">
-    <div id="vjoy" class="touch-zone">
-        <div id="vjoy-knob"></div>
+    <!-- Left joystick: move (forward/back/strafe) -->
+    <div id="vjoy-l" class="vjoy-base">
+        <div class="vjoy-knob"></div>
+        <div class="vjoy-label">MOVE</div>
     </div>
-    <div id="action-btns" class="touch-zone">
-        <div id="btn-fire" class="btn-touch">LASER</div>
-        <div id="btn-boost" class="btn-touch">BOOST</div>
-        <div id="btn-up" class="btn-touch">UP</div>
-        <div id="btn-down" class="btn-touch">DOWN</div>
-        <div id="btn-shop" class="btn-touch">SHOP</div>
+    <!-- Vertical movement buttons -->
+    <div id="btn-up">▲</div>
+    <div id="btn-down">▼</div>
+    <!-- Roll buttons (center) -->
+    <div id="btn-roll-l">↺</div>
+    <div id="btn-roll-r">↻</div>
+    <!-- Right joystick: look/aim (yaw/pitch) -->
+    <div id="vjoy-r" class="vjoy-base">
+        <div class="vjoy-knob"></div>
+        <div class="vjoy-label">LOOK</div>
     </div>
-    <div id="btn-look-area"></div>
+    <!-- Action buttons -->
+    <div id="btn-laser">LASER</div>
+    <div id="btn-boost">BOOST</div>
+    <div id="btn-shop-touch">SHOP</div>
 </div>
 
 <!-- Upgrade Modal -->
@@ -1240,56 +1332,109 @@ class GameEngine{
     }
 
     _initTouch(){
-        const joystick=document.getElementById('vjoy');
-        const knob=document.getElementById('vjoy-knob');
-        let jId=null,jSx=0,jSy=0;
-        joystick.addEventListener('touchstart',e=>{
-            const t=e.changedTouches[0];jId=t.identifier;jSx=t.clientX;jSy=t.clientY;
-        },{passive:true});
-        joystick.addEventListener('touchmove',e=>{
-            for(const t of e.changedTouches) if(t.identifier===jId){
-                const dx=t.clientX-jSx,dy=t.clientY-jSy;
-                const d=Math.min(Math.sqrt(dx*dx+dy*dy),38);
-                const a=Math.atan2(dy,dx);
-                knob.style.transform=`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`;
-                this.inp.forward=dy<-10;this.inp.backward=dy>10;
-                this.inp.left=dx<-10;this.inp.right=dx>10;
-            }
-        },{passive:true});
-        const reset=()=>{jId=null;knob.style.transform='';
-            this.inp.forward=this.inp.backward=this.inp.left=this.inp.right=false;};
-        joystick.addEventListener('touchend',reset);joystick.addEventListener('touchcancel',reset);
-
-        // Look area
-        const look=document.getElementById('btn-look-area');
-        let lId=null,lpx=0,lpy=0;
-        look.addEventListener('touchstart',e=>{const t=e.changedTouches[0];lId=t.identifier;lpx=t.clientX;lpy=t.clientY;},{passive:true});
-        look.addEventListener('touchmove',e=>{
-            for(const t of e.changedTouches) if(t.identifier===lId){
-                this.inp.yaw=(t.clientX-lpx)*0.006;
-                this.inp.pitch=(t.clientY-lpy)*0.006;
-                lpx=t.clientX;lpy=t.clientY;
-            }
-        },{passive:true});
-        const resetLook=()=>{lId=null;this.inp.yaw=0;this.inp.pitch=0;};
-        look.addEventListener('touchend',resetLook);look.addEventListener('touchcancel',resetLook);
-
-        const bind=(id,start,end)=>{
-            const el=document.getElementById(id);
-            el.addEventListener('touchstart',e=>{e.preventDefault();start();},{passive:false});
-            el.addEventListener('touchend',e=>{e.preventDefault();end();},{passive:false});
+        // ── Helper: wire a virtual joystick ──────────────────────────
+        // el: joystick base element
+        // onMove(dx, dy, normX, normY) called each touchmove; onEnd called on release
+        const MAX_R = 46; // pixel radius of joystick travel
+        const makeJoystick = (el, onMove, onEnd) => {
+            const knob = el.querySelector('.vjoy-knob');
+            let tid = null, sx = 0, sy = 0;
+            el.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (tid !== null) return; // one touch per stick
+                const t = e.changedTouches[0];
+                tid = t.identifier; sx = t.clientX; sy = t.clientY;
+            }, { passive: false });
+            el.addEventListener('touchmove', e => {
+                e.preventDefault();
+                for (const t of e.changedTouches) {
+                    if (t.identifier !== tid) continue;
+                    const dx = t.clientX - sx, dy = t.clientY - sy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const clamped = Math.min(dist, MAX_R);
+                    const angle = Math.atan2(dy, dx);
+                    const kx = Math.cos(angle) * clamped;
+                    const ky = Math.sin(angle) * clamped;
+                    knob.style.transform = `translate(${kx}px,${ky}px)`;
+                    onMove(dx, dy, kx / MAX_R, ky / MAX_R);
+                }
+            }, { passive: false });
+            const end = e => {
+                for (const t of e.changedTouches) {
+                    if (t.identifier !== tid) continue;
+                    tid = null;
+                    knob.style.transform = '';
+                    onEnd();
+                }
+            };
+            el.addEventListener('touchend', end, { passive: false });
+            el.addEventListener('touchcancel', end, { passive: false });
         };
-        bind('btn-fire',()=>this.inp.fire=true,()=>this.inp.fire=false);
-        bind('btn-boost',()=>this.inp.boost=true,()=>this.inp.boost=false);
-        bind('btn-up',()=>this.inp.up=true,()=>this.inp.up=false);
-        bind('btn-down',()=>this.inp.down=true,()=>this.inp.down=false);
-        bind('btn-shop',()=>this._toggleShop(),()=>{});
+
+        // ── Left joystick: movement ───────────────────────────────────
+        const MOVE_THRESH = 10;
+        makeJoystick(
+            document.getElementById('vjoy-l'),
+            (dx, dy) => {
+                this.inp.forward  = dy < -MOVE_THRESH;
+                this.inp.backward = dy >  MOVE_THRESH;
+                this.inp.left     = dx < -MOVE_THRESH;
+                this.inp.right    = dx >  MOVE_THRESH;
+            },
+            () => {
+                this.inp.forward = this.inp.backward =
+                this.inp.left    = this.inp.right    = false;
+            }
+        );
+
+        // ── Right joystick: look (yaw/pitch) ─────────────────────────
+        // normX/normY ∈ [-1, 1]; mapped to continuous angular velocity input
+        const LOOK_SENS = 0.36;
+        makeJoystick(
+            document.getElementById('vjoy-r'),
+            (_dx, _dy, nx, ny) => {
+                this.inp.yaw   =  nx * LOOK_SENS;
+                this.inp.pitch =  ny * LOOK_SENS;
+            },
+            () => { this.inp.yaw = 0; this.inp.pitch = 0; }
+        );
+
+        // ── Hold buttons ──────────────────────────────────────────────
+        const hold = (id, on, off) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', e => { e.preventDefault(); on();  }, { passive: false });
+            el.addEventListener('touchend',   e => { e.preventDefault(); off(); }, { passive: false });
+            el.addEventListener('touchcancel',e => { e.preventDefault(); off(); }, { passive: false });
+        };
+        hold('btn-up',     () => this.inp.up     = true,  () => this.inp.up     = false);
+        hold('btn-down',   () => this.inp.down   = true,  () => this.inp.down   = false);
+        hold('btn-roll-l', () => this.inp.roll   = -1,    () => this.inp.roll   = 0);
+        hold('btn-roll-r', () => this.inp.roll   =  1,    () => this.inp.roll   = 0);
+        hold('btn-laser',  () => this.inp.fire   = true,  () => this.inp.fire   = false);
+        hold('btn-boost',  () => this.inp.boost  = true,  () => this.inp.boost  = false);
+
+        // ── Shop tap ──────────────────────────────────────────────────
+        document.getElementById('btn-shop-touch').addEventListener('touchstart', e => {
+            e.preventDefault(); this._toggleShop();
+        }, { passive: false });
     }
 
     _initUI(){
         this.minimapCanvas=document.getElementById('minimap-canvas');
         this.minimapCtx=this.minimapCanvas.getContext('2d');
         this.minimapCanvas.width=110;this.minimapCanvas.height=110;
+
+        // Switch control hints based on input device
+        const isTouch='ontouchstart' in window;
+        if(isTouch){
+            document.getElementById('ctrl-pc').style.display='none';
+            document.getElementById('ctrl-touch').style.display='grid';
+            document.getElementById('controls-hint').innerHTML=
+                '左スティック: 移動<br>右スティック: 照準<br>▲▼: 上昇/下降<br>↺↻: ロール<br>LASER: 採掘<br>BOOST: 加速';
+        }else{
+            document.getElementById('controls-hint').innerHTML=
+                '[W/S] 前進/後退<br>[A/D] 旋回<br>[Q/E] ロール<br>[R/F] 上昇/下降<br>[Shift] ブースト<br>[Space] レーザー<br>[U] アップグレード';
+        }
 
         // Start button
         document.getElementById('btn-start').addEventListener('click',()=>{
