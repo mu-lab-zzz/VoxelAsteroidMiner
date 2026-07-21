@@ -1040,11 +1040,15 @@ class MiningShip{
         if(inp.pitch!==0) this.angVel.x=inp.pitch*tr; else this.angVel.x*=0.88;
         if(inp.roll!==0) this.angVel.z=inp.roll*tr*1.4; else this.angVel.z*=0.88;
 
-        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.angVel.y*dt);
-        this.quat.multiply(MP.q1);
+        // Yaw: rotate around ship's LOCAL up axis (body-frame, same pattern as pitch/roll)
+        MP.v2.set(0,1,0).applyQuaternion(this.quat);
+        MP.q1.setFromAxisAngle(MP.v2,this.angVel.y*dt);
+        this.quat.premultiply(MP.q1);
+        // Pitch: rotate around ship's LOCAL right axis
         MP.v2.set(1,0,0).applyQuaternion(this.quat);
         MP.q1.setFromAxisAngle(MP.v2,this.angVel.x*dt);
         this.quat.premultiply(MP.q1);
+        // Roll: rotate around ship's LOCAL forward axis
         MP.v2.set(0,0,1).applyQuaternion(this.quat);
         MP.q1.setFromAxisAngle(MP.v2,this.angVel.z*dt);
         this.quat.premultiply(MP.q1);
