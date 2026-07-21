@@ -662,7 +662,7 @@ class Asteroid{
     }
 
     _buildMesh(){
-        const ws=this.radius<35?40:this.radius<55?52:64;
+        const ws=this.radius<35?96:this.radius<55?128:160;
         const hs=ws>>1;
         const base=new THREE.SphereGeometry(this.radius,ws,hs);
         const g=base.toNonIndexed();
@@ -680,7 +680,8 @@ class Asteroid{
 
             const n1=SN.n3((x+seed)*0.022,(y+seed)*0.022,(z+seed)*0.022);
             const n2=SN.n3((x+seed)*0.077,(y+seed)*0.077,(z+seed)*0.077);
-            const disp=this.radius*(n1*0.13+n2*0.04);
+            const n3=SN.n3((x+seed)*0.20,(y+seed)*0.20,(z+seed)*0.20);
+            const disp=this.radius*(n1*0.13+n2*0.04+n3*0.012);
             pos.setXYZ(i,x+nx*disp,y+ny*disp,z+nz*disp);
 
             const nOre=SN.n3((x-seed)*0.058,(y-seed)*0.058,(z-seed)*0.058);
@@ -774,7 +775,6 @@ class Asteroid{
 
         if(changed){
             pos.needsUpdate=true;
-            this.mesh.geometry.computeVertexNormals();
             this.mesh.geometry.computeBoundingSphere();
 
             const seed=this.seed;
