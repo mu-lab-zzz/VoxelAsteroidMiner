@@ -866,12 +866,12 @@ class Asteroid{
         if(!this.isHighDetail)return;
         const lp=MP.v1.copy(worldPt).sub(this.group.position);
         const S=CFG.CHUNK;
-        const minX=Math.floor(lp.x-radius)+this.offset;
-        const maxX=Math.ceil( lp.x+radius)+this.offset;
-        const minY=Math.floor(lp.y-radius)+this.offset;
-        const maxY=Math.ceil( lp.y+radius)+this.offset;
-        const minZ=Math.floor(lp.z-radius)+this.offset;
-        const maxZ=Math.ceil( lp.z+radius)+this.offset;
+        const minX=Math.floor(lp.x-radius);
+        const maxX=Math.ceil( lp.x+radius);
+        const minY=Math.floor(lp.y-radius);
+        const maxY=Math.ceil( lp.y+radius);
+        const minZ=Math.floor(lp.z-radius);
+        const maxZ=Math.ceil( lp.z+radius);
 
         const dirtySet=new Set();
         for(let x=minX;x<=maxX;x++){
@@ -1589,6 +1589,23 @@ class GameEngine{
         this.renderer.setSize(window.innerWidth,window.innerHeight);
     }
 
+    _checkCollisions(){
+        const SHIP_R=3.5;
+        for(const ast of this.asteroids){
+            if(!ast.group.visible)continue;
+            const dist=ast.group.position.distanceTo(this.ship.pos);
+            const minDist=ast.radius+SHIP_R;
+            if(dist<minDist){
+                MP.v1.copy(this.ship.pos).sub(ast.group.position);
+                if(MP.v1.lengthSq()<0.0001)MP.v1.set(0,1,0);
+                MP.v1.normalize();
+                this.ship.pos.copy(ast.group.position).addScaledVector(MP.v1,minDist);
+                const vDotN=this.ship.vel.dot(MP.v1);
+                if(vDotN<0)this.ship.vel.addScaledVector(MP.v1,-vDotN*1.1);
+            }
+        }
+    }
+
     _animate(){
         requestAnimationFrame(()=>this._animate());
         const dt=Math.min(this.clock.getDelta(),0.1);
@@ -1596,6 +1613,7 @@ class GameEngine{
         // Start screen guard
         if(document.getElementById('start-screen').style.display==='none'){
             this.ship.update(dt,this.inp);
+            this._checkCollisions();
 
             if(this.inp.fire){
                 this.ship.fireLaser(this.asteroids,this.sparks,dt);
