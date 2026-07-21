@@ -892,7 +892,7 @@ class MiningShip{
         this.laserMesh.visible=true;
 
         if(hitPt&&hitAst){
-            const mineR=1.8*this.stats.miningPow;
+            const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
             let didMine=false;
             hitAst.mine(hitPt,mineR,(vt)=>{
                 this.addResource(vt,1);
