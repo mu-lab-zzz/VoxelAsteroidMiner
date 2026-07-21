@@ -662,7 +662,7 @@ class Asteroid{
     }
 
     _buildMesh(){
-        const ws=this.radius<35?28:this.radius<55?36:44;
+        const ws=this.radius<35?40:this.radius<55?52:64;
         const hs=ws>>1;
         const base=new THREE.SphereGeometry(this.radius,ws,hs);
         const g=base.toNonIndexed();
@@ -709,6 +709,41 @@ class Asteroid{
             vertexColors:true,roughness:0.88,metalness:0.12,flatShading:true}));
         this.mesh.castShadow=true;
         this.group.add(this.mesh);
+        this._buildSpatialIndex();
+    }
+
+    _buildSpatialIndex(){
+        const pos=this.mesh.geometry.attributes.position;
+        const count=pos.count;
+        const cs=this.radius*0.28;
+        this._cellSize=cs;
+        this._grid=new Map();
+        for(let i=0;i<count;i++){
+            const key=this._cellKey(pos.getX(i),pos.getY(i),pos.getZ(i));
+            let cell=this._grid.get(key);
+            if(!cell){cell=[];this._grid.set(key,cell);}
+            cell.push(i);
+        }
+    }
+
+    _cellKey(x,y,z){
+        const cs=this._cellSize;
+        return `${Math.floor(x/cs)},${Math.floor(y/cs)},${Math.floor(z/cs)}`;
+    }
+
+    _querySpatial(lx,ly,lz,r){
+        const cs=this._cellSize;
+        const x0=Math.floor((lx-r)/cs),x1=Math.floor((lx+r)/cs);
+        const y0=Math.floor((ly-r)/cs),y1=Math.floor((ly+r)/cs);
+        const z0=Math.floor((lz-r)/cs),z1=Math.floor((lz+r)/cs);
+        const out=[];
+        for(let cx=x0;cx<=x1;cx++)
+        for(let cy=y0;cy<=y1;cy++)
+        for(let cz=z0;cz<=z1;cz++){
+            const c=this._grid.get(`${cx},${cy},${cz}`);
+            if(c) for(const i of c) out.push(i);
+        }
+        return out;
     }
 
     updateLOD(playerPos){
@@ -718,11 +753,10 @@ class Asteroid{
     mine(worldPt,hitR,onMined){
         const lp=MP.v1.copy(worldPt).sub(this.group.position);
         const pos=this.mesh.geometry.attributes.position;
-        const count=pos.count;
         const searchR2=hitR*hitR;
         let changed=false;
 
-        for(let i=0;i<count;i++){
+        for(const i of this._querySpatial(lp.x,lp.y,lp.z,hitR)){
             const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
             const dx=vx-lp.x,dy=vy-lp.y,dz=vz-lp.z;
             const d2=dx*dx+dy*dy+dz*dz;
