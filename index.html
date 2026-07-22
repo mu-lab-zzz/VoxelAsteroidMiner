@@ -196,6 +196,33 @@
             margin:8px 0 2px;padding-left:2px;}
         .btn-st-wide{width:100%;margin-top:4px;padding:8px;font-size:12px;}
 
+        /* ── Refinery ─────────────────────────────────────────────── */
+        .ref-machine{background:rgba(0,255,170,0.06);border:1px solid rgba(0,255,170,0.18);
+            border-radius:7px;padding:9px 12px;margin-bottom:4px;}
+        .ref-machine-title{font-size:11px;font-weight:700;color:#00ffaa;margin-bottom:4px;}
+        .ref-machine-idle{font-size:10px;color:#446;font-style:italic;}
+        .ref-progress-bg{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;
+            overflow:hidden;margin-top:5px;}
+        .ref-progress-fill{height:100%;background:linear-gradient(90deg,#00aa77,#00ffaa);
+            border-radius:3px;}
+        .ref-queue-item{display:flex;align-items:center;gap:6px;padding:5px 0;
+            border-bottom:1px solid rgba(255,255,255,0.04);}
+        .ref-queue-name{flex:1;font-size:12px;color:#ccd;}
+        .ref-queue-count{font-family:monospace;font-size:11px;font-weight:700;
+            color:#00ffaa;white-space:nowrap;}
+        .ref-ship-count{font-size:9px;color:#446;white-space:nowrap;}
+        .btn-ref-sm{border:none;padding:3px 8px;border-radius:4px;font-size:10px;
+            font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+        .btn-ref-sm.load{background:rgba(0,240,255,0.18);color:#00f0ff;
+            border:1px solid rgba(0,240,255,0.38);}
+        .btn-ref-sm.unload{background:rgba(255,80,80,0.15);color:#ff8888;
+            border:1px solid rgba(255,80,80,0.3);}
+        .btn-ref-sm:disabled{background:#1a2030;color:#334;cursor:not-allowed;
+            border:1px solid #223;}
+        .ref-cap-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;
+            overflow:hidden;margin:3px 0 8px;}
+        .ref-cap-fill{height:100%;background:rgba(0,240,255,0.4);border-radius:2px;}
+
         /* ── Dock Prompt ─────────────────────────────────────────── */
         #dock-prompt{
             position:absolute;bottom:76px;left:50%;transform:translateX(-50%);
@@ -504,6 +531,16 @@ const LANG={
             baseDist:(d)=>`🏭 基地まで ${d}m`,emptyRefine:'精錬できる資源がありません',
             emptySell:'売却できるものがありません',upgradeBtn:'強化',
             sectionRefined:'精錬品',sectionRaw:'生鉱石',
+            loadBtn:'投入',unloadBtn:'戻す',loadAll:'全投入',
+            machineIdle:'待機中',refining:'精錬中',
+            sectionRefineDone:'精錬完了',sectionStation:'ステーション強化',
+            goToMarket:'市場で売却',cargoFull:'貨物スペースが不足',noRefined:'精錬品が不足',
+            machineCount:(n)=>`精錬機 (${n}台)`,queueStatus:(cur,max)=>`精錬キュー (${cur}/${max})`,
+        },
+        stationUpgrades:{
+            machines:   {name:'精錬機追加',   desc:(ss,lv)=>`${ss.machines}台 → ${ss.machines+1}台`},
+            refineSpeed:{name:'精錬速度向上', desc:(ss,lv)=>`${ss.timePerOre}s/個 → ${STATION_UPGRADES.refineSpeed.times[lv+1]}s/個`},
+            capacity:   {name:'投入量拡張',   desc:(ss,lv)=>`${ss.capacity}個 → ${STATION_UPGRADES.capacity.caps[lv+1]}個`},
         },
     },
     en:{
@@ -528,6 +565,16 @@ const LANG={
             baseDist:(d)=>`🏭 Base: ${d}m`,emptyRefine:'No ore to refine',
             emptySell:'Nothing to sell',upgradeBtn:'Upgrade',
             sectionRefined:'Refined Goods',sectionRaw:'Raw Ore',
+            loadBtn:'Load',unloadBtn:'Unload',loadAll:'Load All',
+            machineIdle:'Idle',refining:'Refining',
+            sectionRefineDone:'Refined',sectionStation:'Station Upgrades',
+            goToMarket:'Sell at Market',cargoFull:'Cargo full',noRefined:'Insufficient refined goods',
+            machineCount:(n)=>`Refineries (${n})`,queueStatus:(cur,max)=>`Queue (${cur}/${max})`,
+        },
+        stationUpgrades:{
+            machines:   {name:'Add Refinery',    desc:(ss,lv)=>`${ss.machines} → ${ss.machines+1} machines`},
+            refineSpeed:{name:'Refine Speed Up', desc:(ss,lv)=>`${ss.timePerOre}s → ${STATION_UPGRADES.refineSpeed.times[lv+1]}s/unit`},
+            capacity:   {name:'Queue Capacity',  desc:(ss,lv)=>`${ss.capacity} → ${STATION_UPGRADES.capacity.caps[lv+1]} slots`},
         },
     },
 };
@@ -589,6 +636,35 @@ const UPGRADES={
     cargo: {costs:[400,800,1500,2800,5000,9000]},
     engine:{costs:[700,2000,5500]},
     energy:{costs:[350,1000,2800]},
+};
+
+// Station upgrade tables (costs use refined goods + credits)
+const STATION_UPGRADES={
+    machines:{
+        costs:[
+            {credits:500,  refined:{[VT.IRON]:5}},
+            {credits:2000, refined:{[VT.NICKEL]:8}},
+            {credits:8000, refined:{[VT.TITANIUM]:6}},
+        ],
+    },
+    refineSpeed:{
+        times:[10,8,6,4.5,3],
+        costs:[
+            {credits:300,  refined:{[VT.COPPER]:3}},
+            {credits:1200, refined:{[VT.NICKEL]:5}},
+            {credits:5000, refined:{[VT.TITANIUM]:4}},
+            {credits:15000,refined:{[VT.GOLD]:2}},
+        ],
+    },
+    capacity:{
+        caps:[50,100,150,250,400],
+        costs:[
+            {credits:200, refined:{[VT.IRON]:3}},
+            {credits:700, refined:{[VT.COPPER]:4}},
+            {credits:2500,refined:{[VT.NICKEL]:6}},
+            {credits:7000,refined:{[VT.TITANIUM]:4}},
+        ],
+    },
 };
 
 // Zone definitions — ore pools by distance from base
@@ -1247,6 +1323,11 @@ class GameEngine{
         this.refined={};
         for(const k of Object.values(VT)) this.refined[k]=0;
         this.activeStationTab='refinery';
+        this.stationLv={machines:0,refineSpeed:0,capacity:0};
+        this.stationStats={machines:1,timePerOre:10,capacity:50};
+        this.refineryMachines=[{vt:null,progress:0}];
+        this.refineryQueue={};
+        for(const k of Object.values(VT)) this.refineryQueue[k]=0;
 
         this.inp={
             forward:false,backward:false,left:false,right:false,
@@ -1259,6 +1340,7 @@ class GameEngine{
         this._initInputs();
         this._initUI();
         this._loadSave();
+        this._applyStationStats();
         this._loadSettings();
 
         window.addEventListener('resize',()=>this._onResize());
@@ -1657,25 +1739,94 @@ class GameEngine{
     }
 
     _renderRefinery(el){
-        const inv=this.ship.inventory;
-        let any=false;
-        for(const [vtKey,recipe] of Object.entries(REFINE)){
-            const vt=parseInt(vtKey);
-            const raw=inv[vt]||0;
-            if(raw<recipe.ratio)continue;
-            any=true;
-            const out=Math.floor(raw/recipe.ratio);
-            const row=document.createElement('div');row.className='st-row';
-            row.innerHTML=`<div class="st-info"><span class="st-name">${VPROPS[vt].name} × ${raw}</span>`+
-                `<span class="st-sub">→ ${recipe.name} × ${out}　(${out*recipe.val} Cr)</span></div>`+
-                `<button class="btn-st refine" id="brf-${vt}">${L('ui.refineBtn')}</button>`;
-            el.appendChild(row);
-            el.querySelector(`#brf-${vt}`).onclick=()=>this._refine(vt);
+        const ss=this.stationStats;
+        // ── Machines ─────────────────────────────────────────────
+        const mHead=document.createElement('div');
+        mHead.className='st-section-head';
+        mHead.textContent=L('ui.machineCount',ss.machines);
+        el.appendChild(mHead);
+        for(let i=0;i<this.refineryMachines.length;i++){
+            const m=this.refineryMachines[i];
+            const card=document.createElement('div');card.className='ref-machine';
+            if(m.vt!==null){
+                const pct=Math.floor(m.progress*100);
+                const recipe=REFINE[m.vt];
+                const remaining=(ss.timePerOre*(1-m.progress)).toFixed(1);
+                card.innerHTML=`<div class="ref-machine-title">#${i+1} ${VPROPS[m.vt].name} → ${recipe.name}</div>`+
+                    `<div style="font-size:10px;color:#889;">${L('ui.refining')} ${pct}% ／ ${remaining}s</div>`+
+                    `<div class="ref-progress-bg"><div class="ref-progress-fill" id="ref-prog-${i}" style="width:${pct}%"></div></div>`;
+            }else{
+                card.innerHTML=`<div class="ref-machine-title">#${i+1}</div>`+
+                    `<div class="ref-machine-idle">${L('ui.machineIdle')}</div>`+
+                    `<div class="ref-progress-bg"><div class="ref-progress-fill" id="ref-prog-${i}" style="width:0%"></div></div>`;
+            }
+            el.appendChild(card);
         }
-        if(!any){el.innerHTML=`<div class="st-empty">${L('ui.emptyRefine')}</div>`;return;}
-        const btn=document.createElement('button');
-        btn.className='btn-st refine btn-st-wide';btn.textContent=L('ui.refineAll');
-        btn.onclick=()=>this._refineAll();el.appendChild(btn);
+        // ── Queue ────────────────────────────────────────────────
+        const qTotal=Object.values(this.refineryQueue).reduce((a,b)=>a+(b||0),0);
+        const qPct=Math.min((qTotal/ss.capacity)*100,100);
+        const qHead=document.createElement('div');
+        qHead.className='st-section-head';
+        qHead.textContent=L('ui.queueStatus',qTotal,ss.capacity);
+        el.appendChild(qHead);
+        const capBar=document.createElement('div');capBar.className='ref-cap-bar';
+        capBar.innerHTML=`<div class="ref-cap-fill" style="width:${qPct}%"></div>`;
+        el.appendChild(capBar);
+        let anyOre=false;
+        for(const vtKey of Object.keys(REFINE)){
+            const vt=+vtKey;
+            const inQueue=this.refineryQueue[vt]||0;
+            const inShip=this.ship.inventory[vt]||0;
+            if(inQueue<=0&&inShip<=0)continue;
+            anyOre=true;
+            const spaceLeft=ss.capacity-qTotal;
+            const canLoad=inShip>0&&spaceLeft>0;
+            const canUnload=inQueue>0;
+            const row=document.createElement('div');row.className='ref-queue-item';
+            row.innerHTML=`<span class="ref-queue-name">${VPROPS[vt].name}</span>`+
+                `<span class="ref-queue-count">×${inQueue}</span>`+
+                `<span class="ref-ship-count">船:${inShip}</span>`+
+                `<button class="btn-ref-sm unload" id="bunload-${vt}">${L('ui.unloadBtn')}</button>`+
+                `<button class="btn-ref-sm load" id="bload-${vt}">${L('ui.loadBtn')}</button>`;
+            el.appendChild(row);
+            const unloadBtn=el.querySelector(`#bunload-${vt}`);
+            const loadBtn=el.querySelector(`#bload-${vt}`);
+            if(!canUnload) unloadBtn.disabled=true;
+            if(!canLoad) loadBtn.disabled=true;
+            if(canUnload) unloadBtn.onclick=()=>this._unloadOre(vt);
+            if(canLoad) loadBtn.onclick=()=>this._loadOre(vt,Math.min(inShip,spaceLeft));
+        }
+        if(!anyOre){
+            const em=document.createElement('div');em.className='st-empty';
+            em.textContent=L('ui.emptyRefine');el.appendChild(em);
+        }
+        const hasShipOre=Object.keys(REFINE).some(k=>(this.ship.inventory[+k]||0)>0);
+        if(hasShipOre){
+            const loadAllBtn=document.createElement('button');
+            loadAllBtn.className='btn-st refine btn-st-wide';
+            loadAllBtn.textContent=L('ui.loadAll');
+            loadAllBtn.disabled=(qTotal>=ss.capacity);
+            loadAllBtn.onclick=()=>this._loadAllOre();
+            el.appendChild(loadAllBtn);
+        }
+        // ── Refined output ───────────────────────────────────────
+        const refinedEntries=Object.entries(REFINE).filter(([k])=>(this.refined[+k]||0)>0);
+        if(refinedEntries.length>0){
+            const rHead=document.createElement('div');
+            rHead.className='st-section-head';rHead.textContent=L('ui.sectionRefineDone');
+            el.appendChild(rHead);
+            for(const[vtKey,recipe] of refinedEntries){
+                const vt=+vtKey,qty=this.refined[vt];
+                const row=document.createElement('div');row.className='st-row';
+                row.innerHTML=`<div class="st-info">`+
+                    `<span class="st-name">${recipe.name} × ${qty}</span>`+
+                    `<span class="st-sub">${(qty*recipe.val).toLocaleString()} Cr</span>`+
+                    `</div>`+
+                    `<button class="btn-st sell" id="brf-sell-${vt}">${L('ui.sellBtn')}</button>`;
+                el.appendChild(row);
+                el.querySelector(`#brf-sell-${vt}`).onclick=()=>this._sell(vt);
+            }
+        }
     }
 
     _renderMarket(el){
@@ -1747,6 +1898,37 @@ class GameEngine{
             el.appendChild(row);
             if(canBuy&&!maxed) el.querySelector(`#bupg-${u.key}`).onclick=()=>this._buyUpgrade(u);
         }
+        // ── Station upgrades ──────────────────────────────────────
+        const sHead=document.createElement('div');
+        sHead.className='st-section-head';sHead.textContent=L('ui.sectionStation');
+        el.appendChild(sHead);
+        for(const key of['machines','refineSpeed','capacity']){
+            const def=STATION_UPGRADES[key];
+            const lv=this.stationLv[key]??0;
+            const maxed=lv>=def.costs.length;
+            const cost=!maxed?def.costs[lv]:null;
+            const ss=this.stationStats;
+            let sub;
+            if(maxed){
+                sub=L('ui.maxed');
+            }else{
+                const descStr=L(`stationUpgrades.${key}.desc`,ss,lv);
+                const costParts=[`${cost.credits.toLocaleString()} Cr`];
+                for(const[vtKey,need] of Object.entries(cost.refined||{}))
+                    costParts.push(`${REFINE[+vtKey].name}×${need}`);
+                sub=`${descStr} ─ ${costParts.join(', ')}`;
+            }
+            const canBuy=!maxed
+                &&this.credits>=(cost?.credits||Infinity)
+                &&Object.entries(cost?.refined||{}).every(([k,n])=>(this.refined[+k]||0)>=n);
+            const name=L(`stationUpgrades.${key}.name`);
+            const row=document.createElement('div');row.className='st-row';
+            row.innerHTML=`<div class="st-info"><span class="st-name">${name}</span>`+
+                `<span class="st-sub">${sub}</span></div>`+
+                `<button class="btn-st upgrade" id="bstupg-${key}" ${(!canBuy||maxed)?'disabled':''}>${L('ui.upgradeBtn')}</button>`;
+            el.appendChild(row);
+            if(canBuy&&!maxed) el.querySelector(`#bstupg-${key}`).onclick=()=>this._buyStationUpgrade(key);
+        }
     }
 
     _buyUpgrade(u){
@@ -1759,34 +1941,6 @@ class GameEngine{
         this._saveSave();
         this._renderStationTab('upgrades');
         this._updateCreditsUI();
-    }
-
-    _refine(vt){
-        const recipe=REFINE[vt];if(!recipe)return;
-        const inv=this.ship.inventory;
-        const raw=inv[vt]||0,out=Math.floor(raw/recipe.ratio);
-        if(out<=0)return;
-        const used=out*recipe.ratio;
-        inv[vt]-=used;this.ship.stats.cargo-=used;
-        this.refined[vt]=(this.refined[vt]||0)+out;
-        Sound.playPickup(VPROPS[vt].rar);
-        Notify.show(`${VPROPS[vt].name} → ${recipe.name} × ${out}`,'resource',2000);
-        this._renderStationTab('refinery');
-    }
-
-    _refineAll(){
-        let cnt=0;
-        for(const vtKey of Object.keys(REFINE)){
-            const vt=parseInt(vtKey),recipe=REFINE[vt];
-            const inv=this.ship.inventory,raw=inv[vt]||0;
-            const out=Math.floor(raw/recipe.ratio);
-            if(out<=0)continue;
-            const used=out*recipe.ratio;
-            inv[vt]-=used;this.ship.stats.cargo-=used;
-            this.refined[vt]=(this.refined[vt]||0)+out;cnt++;
-        }
-        if(cnt>0){Sound.playPickup(2);Notify.show(L('ui.refineAllDone'),'success',2000);}
-        this._renderStationTab('refinery');
     }
 
     _sell(vt){
@@ -1831,6 +1985,110 @@ class GameEngine{
             this._saveSave();
         }
         this._renderStationTab('market');this._updateCreditsUI();
+    }
+
+    _applyStationStats(){
+        this.stationStats.machines   = 1 + this.stationLv.machines;
+        this.stationStats.timePerOre = STATION_UPGRADES.refineSpeed.times[this.stationLv.refineSpeed];
+        this.stationStats.capacity   = STATION_UPGRADES.capacity.caps[this.stationLv.capacity];
+        while(this.refineryMachines.length < this.stationStats.machines)
+            this.refineryMachines.push({vt:null,progress:0});
+        if(this.refineryMachines.length > this.stationStats.machines)
+            this.refineryMachines.length = this.stationStats.machines;
+    }
+
+    _dequeueOre(){
+        for(const vtKey of Object.keys(REFINE)){
+            const vt=+vtKey,ratio=REFINE[vt].ratio;
+            if((this.refineryQueue[vt]||0)>=ratio){
+                this.refineryQueue[vt]-=ratio;
+                return vt;
+            }
+        }
+        return null;
+    }
+
+    _updateRefinery(dt){
+        const ss=this.stationStats;
+        for(const m of this.refineryMachines){
+            if(m.vt===null){
+                const vt=this._dequeueOre();
+                if(vt!==null){m.vt=vt;m.progress=0;}
+            }else{
+                m.progress+=dt/ss.timePerOre;
+                if(m.progress>=1){
+                    this.refined[m.vt]=(this.refined[m.vt]||0)+1;
+                    Sound.playPickup(VPROPS[m.vt].rar);
+                    m.vt=null;m.progress=0;
+                    const vt=this._dequeueOre();
+                    if(vt!==null){m.vt=vt;m.progress=0;}
+                }
+            }
+        }
+    }
+
+    _updateRefineryProgressBars(){
+        for(let i=0;i<this.refineryMachines.length;i++){
+            const bar=document.getElementById(`ref-prog-${i}`);
+            if(bar){
+                const m=this.refineryMachines[i];
+                bar.style.width=`${m.vt!==null?Math.floor(m.progress*100):0}%`;
+            }
+        }
+    }
+
+    _loadOre(vt,n,noRender=false){
+        const inv=this.ship.inventory;
+        const avail=inv[vt]||0;
+        const qTotal=Object.values(this.refineryQueue).reduce((a,b)=>a+(b||0),0);
+        const space=this.stationStats.capacity-qTotal;
+        const add=Math.min(n,avail,space);
+        if(add<=0)return;
+        this.refineryQueue[vt]=(this.refineryQueue[vt]||0)+add;
+        inv[vt]-=add;this.ship.stats.cargo-=add;
+        if(!noRender){this._saveSave();this._renderStationTab('refinery');}
+    }
+
+    _loadAllOre(){
+        let anyLoaded=false;
+        for(const vtKey of Object.keys(REFINE)){
+            const vt=+vtKey;
+            if((this.ship.inventory[vt]||0)>0){
+                this._loadOre(vt,this.ship.inventory[vt],true);
+                anyLoaded=true;
+            }
+        }
+        if(anyLoaded){this._saveSave();this._renderStationTab('refinery');}
+    }
+
+    _unloadOre(vt){
+        const qty=this.refineryQueue[vt]||0;if(qty<=0)return;
+        const space=this.ship.stats.maxCargo-this.ship.stats.cargo;
+        const add=Math.min(qty,space);
+        if(add<=0){Notify.warn(L('ui.cargoFull'));return;}
+        this.refineryQueue[vt]-=add;
+        this.ship.inventory[vt]=(this.ship.inventory[vt]||0)+add;
+        this.ship.stats.cargo+=add;
+        this._saveSave();this._renderStationTab('refinery');
+    }
+
+    _buyStationUpgrade(key){
+        const def=STATION_UPGRADES[key];
+        const lv=this.stationLv[key]??0;
+        if(lv>=def.costs.length)return;
+        const cost=def.costs[lv];
+        if(this.credits<cost.credits){Notify.warn(L('ui.noCredit'));return;}
+        for(const[vtKey,need] of Object.entries(cost.refined||{})){
+            if((this.refined[+vtKey]||0)<need){Notify.warn(L('ui.noRefined'));return;}
+        }
+        this.credits-=cost.credits;
+        for(const[vtKey,need] of Object.entries(cost.refined||{}))
+            this.refined[+vtKey]-=need;
+        this.stationLv[key]=lv+1;
+        this._applyStationStats();
+        Sound.playPickup(3);
+        Notify.upgrade(L('ui.upgraded',L(`stationUpgrades.${key}.name`)));
+        this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
     }
 
     _updateCamera(){
@@ -1960,7 +2218,8 @@ class GameEngine{
     _saveSave(){
         localStorage.setItem('vam_save',JSON.stringify({
             stats:this.ship.stats,inventory:this.ship.inventory,
-            credits:this.credits,refined:this.refined}));
+            credits:this.credits,refined:this.refined,
+            stationLv:this.stationLv,refineryQueue:this.refineryQueue}));
     }
     _loadSave(){
         try{
@@ -1971,6 +2230,8 @@ class GameEngine{
                 Object.assign(this.ship.inventory,d.inventory);
                 if(d.credits!=null) this.credits=d.credits;
                 if(d.refined) Object.assign(this.refined,d.refined);
+                if(d.stationLv) Object.assign(this.stationLv,d.stationLv);
+                if(d.refineryQueue) Object.assign(this.refineryQueue,d.refineryQueue);
             }
         }catch(e){}
     }
@@ -2003,6 +2264,7 @@ class GameEngine{
         // Start screen guard
         if(document.getElementById('start-screen').style.display==='none'){
             this.station.update(dt);
+            this._updateRefinery(dt);
             this._checkDocking();
             if(!this.stationOpen) this.ship.update(dt,this.inp);
             this._checkCollisions();
@@ -2035,13 +2297,18 @@ class GameEngine{
                 this._saveSave();
             }
 
-            // FPS counter
+            // FPS counter + periodic refinery UI refresh
             this.fpsFrames++;this.fpsTick+=dt;
             if(this.fpsTick>=1){
                 document.getElementById('fps-val').textContent=this.fpsFrames;
                 this.fpsFrames=0;this.fpsTick=0;
                 this._updateHUD();
+                if(this.stationOpen&&this.activeStationTab==='refinery')
+                    this._renderStationTab('refinery');
             }
+            // Update progress bars each frame while refinery tab is open
+            if(this.stationOpen&&this.activeStationTab==='refinery')
+                this._updateRefineryProgressBars();
         }
 
         this.renderer.render(this.scene,this.camera);
