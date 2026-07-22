@@ -1182,12 +1182,17 @@ class MiningShip{
         Sound.setThrust(spd/80);
     }
 
-    fireLaser(asteroids,sparks,dt){
+    fireLaser(asteroids,sparks,dt,camera){
         if(this.stats.energy<2){this.laserMesh.visible=false;Sound.stopLaser();return;}
         this.stats.energy=Math.max(0,this.stats.energy-this.stats.laserCost*dt);
         Sound.startLaser();
 
-        MP.v1.set(0,0,-1).applyQuaternion(this.quat);
+        // Aim along camera center ray so laser matches the crosshair.
+        // camera.getWorldDirection gives the screen-center ray; we pick a
+        // distant aim point on that ray, then redirect from ship.pos toward it.
+        camera.getWorldDirection(MP.v1);
+        MP.v4.copy(camera.position).addScaledVector(MP.v1,200);
+        MP.v1.copy(MP.v4).sub(this.pos).normalize();
         MP.ray.set(this.pos,MP.v1);
         MP.ray.far=85;
 
@@ -2307,9 +2312,10 @@ class GameEngine{
             this._checkDocking();
             if(!this.stationOpen) this.ship.update(dt,this.inp);
             this._checkCollisions();
+            this._updateCamera();   // before fireLaser so camera dir is current-frame
 
             if(this.inp.fire){
-                this.ship.fireLaser(this.asteroids,this.sparks,dt);
+                this.ship.fireLaser(this.asteroids,this.sparks,dt,this.camera);
                 document.getElementById('crosshair').classList.add('firing');
             }else{
                 this.ship.laserMesh.visible=false;
@@ -2326,8 +2332,6 @@ class GameEngine{
 
             // Rotate planet slowly
             if(this.planet) this.planet.rotation.y+=dt*0.008;
-
-            this._updateCamera();
 
             // Auto-save
             this.autoSaveTick+=dt;
