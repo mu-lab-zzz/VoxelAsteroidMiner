@@ -2237,7 +2237,7 @@ class GameEngine{
         ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();
         ctx.restore();
         // Heading arrow
-        const hfx=Math.sin(this.ship.yaw);
+        const hfx=-Math.sin(this.ship.yaw);
         const hfz=-Math.cos(this.ship.yaw);
         const hLen=16;
         const tipX=R+hfx*hLen, tipZ=R+hfz*hLen;
