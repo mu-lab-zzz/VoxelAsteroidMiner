@@ -667,12 +667,30 @@ const STATION_UPGRADES={
     },
 };
 
-// Zone definitions — ore pools by distance from base
+// Zone definitions — tiered by distance from station
+// sizes[]: weighted list for random size pick (more entries = higher weight)
+// rareChance: probability of spawning a "rare" small asteroid with rarePool instead
 const ZONES=[
-    {maxDist:  380, pool:[VT.IRON,VT.COPPER,VT.ICE]},
-    {maxDist:  700, pool:[VT.COPPER,VT.NICKEL,VT.TITANIUM]},
-    {maxDist: 1000, pool:[VT.TITANIUM,VT.GOLD,VT.PLATINUM]},
-    {maxDist:Infinity, pool:[VT.GOLD,VT.PLATINUM,VT.URANIUM]},
+    // Inner (0-350m): small iron/copper/ice clusters
+    {maxDist:  350,
+     pool:[VT.IRON,VT.COPPER,VT.ICE],
+     sizes:['small','small','small','medium'],
+     rareChance:0},
+    // Near-mid (350-650m): medium/large iron+copper; rare small nickel/titanium
+    {maxDist:  650,
+     pool:[VT.IRON,VT.COPPER],
+     sizes:['small','medium','medium','large','large'],
+     rareChance:0.18, rarePool:[VT.NICKEL,VT.TITANIUM], rareSizes:['small']},
+    // Mid (650-950m): medium/large nickel/titanium; rare small gold/platinum
+    {maxDist:  950,
+     pool:[VT.NICKEL,VT.TITANIUM],
+     sizes:['small','medium','medium','large','large'],
+     rareChance:0.15, rarePool:[VT.GOLD,VT.PLATINUM], rareSizes:['small']},
+    // Outer (950m+): gold/platinum/uranium; rare small uranium-rich
+    {maxDist:Infinity,
+     pool:[VT.GOLD,VT.PLATINUM,VT.URANIUM],
+     sizes:['small','medium','large','large'],
+     rareChance:0.10, rarePool:[VT.URANIUM], rareSizes:['small']},
 ];
 function getZonePool(dist){return ZONES.find(z=>dist<z.maxDist).pool;}
 
@@ -920,7 +938,7 @@ class BaseStation{
 }
 
 class Asteroid{
-    constructor(id,scene,x,y,z,sizeType,seed){
+    constructor(id,scene,x,y,z,sizeType,seed,orePool){
         this.id=id;this.scene=scene;this.seed=seed;
         this.group=new THREE.Group();
         this.group.position.set(x,y,z);
@@ -930,9 +948,7 @@ class Asteroid{
         else if(sizeType==='medium') this.radius=38+Math.floor(Math.random()*18);
         else                         this.radius=58+Math.floor(Math.random()*22);
 
-        // Assign 1-2 ore types based on distance from origin (base station)
-        const dist=Math.sqrt(x*x+y*y+z*z);
-        const pool=getZonePool(dist);
+        const pool=orePool||getZonePool(Math.sqrt(x*x+y*y+z*z));
         const nPick=Math.random()<0.5?1:2;
         this.oreTypes=[...pool].sort(()=>Math.random()-0.5).slice(0,nPick);
 
@@ -1427,15 +1443,23 @@ class GameEngine{
         // Start ship near station docking collar, facing outward
         this.ship.pos.set(0,0,90);
 
-        const types=['small','small','small','medium','medium','large'];
         let placed=0;
         const seed=Date.now();
         for(let i=0;i<200&&placed<CFG.ASTEROID_N;i++){
             const a=(seed+i*377)%1000/1000,b=(seed+i*631)%1000/1000,c=(seed+i*919)%1000/1000;
             const x=(a-.5)*CFG.WORLD_R,y=(b-.5)*(CFG.WORLD_R*0.28),z=(c-.5)*CFG.WORLD_R;
             if(x*x+y*y+z*z<160*160)continue;
-            const sz=types[Math.floor(Math.random()*types.length)];
-            this.asteroids.push(new Asteroid(placed,this.scene,x,y,z,sz,Math.random()*99999));
+            const dist=Math.sqrt(x*x+y*y+z*z);
+            const zone=ZONES.find(z=>dist<z.maxDist);
+            let sz,orePool;
+            if(zone.rareChance>0&&Math.random()<zone.rareChance){
+                sz=zone.rareSizes[Math.floor(Math.random()*zone.rareSizes.length)];
+                orePool=zone.rarePool;
+            }else{
+                sz=zone.sizes[Math.floor(Math.random()*zone.sizes.length)];
+                orePool=zone.pool;
+            }
+            this.asteroids.push(new Asteroid(placed,this.scene,x,y,z,sz,Math.random()*99999,orePool));
             placed++;
         }
     }
