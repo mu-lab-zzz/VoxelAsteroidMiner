@@ -2158,6 +2158,21 @@ class GameEngine{
         ctx.fillStyle=sl>maxR?'#ffdd00':'#00ffaa';
         ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();
         ctx.restore();
+        // Heading arrow
+        const hfx=Math.sin(this.ship.yaw);
+        const hfz=-Math.cos(this.ship.yaw);
+        const hLen=16;
+        const tipX=R+hfx*hLen, tipZ=R+hfz*hLen;
+        const pX=-hfz*3.5, pZ=hfx*3.5;
+        ctx.strokeStyle='rgba(255,240,60,0.92)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(R,R);ctx.lineTo(tipX,tipZ);ctx.stroke();
+        ctx.fillStyle='rgba(255,240,60,0.92)';
+        ctx.beginPath();
+        ctx.moveTo(tipX+hfx*4,tipZ+hfz*4);
+        ctx.lineTo(tipX+pX,tipZ+pZ);
+        ctx.lineTo(tipX-pX,tipZ-pZ);
+        ctx.closePath();ctx.fill();
+        ctx.lineWidth=1;
         // Ship dot
         ctx.fillStyle='#00f0ff';
         ctx.beginPath();ctx.arc(R,R,3,0,Math.PI*2);ctx.fill();
