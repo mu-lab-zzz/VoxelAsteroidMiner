@@ -192,6 +192,8 @@
         .btn-st.upgrade{background:#aa88ff;color:#000;}
         .btn-st:disabled{background:#334;color:#556;cursor:not-allowed;}
         .st-empty{color:#556;font-size:12px;text-align:center;padding:18px;}
+        .st-section-head{font-size:10px;color:#556;text-transform:uppercase;letter-spacing:1px;
+            margin:8px 0 2px;padding-left:2px;}
         .btn-st-wide{width:100%;margin-top:4px;padding:8px;font-size:12px;}
 
         /* ── Dock Prompt ─────────────────────────────────────────── */
@@ -500,7 +502,8 @@ const LANG={
             stationName:'🏭 採掘基地 Alpha',invTitle:'💎 採取済み資源',
             close:'✕ 閉じる',departBtn:'🚀 出発',
             baseDist:(d)=>`🏭 基地まで ${d}m`,emptyRefine:'精錬できる資源がありません',
-            emptySell:'売却できる精錬品がありません',upgradeBtn:'強化',
+            emptySell:'売却できるものがありません',upgradeBtn:'強化',
+            sectionRefined:'精錬品',sectionRaw:'生鉱石',
         },
     },
     en:{
@@ -523,7 +526,8 @@ const LANG={
             stationName:'🏭 Mining Base Alpha',invTitle:'💎 Cargo Hold',
             close:'✕ Close',departBtn:'🚀 Depart',
             baseDist:(d)=>`🏭 Base: ${d}m`,emptyRefine:'No ore to refine',
-            emptySell:'No refined goods to sell',upgradeBtn:'Upgrade',
+            emptySell:'Nothing to sell',upgradeBtn:'Upgrade',
+            sectionRefined:'Refined Goods',sectionRaw:'Raw Ore',
         },
     },
 };
@@ -1676,21 +1680,39 @@ class GameEngine{
 
     _renderMarket(el){
         const ref=this.refined;
-        let any=false,totalCr=0;
-        for(const [vtKey,recipe] of Object.entries(REFINE)){
-            const vt=parseInt(vtKey);
-            const qty=ref[vt]||0;
-            if(qty<=0)continue;
-            any=true;
-            const cr=qty*recipe.val;totalCr+=cr;
-            const row=document.createElement('div');row.className='st-row';
-            row.innerHTML=`<div class="st-info"><span class="st-name">${recipe.name} × ${qty}</span>`+
-                `<span class="st-sub">${cr.toLocaleString()} Cr</span></div>`+
-                `<button class="btn-st sell" id="bsell-${vt}">${L('ui.sellBtn')}</button>`;
-            el.appendChild(row);
-            el.querySelector(`#bsell-${vt}`).onclick=()=>this._sell(vt);
+        const inv=this.ship.inventory;
+        let totalCr=0;
+
+        const addSection=(header,items,idPrefix,onSell)=>{
+            if(items.length===0)return;
+            const h=document.createElement('div');
+            h.className='st-section-head';h.textContent=header;el.appendChild(h);
+            for(const{vt,label,qty,cr}of items){
+                totalCr+=cr;
+                const row=document.createElement('div');row.className='st-row';
+                row.innerHTML=`<div class="st-info"><span class="st-name">${label} × ${qty}</span>`+
+                    `<span class="st-sub">${cr.toLocaleString()} Cr</span></div>`+
+                    `<button class="btn-st sell" id="${idPrefix}${vt}">${L('ui.sellBtn')}</button>`;
+                el.appendChild(row);
+                el.querySelector(`#${idPrefix}${vt}`).onclick=()=>onSell(vt);
+            }
+        };
+
+        const refinedItems=Object.entries(REFINE)
+            .map(([k,r])=>({vt:+k,label:r.name,qty:ref[+k]||0,cr:(ref[+k]||0)*r.val}))
+            .filter(x=>x.qty>0);
+        const rawItems=Object.entries(ORES)
+            .filter(([,o])=>o.baseVal>0)
+            .map(([k,o])=>({vt:+k,label:VPROPS[+k].name,qty:inv[+k]||0,cr:(inv[+k]||0)*o.baseVal}))
+            .filter(x=>x.qty>0);
+
+        if(refinedItems.length===0&&rawItems.length===0){
+            el.innerHTML=`<div class="st-empty">${L('ui.emptySell')}</div>`;return;
         }
-        if(!any){el.innerHTML=`<div class="st-empty">${L('ui.emptySell')}</div>`;return;}
+
+        addSection(L('ui.sectionRefined'),refinedItems,'bsell-',vt=>this._sell(vt));
+        addSection(L('ui.sectionRaw'),rawItems,'bsellraw-',vt=>this._sellRaw(vt));
+
         const btn=document.createElement('button');
         btn.className='btn-st sell btn-st-wide';
         btn.textContent=`${L('ui.sellAll')} (${totalCr.toLocaleString()} Cr)`;
@@ -1776,11 +1798,32 @@ class GameEngine{
         this._saveSave();this._renderStationTab('market');this._updateCreditsUI();
     }
 
+    _sellRaw(vt){
+        const ore=ORES[vt];
+        const qty=this.ship.inventory[vt]||0;if(qty<=0)return;
+        const earned=qty*ore.baseVal;
+        this.credits+=earned;
+        this.ship.inventory[vt]=0;
+        this.ship.stats.cargo-=qty;
+        Sound.playPickup(ore.rar);
+        Notify.show(`💳 +${earned.toLocaleString()} Cr`,'success',2000);
+        this._saveSave();this._renderStationTab('market');this._updateCreditsUI();
+    }
+
     _sellAll(){
         let total=0;
+        // refined goods
         for(const [vtKey,recipe] of Object.entries(REFINE)){
-            const vt=parseInt(vtKey),qty=this.refined[vt]||0;
+            const vt=+vtKey,qty=this.refined[vt]||0;
             if(qty<=0)continue;total+=qty*recipe.val;this.refined[vt]=0;
+        }
+        // raw ore
+        for(const [vtKey,ore] of Object.entries(ORES)){
+            const vt=+vtKey;if(ore.baseVal<=0)continue;
+            const qty=this.ship.inventory[vt]||0;
+            if(qty<=0)continue;
+            total+=qty*ore.baseVal;
+            this.ship.inventory[vt]=0;this.ship.stats.cargo-=qty;
         }
         if(total>0){
             this.credits+=total;Sound.playPickup(3);
