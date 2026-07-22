@@ -792,23 +792,52 @@ class SoundEngine{
         this._engGain.gain.linearRampToValueAtTime(v*0.11,t+0.12);
         this._engOsc.frequency.linearRampToValueAtTime(48+v*55,t+0.12);
     }
+    _noiseBuffer(){
+        const sr=this.ctx.sampleRate;
+        const buf=this.ctx.createBuffer(1,sr,sr);
+        const d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+        return buf;
+    }
     startLaser(){
         if(!this.ready||this._laserNodes)return;
-        const o1=this.ctx.createOscillator(),o2=this.ctx.createOscillator();
-        const flt=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
-        o1.type='sine';o1.frequency.value=1760;
-        o2.type='sine';o2.frequency.value=880;
-        flt.type='bandpass';flt.frequency.value=1200;flt.Q.value=3;
-        g.gain.value=0.07;
-        o1.connect(flt);o2.connect(flt);flt.connect(g);g.connect(this.master);
-        o1.start();o2.start();
-        this._laserNodes={o1,o2,flt,g};
+        const c=this.ctx,t=c.currentTime;
+        // Low sawtooth buzz (power core)
+        const buzz=c.createOscillator();
+        buzz.type='sawtooth';buzz.frequency.value=100;
+        const buzzG=c.createGain();buzzG.gain.value=0.10;
+        buzz.connect(buzzG);
+        // LFO tremolo — rapid energy flutter at 18 Hz
+        const lfo=c.createOscillator();
+        lfo.type='sine';lfo.frequency.value=18;
+        const lfoG=c.createGain();lfoG.gain.value=0.06;
+        lfo.connect(lfoG);lfoG.connect(buzzG.gain);
+        // High sparkle tone
+        const tone=c.createOscillator();
+        tone.type='sine';tone.frequency.value=2100;
+        const toneG=c.createGain();toneG.gain.value=0.030;
+        tone.connect(toneG);
+        // Plasma crackle (bandpass noise)
+        const nSrc=c.createBufferSource();
+        nSrc.buffer=this._noiseBuffer();nSrc.loop=true;
+        const nFlt=c.createBiquadFilter();
+        nFlt.type='bandpass';nFlt.frequency.value=3600;nFlt.Q.value=1.5;
+        const nG=c.createGain();nG.gain.value=0.018;
+        nSrc.connect(nFlt);nFlt.connect(nG);
+        // Master with attack envelope
+        const out=c.createGain();
+        out.gain.setValueAtTime(0,t);
+        out.gain.linearRampToValueAtTime(1.0,t+0.03);
+        buzzG.connect(out);toneG.connect(out);nG.connect(out);
+        out.connect(this.master);
+        buzz.start();lfo.start();tone.start();nSrc.start();
+        this._laserNodes={buzz,lfo,tone,nSrc,out};
     }
     stopLaser(){
         if(!this.ready||!this._laserNodes)return;
         const n=this._laserNodes;this._laserNodes=null;
-        n.g.gain.linearRampToValueAtTime(0,this.ctx.currentTime+0.06);
-        setTimeout(()=>{try{n.o1.stop();n.o2.stop();}catch(e){}},120);
+        n.out.gain.linearRampToValueAtTime(0,this.ctx.currentTime+0.09);
+        setTimeout(()=>{try{n.buzz.stop();n.lfo.stop();n.tone.stop();n.nSrc.stop();}catch(e){}},200);
     }
     playHit(){
         if(!this.ready)return;
@@ -1103,6 +1132,7 @@ class MiningShip{
         this.quat=this.root.quaternion;
         this.yaw=0;    // heading angle around world Y
         this.pitch=0;  // elevation angle around local X
+        this._cvW=new THREE.Vector3(); // scratch: cannon world-pos
 
         this.stats={
             hp:100,maxHp:100,
@@ -1141,12 +1171,25 @@ class MiningShip{
     }
 
     _buildLaser(){
-        const g=new THREE.CylinderGeometry(0.08,0.16,1,7);g.rotateX(Math.PI/2);
-        this.laserMesh=new THREE.Mesh(g,
-            new THREE.MeshBasicMaterial({color:0x00f0ff,transparent:true,opacity:0.85}));
-        this.laserMesh.visible=false;
-        this.scene.add(this.laserMesh);
+        const mCore=new THREE.MeshBasicMaterial({
+            color:0xe0ffff,transparent:true,opacity:0.95,
+            blending:THREE.AdditiveBlending,depthWrite:false});
+        const mGlow=new THREE.MeshBasicMaterial({
+            color:0x0088ff,transparent:true,opacity:0.20,
+            blending:THREE.AdditiveBlending,depthWrite:false});
+        this.laserBeams=[];
+        for(let i=0;i<2;i++){
+            const grp=new THREE.Group();
+            const gc=new THREE.CylinderGeometry(0.04,0.04,1,6);gc.rotateX(Math.PI/2);
+            grp.add(new THREE.Mesh(gc,mCore));
+            const gg=new THREE.CylinderGeometry(0.22,0.22,1,8);gg.rotateX(Math.PI/2);
+            grp.add(new THREE.Mesh(gg,mGlow));
+            grp.visible=false;
+            this.scene.add(grp);
+            this.laserBeams.push(grp);
+        }
     }
+    hideLaser(){for(const b of this.laserBeams) b.visible=false;}
 
     update(dt,inp){
         const thrust=this.stats.thrust*(inp.boost?this.stats.boost:1);
@@ -1191,7 +1234,7 @@ class MiningShip{
     }
 
     fireLaser(asteroids,sparks,dt,camera){
-        if(this.stats.energy<2){this.laserMesh.visible=false;Sound.stopLaser();return;}
+        if(this.stats.energy<2){this.hideLaser();Sound.stopLaser();return;}
         this.stats.energy=Math.max(0,this.stats.energy-this.stats.laserCost*dt);
         Sound.startLaser();
 
@@ -1213,14 +1256,17 @@ class MiningShip{
             if(hits.length>0){hitPt=hits[0].point;hitAst=ast;break;}
         }
 
-        // draw beam
+        // draw twin beams from wing cannons (±2.0 in local X, slightly forward)
         const endPt=hitPt||MP.v2.copy(this.pos).addScaledVector(MP.v1,85);
-        const midPt=MP.v3.copy(this.pos).add(endPt).multiplyScalar(0.5);
-        const beamLen=this.pos.distanceTo(endPt);
-        this.laserMesh.position.copy(midPt);
-        this.laserMesh.scale.set(1,1,beamLen);
-        this.laserMesh.lookAt(endPt);
-        this.laserMesh.visible=true;
+        for(let i=0;i<2;i++){
+            this._cvW.set(i===0?-2.0:2.0, 0, -0.3).applyQuaternion(this.quat).add(this.pos);
+            const bLen=this._cvW.distanceTo(endPt);
+            MP.v3.copy(this._cvW).add(endPt).multiplyScalar(0.5);
+            this.laserBeams[i].position.copy(MP.v3);
+            this.laserBeams[i].scale.set(1,1,bLen);
+            this.laserBeams[i].lookAt(endPt);
+            this.laserBeams[i].visible=true;
+        }
 
         if(hitPt&&hitAst){
             const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
@@ -1720,7 +1766,7 @@ class GameEngine{
         this.ship.vel.set(0,0,0);
         this.ship.angVel.set(0,0,0);
         this.inp.fire=false;
-        this.ship.laserMesh.visible=false;
+        this.ship.hideLaser();
         Sound.stopLaser();
         document.getElementById('station-modal').style.display='flex';
         this._updateCreditsUI();
@@ -2345,7 +2391,7 @@ class GameEngine{
                 this.ship.fireLaser(this.asteroids,this.sparks,dt,this.camera);
                 document.getElementById('crosshair').classList.add('firing');
             }else{
-                this.ship.laserMesh.visible=false;
+                this.ship.hideLaser();
                 Sound.stopLaser();
                 document.getElementById('crosshair').classList.remove('firing');
             }
