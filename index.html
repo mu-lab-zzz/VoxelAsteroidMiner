@@ -1410,7 +1410,7 @@ class GameEngine{
         this.camDist=CFG.CAM_DEFAULT;
         this.cameraTarget=new THREE.Vector3();
         this.cameraMode='third';
-        this.dockPromptDismissed=false;
+        this.dockPromptCooldown=0; // seconds until prompt can show again
         this.isLocked=false;
         this.stationOpen=false;
         this.settingsOpen=false;
@@ -1750,7 +1750,7 @@ class GameEngine{
             this._openStation();
         });
         document.getElementById('btn-dock-no').addEventListener('click',()=>{
-            this.dockPromptDismissed=true;
+            this.dockPromptCooldown=12; // re-shows after 12 s
             document.getElementById('dock-prompt').style.display='none';
         });
 
@@ -1809,8 +1809,7 @@ class GameEngine{
         if(!this.stationOpen)return;
         this.stationOpen=false;
         document.getElementById('station-modal').style.display='none';
-        // Suppress dock prompt until ship exits the 160m zone
-        this.dockPromptDismissed=true;
+        this.dockPromptCooldown=20; // give time to fly away before prompt reappears
         const d=this.ship.pos.length();
         const dir=d>0.01?this.ship.pos.clone().normalize():new THREE.Vector3(0,0,1);
         if(d<70) this.ship.pos.copy(dir.multiplyScalar(70));
@@ -1821,16 +1820,11 @@ class GameEngine{
     _checkDocking(){
         const dist=this.ship.pos.length();
         const prompt=document.getElementById('dock-prompt');
-        // Hide prompt while station modal is open
-        if(this.stationOpen){
+        if(this.stationOpen||this.dockPromptCooldown>0){
             prompt.style.display='none';
             return;
         }
-        if(dist>=160){
-            // Reset dismissed flag when ship moves far enough away
-            this.dockPromptDismissed=false;
-            prompt.style.display='none';
-        }else if(!this.dockPromptDismissed){
+        if(dist<160){
             prompt.style.display='flex';
             document.getElementById('dock-dist').textContent=Math.round(dist);
         }else{
@@ -2436,6 +2430,8 @@ class GameEngine{
             for(const ast of this.asteroids){
                 ast.updateLOD(this.ship.pos);
             }
+
+            if(this.dockPromptCooldown>0) this.dockPromptCooldown-=dt;
 
             // Rotate planet slowly
             if(this.planet) this.planet.rotation.y+=dt*0.008;
