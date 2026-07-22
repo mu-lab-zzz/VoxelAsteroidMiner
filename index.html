@@ -232,7 +232,7 @@
 
         /* ── Dock Prompt ─────────────────────────────────────────── */
         #dock-prompt{
-            position:absolute;bottom:90px;left:50%;transform:translateX(-50%);
+            position:absolute;bottom:180px;left:50%;transform:translateX(-50%);
             background:rgba(0,10,24,0.95);border:1.5px solid rgba(0,255,170,0.55);
             border-radius:12px;padding:14px 22px;display:none;flex-direction:column;
             gap:11px;z-index:20;pointer-events:auto;text-align:center;
@@ -549,7 +549,7 @@ const LANG={
             energy:{name:'エネルギー容量拡張',desc:(s)=>`容量 ${s.maxEnergy} → ${s.maxEnergy+40}`},
         },
         ui:{
-            dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（160m以内）',
+            dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（60m以内）',
             refineBtn:'精錬',refineAll:'全精錬',refineAllDone:'全精錬完了！',
             sellBtn:'売却',sellAll:'全売却',
             noCredit:'クレジットが不足しています',maxed:'MAX',upgraded:(n)=>`${n}！`,
@@ -583,7 +583,7 @@ const LANG={
             energy:{name:'Energy Capacity Upgrade',desc:(s)=>`Energy ${s.maxEnergy} → ${s.maxEnergy+40}`},
         },
         ui:{
-            dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 160m)',
+            dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 60m)',
             refineBtn:'Refine',refineAll:'Refine All',refineAllDone:'All refined!',
             sellBtn:'Sell',sellAll:'Sell All',
             noCredit:'Insufficient credits',maxed:'MAX',upgraded:(n)=>`${n} upgraded!`,
@@ -1786,7 +1786,7 @@ class GameEngine{
         if(this.stationOpen) this._closeStation();
         else {
             const dist=this.ship.pos.length();
-            if(dist<160) this._openStation();
+            if(dist<60) this._openStation();
             else Notify.warn(L('ui.tooFar'));
         }
     }
@@ -1824,7 +1824,7 @@ class GameEngine{
             prompt.style.display='none';
             return;
         }
-        if(dist<160){
+        if(dist<60){
             prompt.style.display='flex';
             document.getElementById('dock-dist').textContent=Math.round(dist);
         }else{
