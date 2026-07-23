@@ -264,6 +264,62 @@
         }
         #btn-dock-yes:hover{background:rgba(0,255,170,0.32);}
 
+        /* ── Atmosphere Overlay ─────────────────────────────────── */
+        #atmo-overlay{
+            position:absolute;inset:0;z-index:80;pointer-events:none;
+            background:linear-gradient(135deg,rgba(30,160,60,0.92),rgba(110,15,190,0.92));
+            opacity:0;
+        }
+        /* ── Planet HUD Indicator ───────────────────────────────── */
+        #planet-indicator{
+            position:absolute;transform:translate(-50%,-50%);
+            display:none;flex-direction:column;align-items:center;gap:3px;
+            pointer-events:none;z-index:15;
+        }
+        .planet-arrow{
+            width:0;height:0;border-left:7px solid transparent;
+            border-right:7px solid transparent;border-bottom:15px solid #cc44ff;
+            filter:drop-shadow(0 0 5px rgba(200,68,255,0.85));
+        }
+        #planet-indicator-label{
+            font:700 9px monospace;color:#cc44ff;
+            text-shadow:0 0 6px rgba(200,68,255,0.7);
+            letter-spacing:.5px;white-space:nowrap;
+        }
+        /* ── Planet Base Prompt ─────────────────────────────────── */
+        #planet-base-prompt{
+            position:absolute;bottom:180px;left:50%;transform:translateX(-50%);
+            background:rgba(4,0,18,0.95);border:1.5px solid rgba(170,68,255,0.55);
+            border-radius:12px;padding:14px 22px;display:none;flex-direction:column;
+            gap:11px;z-index:20;pointer-events:auto;text-align:center;
+            box-shadow:0 0 32px rgba(170,68,255,0.16);min-width:200px;
+        }
+        #btn-planet-base-yes{
+            border-radius:7px;font:700 13px monospace;padding:9px 22px;cursor:pointer;
+            background:rgba(170,68,255,0.14);border:1px solid rgba(170,68,255,0.65);
+            color:#cc88ff;transition:background .15s;
+        }
+        #btn-planet-base-yes:hover{background:rgba(170,68,255,0.32);}
+        /* ── Planet Base Modal ──────────────────────────────────── */
+        #planet-base-modal{
+            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:min(360px,96vw);background:rgba(6,2,18,0.97);
+            border:2px solid rgba(170,68,255,0.5);border-radius:14px;padding:18px;
+            display:none;flex-direction:column;gap:10px;z-index:100;
+            pointer-events:auto;box-shadow:0 0 50px rgba(170,68,255,0.18);
+            max-height:90vh;overflow-y:auto;
+        }
+        #planet-base-credits{text-align:center;font-family:monospace;font-size:15px;
+            font-weight:700;color:#ffcc44;
+            background:rgba(255,200,0,0.08);border-radius:7px;padding:6px;}
+        /* ── Altitude Exit Hint ─────────────────────────────────── */
+        #altitude-hint{
+            position:absolute;top:64px;left:50%;transform:translateX(-50%);
+            background:rgba(4,0,18,0.88);border:1px solid rgba(170,68,255,0.4);
+            border-radius:8px;padding:5px 14px;font:700 11px monospace;
+            color:#cc88ff;display:none;z-index:16;pointer-events:none;
+            text-shadow:0 0 8px rgba(170,68,255,0.6);white-space:nowrap;
+        }
         /* ── Settings Modal ─────────────────────────────────────── */
         #settings-modal{
             position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -496,6 +552,34 @@
     <button id="btn-dock-yes">🏭 ドッキング</button>
 </div>
 
+<!-- Atmosphere Overlay -->
+<div id="atmo-overlay"></div>
+
+<!-- Planet HUD Indicator -->
+<div id="planet-indicator">
+    <div class="planet-arrow"></div>
+    <div id="planet-indicator-label">🌍</div>
+</div>
+
+<!-- Altitude Exit Hint (shown in planet mode when flying high) -->
+<div id="altitude-hint"></div>
+
+<!-- Planet Base Prompt -->
+<div id="planet-base-prompt">
+    <button id="btn-planet-base-yes">🌍 惑星基地ドッキング</button>
+</div>
+
+<!-- Planet Base Modal -->
+<div id="planet-base-modal">
+    <div class="modal-title" style="color:#cc88ff;border-bottom-color:rgba(170,68,255,0.28);">🌍 惑星異星基地</div>
+    <div id="planet-base-credits">💳 <span id="planet-credits-val">0</span> Cr</div>
+    <div id="planet-base-content"></div>
+    <button class="btn-close-modal" id="btn-close-planet-base"
+        style="background:rgba(170,68,255,0.15);color:#cc88ff;border:1px solid rgba(170,68,255,0.3);">
+        🚀 出発
+    </button>
+</div>
+
 <!-- Settings Modal -->
 <div id="settings-modal">
     <div class="modal-title">⚙ 設定</div>
@@ -552,9 +636,11 @@ let LOCALE='ja'; // switch to 'en' for English
 const LANG={
     ja:{
         ores:{air:'Air',stone:'石',iron:'鉄',copper:'銅',nickel:'ニッケル',
-              titanium:'チタン',gold:'金',platinum:'プラチナ',uranium:'ウラン',ice:'氷'},
+              titanium:'チタン',gold:'金',platinum:'プラチナ',uranium:'ウラン',ice:'氷',
+              crystal:'クリスタル',xenite:'ゼナイト'},
         refined:{ice:'水（冷却材）',iron:'鉄バー',copper:'銅バー',nickel:'ニッケル合金',
-                 titanium:'チタンバー',gold:'金インゴット',platinum:'プラチナバー',uranium:'ウラン燃料棒'},
+                 titanium:'チタンバー',gold:'金インゴット',platinum:'プラチナバー',uranium:'ウラン燃料棒',
+                 crystal:'クリスタル結晶',xenite:'ゼナイト合金'},
         upgrades:{
             laser:{name:'採掘レーザー強化',desc:(s)=>`採掘力 ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`},
             cargo:{name:'貨物スロット拡張', desc:(s)=>`積載量 ${s.maxCargo} → ${s.maxCargo+50}`},
@@ -586,9 +672,11 @@ const LANG={
     },
     en:{
         ores:{air:'Air',stone:'Stone',iron:'Iron',copper:'Copper',nickel:'Nickel',
-              titanium:'Titanium',gold:'Gold',platinum:'Platinum',uranium:'Uranium',ice:'Ice'},
+              titanium:'Titanium',gold:'Gold',platinum:'Platinum',uranium:'Uranium',ice:'Ice',
+              crystal:'Crystal',xenite:'Xenite'},
         refined:{ice:'Coolant',iron:'Iron Bar',copper:'Copper Bar',nickel:'Nickel Alloy',
-                 titanium:'Titanium Bar',gold:'Gold Ingot',platinum:'Platinum Bar',uranium:'Uranium Rod'},
+                 titanium:'Titanium Bar',gold:'Gold Ingot',platinum:'Platinum Bar',uranium:'Uranium Rod',
+                 crystal:'Crystal Shard',xenite:'Xenite Alloy'},
         upgrades:{
             laser:{name:'Mining Laser Upgrade',desc:(s)=>`Power ${s.miningPow.toFixed(1)} → ${(s.miningPow+0.5).toFixed(1)}`},
             cargo:{name:'Cargo Expansion',      desc:(s)=>`Capacity ${s.maxCargo} → ${s.maxCargo+50}`},
@@ -631,7 +719,8 @@ function L(path,...args){
 //  VOXEL TYPES  (numeric IDs — used as typed-array indices and save keys)
 // ════════════════════════════════════════════════════════════════
 const VT={AIR:0,STONE:1,IRON:2,COPPER:3,NICKEL:4,
-           TITANIUM:5,GOLD:6,PLATINUM:7,URANIUM:8,ICE:9};
+           TITANIUM:5,GOLD:6,PLATINUM:7,URANIUM:8,ICE:9,
+           CRYSTAL:10,XENITE:11};
 
 // Master ore database — single source of truth
 // refineRatio: raw units needed per 1 refined unit; null = not refinable
@@ -646,6 +735,8 @@ const ORES={
     [VT.PLATINUM]:{color:0xe5e4e2,hard:5,rar:3,baseVal:100, refineRatio:1,   refineVal:330,nameKey:'platinum'},
     [VT.URANIUM]: {color:0x39ff14,hard:8,rar:4,baseVal:250, refineRatio:1,   refineVal:950,nameKey:'uranium'},
     [VT.ICE]:     {color:0x88ddff,hard:1,rar:0,baseVal:3,   refineRatio:4,   refineVal:12, nameKey:'ice'},
+    [VT.CRYSTAL]: {color:0xcc44ff,hard:3,rar:3,baseVal:80,  refineRatio:1,   refineVal:280,nameKey:'crystal'},
+    [VT.XENITE]:  {color:0x00ff88,hard:5,rar:4,baseVal:200, refineRatio:1,   refineVal:750,nameKey:'xenite'},
 };
 
 // Derived tables — computed once from ORES
@@ -1152,6 +1243,107 @@ class Asteroid{
 }
 
 // ════════════════════════════════════════════════════════════════
+//  PLANET ROCK  (alien surface rock, mineable)
+// ════════════════════════════════════════════════════════════════
+class PlanetRock{
+    constructor(parent,x,y,z,radius,orePool){
+        this.radius=radius;
+        this.oreTypes=orePool;
+        this.seed=Math.random()*99999;
+        this.group=new THREE.Group();
+        this.group.position.set(x,y,z);
+        parent.add(this.group);
+        this._buildMesh();
+    }
+    _buildMesh(){
+        const r=this.radius,seed=this.seed;
+        const base=new THREE.SphereGeometry(r,48,24);
+        base.scale(1,0.55,1);
+        const g=base.toNonIndexed();base.dispose();
+        const pos=g.attributes.position;
+        const count=pos.count;
+        const cols=new Float32Array(count*3);
+        for(let i=0;i<count;i++){
+            const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+            const len=Math.sqrt(x*x+y*y+z*z)||1;
+            const n1=SN.n3((x+seed)*0.06,(y+seed)*0.06,(z+seed)*0.06);
+            const n2=SN.n3((x+seed)*0.18,(y+seed)*0.18,(z+seed)*0.18);
+            const disp=r*(n1*0.12+n2*0.04);
+            pos.setXYZ(i,x+(x/len)*disp,y+(y/len)*disp,z+(z/len)*disp);
+            const nOre=SN.n3((x-seed)*0.07,(y-seed)*0.07,(z-seed)*0.07);
+            let vt=VT.STONE;
+            if(nOre>0.28&&this.oreTypes.length>0){
+                const rv=Math.abs(SN.n3(x*0.1,y*0.1,z*0.1));
+                vt=this.oreTypes[Math.floor(rv*this.oreTypes.length)%this.oreTypes.length];
+            }
+            const c3=VRGB[vt]||[0.4,0.4,0.4];
+            cols[i*3]=c3[0];cols[i*3+1]=c3[1];cols[i*3+2]=c3[2];
+        }
+        g.setAttribute('color',new THREE.BufferAttribute(cols,3));
+        g.computeVertexNormals();
+        g.attributes.position.setUsage(THREE.DynamicDrawUsage);
+        this.mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+            vertexColors:true,roughness:0.84,metalness:0.18,flatShading:true}));
+        this.group.add(this.mesh);
+        this._buildSpatialIndex();
+    }
+    _buildSpatialIndex(){
+        const pos=this.mesh.geometry.attributes.position;
+        const cs=this.radius*0.3;this._cellSize=cs;this._grid=new Map();
+        for(let i=0;i<pos.count;i++){
+            const key=this._cellKey(pos.getX(i),pos.getY(i),pos.getZ(i));
+            let cell=this._grid.get(key);
+            if(!cell){cell=[];this._grid.set(key,cell);}
+            cell.push(i);
+        }
+    }
+    _cellKey(x,y,z){const cs=this._cellSize;
+        return`${Math.floor(x/cs)},${Math.floor(y/cs)},${Math.floor(z/cs)}`;}
+    _querySpatial(lx,ly,lz,r){
+        const cs=this._cellSize;
+        const x0=Math.floor((lx-r)/cs),x1=Math.floor((lx+r)/cs);
+        const y0=Math.floor((ly-r)/cs),y1=Math.floor((ly+r)/cs);
+        const z0=Math.floor((lz-r)/cs),z1=Math.floor((lz+r)/cs);
+        const out=[];
+        for(let cx=x0;cx<=x1;cx++)
+        for(let cy=y0;cy<=y1;cy++)
+        for(let cz=z0;cz<=z1;cz++){
+            const c=this._grid.get(`${cx},${cy},${cz}`);
+            if(c)for(const i of c)out.push(i);
+        }
+        return out;
+    }
+    mine(worldPt,hitR,onMined){
+        const lp=MP.v1.copy(worldPt).sub(this.group.position);
+        const pos=this.mesh.geometry.attributes.position;
+        const searchR2=hitR*hitR;let changed=false;
+        for(const i of this._querySpatial(lp.x,lp.y,lp.z,hitR)){
+            const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
+            const dx=vx-lp.x,dy=vy-lp.y,dz=vz-lp.z;
+            if(dx*dx+dy*dy+dz*dz>searchR2)continue;
+            const vlen=Math.sqrt(vx*vx+vy*vy+vz*vz);if(vlen<0.5)continue;
+            const d2=dx*dx+dy*dy+dz*dz;
+            const falloff=1-Math.sqrt(d2)/hitR;
+            const depth=hitR*falloff*falloff*0.9;
+            pos.setXYZ(i,vx-(vx/vlen)*depth,vy-(vy/vlen)*depth,vz-(vz/vlen)*depth);
+            changed=true;
+        }
+        if(changed){
+            pos.needsUpdate=true;
+            this.mesh.geometry.computeBoundingSphere();
+            const seed=this.seed;
+            const nOre=SN.n3((lp.x-seed)*0.07,(lp.y-seed)*0.07,(lp.z-seed)*0.07);
+            let vt=VT.STONE;
+            if(nOre>0.28&&this.oreTypes.length>0){
+                const rv=Math.abs(SN.n3(lp.x*0.1,lp.y*0.1,lp.z*0.1));
+                vt=this.oreTypes[Math.floor(rv*this.oreTypes.length)%this.oreTypes.length];
+            }
+            onMined(vt);
+        }
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
 //  MINING SHIP
 // ════════════════════════════════════════════════════════════════
 class MiningShip{
@@ -1423,9 +1615,17 @@ class GameEngine{
         this.camDist=CFG.CAM_DEFAULT;
         this.cameraTarget=new THREE.Vector3();
         this.cameraMode='third';
-        this.dockPromptCooldown=0; // seconds until prompt can show again
+        this.dockPromptCooldown=0;
         this.isLocked=false;
         this.stationOpen=false;
+        // Planet interior system
+        this.sceneMode='space'; // 'space'|'entering'|'planet'|'leaving'
+        this._atmoAlpha=0;this._atmoFadeDir=0;this._atmoCallback=null;
+        this._planetBuilt=false;this._planetGroup=null;
+        this._planetBasePos=null;this._planetBaseGroup=null;
+        this.planetBaseOpen=false;this.planetBaseCooldown=0;
+        this.planetRocks=[];this.dangerZones=[];
+        this._spaceOnlyObjects=[];
         this.settingsOpen=false;
         this.inventoryOpen=false;
         this.settings={pitchInvert:true,showDebug:false};
@@ -1496,14 +1696,18 @@ class GameEngine{
         const sg=new THREE.BufferGeometry();
         sg.setAttribute('position',new THREE.BufferAttribute(sPos,3));
         sg.setAttribute('color',new THREE.BufferAttribute(sCols,3));
-        this.scene.add(new THREE.Points(sg,new THREE.PointsMaterial({
-            size:1.4,vertexColors:true,sizeAttenuation:false})));
+        const starsObj=new THREE.Points(sg,new THREE.PointsMaterial({
+            size:1.4,vertexColors:true,sizeAttenuation:false}));
+        this.scene.add(starsObj);
+        this._spaceOnlyObjects.push(starsObj);
 
         // Nebula glow (large back sphere)
         const nebG=new THREE.SphereGeometry(1400,16,16);
         const nebM=new THREE.MeshBasicMaterial({
             color:0x1a0830,side:THREE.BackSide,transparent:true,opacity:0.55});
-        this.scene.add(new THREE.Mesh(nebG,nebM));
+        const nebObj=new THREE.Mesh(nebG,nebM);
+        this.scene.add(nebObj);
+        this._spaceOnlyObjects.push(nebObj);
 
         // Distant planet
         const pG=new THREE.SphereGeometry(55,24,24);
@@ -1527,6 +1731,7 @@ class GameEngine{
         pMesh.position.set(900,-180,-1100);
         this.scene.add(pMesh);
         this.planet=pMesh;
+        this._spaceOnlyObjects.push(pMesh);
     }
 
     _initEntities(){
@@ -1534,6 +1739,7 @@ class GameEngine{
         this.ship=new MiningShip(this.scene);
         this.exhaust=new ExhaustEmitter(this.scene,this.ship);
         this.station=new BaseStation(this.scene);
+        this._spaceOnlyObjects.push(this.station.group);
         // Start ship near station docking collar, facing outward
         this.ship.pos.set(0,0,90);
 
@@ -1553,9 +1759,13 @@ class GameEngine{
                 sz=zone.sizes[Math.floor(Math.random()*zone.sizes.length)];
                 orePool=zone.pool;
             }
-            this.asteroids.push(new Asteroid(placed,this.scene,x,y,z,sz,Math.random()*99999,orePool));
+            const ast=new Asteroid(placed,this.scene,x,y,z,sz,Math.random()*99999,orePool);
+            this.asteroids.push(ast);
+            this._spaceOnlyObjects.push(ast.group);
             placed++;
         }
+        // Add laser beams to space-only set (they're in main scene)
+        for(const beam of this.ship.laserBeams) this._spaceOnlyObjects.push(beam);
     }
 
     _initInputs(){
@@ -1762,6 +1972,12 @@ class GameEngine{
             document.getElementById('dock-prompt').style.display='none';
             this._openStation();
         });
+        // Planet base prompt/modal
+        document.getElementById('btn-planet-base-yes').addEventListener('click',()=>{
+            document.getElementById('planet-base-prompt').style.display='none';
+            this._openPlanetBase();
+        });
+        document.getElementById('btn-close-planet-base').addEventListener('click',()=>this._closePlanetBase());
 
         // Inventory badge + modal
         document.getElementById('btn-inv-badge').addEventListener('click',()=>this._toggleInventory());
@@ -2215,6 +2431,386 @@ class GameEngine{
         this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
     }
 
+    // ── Planet Interior System ──────────────────────────────────
+    _buildPlanetInterior(){
+        if(this._planetBuilt)return;
+        this._planetBuilt=true;
+        const grp=new THREE.Group();
+        this.scene.add(grp);
+        this._planetGroup=grp;
+        grp.visible=false;
+
+        // Ground terrain (alien green-purple)
+        const tG=new THREE.PlaneGeometry(1200,1200,80,80);
+        tG.rotateX(-Math.PI/2);
+        const tPos=tG.attributes.position;
+        const tCol=new Float32Array(tPos.count*3);
+        for(let i=0;i<tPos.count;i++){
+            const x=tPos.getX(i),z=tPos.getZ(i);
+            const h=SN.n3(x*0.007,0,z*0.007)*22+SN.n3(x*0.022,0,z*0.022)*8+SN.n3(x*0.07,0,z*0.07)*3;
+            tPos.setY(i,Math.max(0,h));
+            const n=SN.n3(x*0.013,0,z*0.013);
+            const n2=SN.n3(x*0.042,0,z*0.042);
+            const purp=Math.max(0,n2*0.5+0.18);
+            tCol[i*3]=0.09+purp*0.28;
+            tCol[i*3+1]=0.30+Math.max(0,n)*0.38;
+            tCol[i*3+2]=0.14+purp*0.42;
+        }
+        tG.setAttribute('color',new THREE.BufferAttribute(tCol,3));
+        tG.computeVertexNormals();
+        grp.add(new THREE.Mesh(tG,new THREE.MeshStandardMaterial({
+            vertexColors:true,roughness:0.92,metalness:0.04,flatShading:true})));
+
+        // Sky dome
+        grp.add(new THREE.Mesh(new THREE.SphereGeometry(900,16,10),
+            new THREE.MeshBasicMaterial({color:0x040e08,side:THREE.BackSide})));
+        grp.add(new THREE.Mesh(new THREE.SphereGeometry(750,12,8),
+            new THREE.MeshBasicMaterial({color:0x0e280e,side:THREE.BackSide,transparent:true,opacity:0.55})));
+        grp.add(new THREE.Mesh(new THREE.SphereGeometry(600,12,8),
+            new THREE.MeshBasicMaterial({color:0x1a0530,side:THREE.BackSide,transparent:true,opacity:0.38})));
+
+        // Lighting
+        const alienSun=new THREE.DirectionalLight(0xaaffcc,1.3);
+        alienSun.position.set(200,380,120);grp.add(alienSun);
+        grp.add(new THREE.AmbientLight(0x1a0a33,0.65));
+        const purpFill=new THREE.PointLight(0x7722cc,0.55,700);
+        purpFill.position.set(-400,200,-300);grp.add(purpFill);
+
+        // Alien rocks (15 scattered)
+        this.planetRocks=[];
+        const rockDefs=[
+            [80,0,60,20,[VT.CRYSTAL]],[180,0,-50,28,[VT.XENITE]],
+            [250,0,120,18,[VT.CRYSTAL,VT.URANIUM]],[-60,0,180,32,[VT.CRYSTAL]],
+            [-150,0,-80,24,[VT.XENITE]],[320,0,-180,16,[VT.CRYSTAL,VT.XENITE]],
+            [-220,0,300,30,[VT.XENITE,VT.URANIUM]],[50,0,-250,22,[VT.CRYSTAL]],
+            [400,0,80,19,[VT.XENITE]],[-300,0,-150,26,[VT.CRYSTAL]],
+            [200,0,280,21,[VT.CRYSTAL,VT.XENITE]],[150,0,-320,28,[VT.XENITE]],
+            [-80,0,-350,17,[VT.CRYSTAL]],[350,0,250,23,[VT.XENITE]],
+            [-250,0,200,20,[VT.CRYSTAL,VT.URANIUM]]
+        ];
+        for(const[rx,ry,rz,r,pool] of rockDefs){
+            this.planetRocks.push(new PlanetRock(grp,rx,0,rz,r,pool));
+        }
+
+        // Planet base
+        this._buildPlanetBaseStructure(grp);
+
+        // Danger zones (3)
+        this.dangerZones=[];
+        const dzDefs=[[-80,350,65],[300,-280,55],[-320,-200,70]];
+        for(const[dx,dz,dzR] of dzDefs){
+            const addBlend={blending:THREE.AdditiveBlending,depthWrite:false,transparent:true};
+            const ring=new THREE.Mesh(
+                Object.assign(new THREE.TorusGeometry(dzR,2,8,40),{rotateX:function(a){this.rotateX(a);return this;}}),
+                new THREE.MeshBasicMaterial({color:0xff2200,opacity:0.7,...addBlend}));
+            ring.geometry.rotateX(Math.PI/2);
+            ring.position.set(dx,1,dz);grp.add(ring);
+            const glow=new THREE.Mesh(
+                Object.assign(new THREE.CircleGeometry(dzR-2,40),{rotX:true}),
+                new THREE.MeshBasicMaterial({color:0xff1100,opacity:0.07,side:THREE.DoubleSide,...addBlend}));
+            glow.geometry.rotateX(-Math.PI/2);
+            glow.position.set(dx,0.5,dz);grp.add(glow);
+            // Warning beacon
+            const beacon=new THREE.Mesh(new THREE.SphereGeometry(3,8,8),
+                new THREE.MeshBasicMaterial({color:0xff2200,opacity:0.85,...addBlend}));
+            beacon.position.set(dx,14,dz);grp.add(beacon);
+            this.dangerZones.push({
+                pos:new THREE.Vector3(dx,0,dz),radius:dzR,
+                ring,glow,beacon,blinkT:Math.random()*6.28
+            });
+        }
+    }
+
+    _buildPlanetBaseStructure(grp){
+        const baseMat=new THREE.MeshStandardMaterial({color:0x253830,metalness:0.65,roughness:0.38});
+        const glassMat=new THREE.MeshStandardMaterial({color:0x44cc77,transparent:true,opacity:0.72,roughness:0.05,metalness:0.3});
+        const alienMat=new THREE.MeshStandardMaterial({color:0x7722bb,metalness:0.85,roughness:0.18});
+        const glowMat=new THREE.MeshBasicMaterial({color:0x44ff99});
+
+        const bg=new THREE.Group();
+        bg.position.set(-200,0,-100);
+        grp.add(bg);
+        this._planetBaseGroup=bg;
+        this._planetBasePos=new THREE.Vector3(-200,0,-100);
+
+        // Landing pad
+        bg.add(new THREE.Mesh(new THREE.CylinderGeometry(24,24,2,6),baseMat));
+        // Dome
+        const dome=new THREE.Mesh(new THREE.SphereGeometry(13,12,8,0,Math.PI*2,0,Math.PI),glassMat);
+        dome.position.y=10;bg.add(dome);
+        // Support columns
+        for(let i=0;i<6;i++){
+            const a=i*Math.PI/3;
+            const col=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,12,6),alienMat);
+            col.position.set(Math.cos(a)*10,5,Math.sin(a)*10);bg.add(col);
+        }
+        // Antenna array
+        for(let i=0;i<3;i++){
+            const a=i*Math.PI*2/3+Math.PI/6;
+            const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,14,5),alienMat);
+            ant.position.set(Math.cos(a)*16,7,Math.sin(a)*16);
+            ant.rotation.z=Math.cos(a)*0.35;bg.add(ant);
+            const tip=new THREE.Mesh(new THREE.SphereGeometry(1.2,6,6),glowMat);
+            tip.position.set(Math.cos(a)*16,14,Math.sin(a)*16);bg.add(tip);
+        }
+        // Landing lights
+        for(let i=0;i<4;i++){
+            const a=i*Math.PI/2+Math.PI/4;
+            const lt=new THREE.Mesh(new THREE.SphereGeometry(0.8,6,6),glowMat);
+            lt.position.set(Math.cos(a)*22,2,Math.sin(a)*22);bg.add(lt);
+        }
+        const baseLight=new THREE.PointLight(0x44ff99,2.0,160);
+        baseLight.position.y=20;bg.add(baseLight);
+        this._planetBaseLight=baseLight;
+    }
+
+    _enterPlanetSurface(){
+        for(const obj of this._spaceOnlyObjects) obj.visible=false;
+        this.ship.hideLaser();Sound.stopLaser();
+        this.ship.pos.set(0,50,0);
+        this.ship.vel.set(0,-6,0);
+        this.ship.yaw=0;this.ship.pitch=0;
+        this.ship.angVel.set(0,0,0);
+        this._planetGroup.visible=true;
+        this.scene.fog.color.set(0x0a1e0f);
+        this.scene.fog.density=0.0018;
+        this.sceneMode='planet';
+        Notify.show('🌍 惑星表面に降下中','info',2500);
+    }
+
+    _exitPlanetSurface(){
+        this._planetGroup.visible=false;
+        for(const obj of this._spaceOnlyObjects) obj.visible=true;
+        // Place ship 220m outside planet, aimed toward origin
+        const pDir=this.planet.position.clone().normalize().negate();
+        this.ship.pos.copy(this.planet.position).addScaledVector(pDir,220);
+        this.ship.vel.copy(pDir).multiplyScalar(14);
+        this.ship.angVel.set(0,0,0);
+        this.scene.fog.color.set(0x000008);
+        this.scene.fog.density=0.00072;
+        this.sceneMode='space';
+        this.dockPromptCooldown=5;
+        Notify.show('🚀 大気圏脱出完了！','success',2500);
+    }
+
+    _updateAtmoOverlay(dt){
+        if(this._atmoFadeDir===0)return;
+        this._atmoAlpha+=this._atmoFadeDir*dt*1.8;
+        this._atmoAlpha=Math.max(0,Math.min(1,this._atmoAlpha));
+        document.getElementById('atmo-overlay').style.opacity=this._atmoAlpha;
+        if(this._atmoFadeDir===1&&this._atmoAlpha>=1){
+            this._atmoFadeDir=-1;
+            if(this._atmoCallback){this._atmoCallback();this._atmoCallback=null;}
+        }else if(this._atmoFadeDir===-1&&this._atmoAlpha<=0){
+            this._atmoFadeDir=0;
+        }
+    }
+
+    _checkPlanetBaseDock(){
+        const prompt=document.getElementById('planet-base-prompt');
+        if(this.planetBaseOpen||this.planetBaseCooldown>0||!this._planetBasePos){
+            prompt.style.display='none';return;
+        }
+        const dist=this.ship.pos.distanceTo(this._planetBasePos);
+        prompt.style.display=(dist<50)?'flex':'none';
+    }
+
+    _openPlanetBase(){
+        if(this.planetBaseOpen)return;
+        this.planetBaseOpen=true;
+        this.ship.vel.set(0,0,0);this.ship.angVel.set(0,0,0);
+        this.inp.fire=false;this.ship.hideLaser();Sound.stopLaser();
+        document.getElementById('planet-base-modal').style.display='flex';
+        this._renderPlanetBase();this._updateCreditsUI();
+        Notify.show('🌍 惑星基地ドッキング完了','success',2000);
+    }
+
+    _closePlanetBase(){
+        if(!this.planetBaseOpen)return;
+        this.planetBaseOpen=false;
+        document.getElementById('planet-base-modal').style.display='none';
+        this.planetBaseCooldown=15;
+        Notify.show('🚀 惑星基地出発！','info',1500);
+    }
+
+    _renderPlanetBase(){
+        const el=document.getElementById('planet-base-content');
+        if(!el)return;
+        el.innerHTML='';
+        const inv=this.ship.inventory;
+        let hasOre=false,totalCr=0;
+        for(const[vt,ore] of Object.entries(ORES)){
+            const qty=inv[+vt]||0;
+            if(qty<=0||ore.baseVal<=0)continue;
+            hasOre=true;
+            const sv=Math.round(ore.baseVal*1.5);
+            const cr=qty*sv;totalCr+=cr;
+            const row=document.createElement('div');row.className='st-row';
+            row.innerHTML=`<div class="st-info">`+
+                `<span class="st-name">${VPROPS[+vt].name} × ${qty}</span>`+
+                `<span class="st-sub">${cr.toLocaleString()} Cr (×${sv}/個)</span></div>`+
+                `<button class="btn-st sell" id="pb-sell-${vt}">売却</button>`;
+            el.appendChild(row);
+            el.querySelector(`#pb-sell-${vt}`).onclick=()=>{
+                const q=this.ship.inventory[+vt]||0;if(q<=0)return;
+                const earned=q*sv;this.credits+=earned;
+                this.ship.inventory[+vt]=0;this.ship.stats.cargo-=q;
+                Sound.playPickup(ORES[+vt].rar);
+                Notify.show(`💳 +${earned.toLocaleString()} Cr`,'success',2000);
+                this._saveSave();this._renderPlanetBase();this._updateCreditsUI();
+            };
+        }
+        if(!hasOre){
+            const em=document.createElement('div');em.className='st-empty';
+            em.textContent='売却できる資源がありません';el.appendChild(em);
+        }else{
+            const btn=document.createElement('button');
+            btn.className='btn-st sell btn-st-wide';
+            btn.textContent=`全売却 (${totalCr.toLocaleString()} Cr)`;
+            btn.onclick=()=>{
+                let total=0;
+                for(const[vt,ore] of Object.entries(ORES)){
+                    const qty=inv[+vt]||0;if(qty<=0||ore.baseVal<=0)continue;
+                    total+=qty*Math.round(ore.baseVal*1.5);
+                    this.ship.inventory[+vt]=0;this.ship.stats.cargo-=qty;
+                }
+                if(total>0){this.credits+=total;Sound.playPickup(3);
+                    Notify.show(`💳 +${total.toLocaleString()} Cr`,'success',3000);this._saveSave();}
+                this._renderPlanetBase();this._updateCreditsUI();
+            };
+            el.appendChild(btn);
+        }
+        const note=document.createElement('div');
+        note.style.cssText='font-size:10px;color:#667;margin-top:6px;text-align:center;';
+        note.textContent='惑星産資源は1.5倍価格で売却可能';
+        el.appendChild(note);
+        const cv=document.getElementById('planet-credits-val');
+        if(cv)cv.textContent=this.credits.toLocaleString();
+    }
+
+    _checkDangerZones(dt){
+        if(!this.dangerZones)return;
+        for(const dz of this.dangerZones){
+            dz.blinkT+=dt;
+            const dx=this.ship.pos.x-dz.pos.x;
+            const dz2=this.ship.pos.z-dz.pos.z;
+            const inZone=dx*dx+dz2*dz2<dz.radius*dz.radius;
+            if(inZone){
+                this.ship.stats.hp=Math.max(0,this.ship.stats.hp-10*dt);
+                const on=Math.sin(dz.blinkT*10)>0;
+                dz.ring.material.opacity=on?1.0:0.5;
+                dz.glow.material.opacity=on?0.18:0.06;
+                dz.beacon.material.opacity=on?1.0:0.3;
+            }else{
+                const on=Math.sin(dz.blinkT*3)>0;
+                dz.ring.material.opacity=on?0.75:0.4;
+                dz.glow.material.opacity=0.07;
+                dz.beacon.material.opacity=on?0.85:0.4;
+            }
+        }
+    }
+
+    _updatePlanetIndicator(){
+        const el=document.getElementById('planet-indicator');
+        if(this.sceneMode!=='space'){el.style.display='none';return;}
+        const W=window.innerWidth,H=window.innerHeight,margin=44;
+        const sp=this.planet.position.clone();
+        sp.project(this.camera);
+        const behind=sp.z>1;
+        if(behind){sp.x=-sp.x;sp.y=-sp.y;}
+        const sx=(sp.x*0.5+0.5)*W,sy=(-sp.y*0.5+0.5)*H;
+        const cx=W/2,cy=H/2;
+        const dist=Math.round(this.ship.pos.distanceTo(this.planet.position));
+        document.getElementById('planet-indicator-label').textContent=`🌍 ${dist}m`;
+        const onScreen=!behind&&sx>margin&&sx<W-margin&&sy>margin&&sy<H-margin;
+        let px,py,angleDeg;
+        if(onScreen){px=sx;py=sy-22;angleDeg=180;}
+        else{
+            const dx=sx-cx,dy=sy-cy;
+            if(dx===0&&dy===0){el.style.display='none';return;}
+            const halfW=cx-margin,halfH=cy-margin;
+            let clampX,clampY;
+            if(Math.abs(dx)*halfH>Math.abs(dy)*halfW){
+                const s=halfW/Math.abs(dx);clampX=cx+dx*s;clampY=cy+dy*s;
+            }else{
+                const s=halfH/Math.abs(dy);clampX=cx+dx*s;clampY=cy+dy*s;
+            }
+            px=clampX;py=clampY;
+            angleDeg=Math.atan2(dy,dx)*180/Math.PI+90;
+        }
+        el.style.left=px+'px';el.style.top=py+'px';
+        el.querySelector('.planet-arrow').style.transform=`rotate(${angleDeg}deg)`;
+        el.style.display='flex';
+    }
+
+    _updateAltitudeHint(){
+        const hint=document.getElementById('altitude-hint');
+        if(this.sceneMode!=='planet'){hint.style.display='none';return;}
+        const alt=Math.round(this.ship.pos.y);
+        if(alt>140){
+            hint.style.display='block';
+            hint.textContent=`↑ 高度 ${alt}m / 220m で大気圏脱出`;
+        }else{
+            hint.style.display='none';
+        }
+    }
+
+    _renderPlanetMinimap(){
+        const ctx=this.minimapCtx;
+        const R=45,S=0.12;
+        ctx.clearRect(0,0,110,110);
+        ctx.fillStyle='rgba(8,22,12,0.75)';
+        ctx.beginPath();ctx.arc(R,R,R-2,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(170,68,255,0.4)';
+        ctx.beginPath();ctx.arc(R,R,R-2,0,Math.PI*2);ctx.stroke();
+        // Danger zones
+        for(const dz of this.dangerZones){
+            const dx=(dz.pos.x-this.ship.pos.x)*S;
+            const dz2=(dz.pos.z-this.ship.pos.z)*S;
+            if(dx*dx+dz2*dz2>(R-2)*(R-2))continue;
+            ctx.strokeStyle='rgba(255,30,0,0.65)';ctx.lineWidth=1.5;
+            ctx.beginPath();ctx.arc(R+dx,R+dz2,dz.radius*S,0,Math.PI*2);ctx.stroke();
+        }
+        // Rocks
+        for(const rock of this.planetRocks){
+            const dx=(rock.group.position.x-this.ship.pos.x)*S;
+            const dz=(rock.group.position.z-this.ship.pos.z)*S;
+            if(dx*dx+dz*dz>(R-4)*(R-4))continue;
+            ctx.fillStyle='#cc88ff';
+            ctx.beginPath();ctx.arc(R+dx,R+dz,2.5,0,Math.PI*2);ctx.fill();
+        }
+        // Planet base (purple diamond)
+        if(this._planetBasePos){
+            const bdx=(this._planetBasePos.x-this.ship.pos.x)*S;
+            const bdz=(this._planetBasePos.z-this.ship.pos.z)*S;
+            const bl=Math.sqrt(bdx*bdx+bdz*bdz),maxR=R-5;
+            const bx2=bl>maxR?bdx/bl*maxR:bdx;
+            const bz2=bl>maxR?bdz/bl*maxR:bdz;
+            ctx.save();ctx.translate(R+bx2,R+bz2);
+            ctx.fillStyle=bl>maxR?'#ffdd00':'#aa44ff';
+            ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);
+            ctx.closePath();ctx.fill();ctx.restore();
+        }
+        // Heading arrow
+        const hfx=-Math.sin(this.ship.yaw),hfz=-Math.cos(this.ship.yaw);
+        const hLen=16,tipX=R+hfx*hLen,tipZ=R+hfz*hLen;
+        const pX=-hfz*3.5,pZ=hfx*3.5;
+        ctx.strokeStyle='rgba(255,240,60,0.92)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(R,R);ctx.lineTo(tipX,tipZ);ctx.stroke();
+        ctx.fillStyle='rgba(255,240,60,0.92)';
+        ctx.beginPath();ctx.moveTo(tipX+hfx*4,tipZ+hfz*4);
+        ctx.lineTo(tipX+pX,tipZ+pZ);ctx.lineTo(tipX-pX,tipZ-pZ);
+        ctx.closePath();ctx.fill();ctx.lineWidth=1;
+        // Altitude text
+        const alt=Math.round(this.ship.pos.y);
+        ctx.fillStyle=alt>140?'#cc88ff':'rgba(170,68,255,0.5)';
+        ctx.font='8px monospace';ctx.textAlign='right';
+        ctx.fillText(`ALT:${alt}`,R*2-3,R*2-3);ctx.textAlign='left';
+        // Ship dot
+        ctx.fillStyle='#00f0ff';
+        ctx.beginPath();ctx.arc(R,R,3,0,Math.PI*2);ctx.fill();
+    }
+
     _updateStationIndicator(){
         const el=document.getElementById('station-indicator');
         if(this.stationOpen){el.style.display='none';return;}
@@ -2468,16 +3064,46 @@ class GameEngine{
 
         // Start screen guard
         if(document.getElementById('start-screen').style.display==='none'){
-            this.station.update(dt);
-            this._updateRefinery(dt);
-            this._checkDocking();
-            if(!this.stationOpen) this.ship.update(dt,this.inp);
-            this._checkCollisions();
-            this._updateCamera();   // before fireLaser so camera dir is current-frame
-            this._updateStationIndicator();
+            // Atmosphere transition overlay (always runs)
+            this._updateAtmoOverlay(dt);
 
+            const inSpace=this.sceneMode==='space'||this.sceneMode==='entering';
+            const inPlanet=this.sceneMode==='planet'||this.sceneMode==='leaving';
+            const canMove=!this.stationOpen&&!this.planetBaseOpen;
+
+            if(inSpace){
+                this.station.update(dt);
+                this._updateRefinery(dt);
+                this._checkDocking();
+            }
+            if(inPlanet){
+                this._checkPlanetBaseDock();
+                this._checkDangerZones(dt);
+            }
+
+            if(canMove) this.ship.update(dt,this.inp);
+
+            if(inSpace){
+                this._checkCollisions();
+            } else if(this.sceneMode==='planet'){
+                // Ground floor (keep ship above terrain)
+                if(this.ship.pos.y<5){
+                    this.ship.pos.y=5;
+                    if(this.ship.vel.y<0) this.ship.vel.y*=-0.4;
+                }
+            }
+
+            this._updateCamera();
+
+            if(inSpace){
+                this._updateStationIndicator();
+                this._updatePlanetIndicator();
+            }
+            this._updateAltitudeHint();
+
+            const targets=inPlanet?this.planetRocks:this.asteroids;
             if(this.inp.fire){
-                this.ship.fireLaser(this.asteroids,this.sparks,dt,this.camera);
+                this.ship.fireLaser(targets,this.sparks,dt,this.camera);
                 document.getElementById('crosshair').classList.add('firing');
             }else{
                 this.ship.hideLaser();
@@ -2488,23 +3114,41 @@ class GameEngine{
             this.sparks.update(dt);
             this.exhaust.update(dt,this.inp);
 
-            for(const ast of this.asteroids){
-                ast.updateLOD(this.ship.pos);
+            if(inSpace){
+                for(const ast of this.asteroids) ast.updateLOD(this.ship.pos);
             }
 
             if(this.dockPromptCooldown>0) this.dockPromptCooldown-=dt;
+            if(this.planetBaseCooldown>0) this.planetBaseCooldown-=dt;
 
-            // Rotate planet slowly
-            if(this.planet) this.planet.rotation.y+=dt*0.008;
-
-            // Auto-save
-            this.autoSaveTick+=dt;
-            if(this.autoSaveTick>=CFG.AUTO_SAVE){
-                this.autoSaveTick=0;
-                this._saveSave();
+            // Planet approach check (space → planet)
+            if(this.sceneMode==='space'&&this._atmoFadeDir===0){
+                const pd=this.ship.pos.distanceTo(this.planet.position);
+                if(pd<185){
+                    this._buildPlanetInterior();
+                    this._atmoFadeDir=1;
+                    this._atmoCallback=()=>this._enterPlanetSurface();
+                    this.sceneMode='entering';
+                    Notify.show('⚠ 大気圏突入！','warn',2000);
+                }
+            }
+            // Planet exit check (planet → space)
+            if(this.sceneMode==='planet'&&this._atmoFadeDir===0){
+                if(this.ship.pos.y>220){
+                    this._atmoFadeDir=1;
+                    this._atmoCallback=()=>this._exitPlanetSurface();
+                    this.sceneMode='leaving';
+                    Notify.show('🚀 大気圏脱出中...','info',1500);
+                }
             }
 
-            // FPS counter + periodic refinery UI refresh
+            if(this.planet) this.planet.rotation.y+=dt*0.008;
+
+            this.autoSaveTick+=dt;
+            if(this.autoSaveTick>=CFG.AUTO_SAVE){
+                this.autoSaveTick=0;this._saveSave();
+            }
+
             this.fpsFrames++;this.fpsTick+=dt;
             if(this.fpsTick>=1){
                 document.getElementById('fps-val').textContent=this.fpsFrames;
@@ -2513,13 +3157,16 @@ class GameEngine{
                 if(this.stationOpen&&this.activeStationTab==='refinery')
                     this._renderStationTab('refinery');
             }
-            // Update progress bars each frame while refinery tab is open
             if(this.stationOpen&&this.activeStationTab==='refinery')
                 this._updateRefineryProgressBars();
         }
 
         this.renderer.render(this.scene,this.camera);
-        this._renderMinimap();
+        if(this.sceneMode==='planet'||this.sceneMode==='leaving'){
+            this._renderPlanetMinimap();
+        }else{
+            this._renderMinimap();
+        }
     }
 }
 
