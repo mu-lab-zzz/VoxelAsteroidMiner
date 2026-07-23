@@ -423,6 +423,53 @@
         }
         #btn-boost:active{background:rgba(255,180,0,0.5);}
 
+        /* WARP button */
+        #btn-warp{
+            position:absolute;pointer-events:auto;
+            width:54px;height:54px;border-radius:50%;
+            background:rgba(100,0,255,0.18);border:2px solid #8800ff;
+            color:#cc88ff;font-size:9px;font-weight:700;
+            display:none;align-items:center;justify-content:center;
+            bottom:150px;left:50%;transform:translateX(-136px);
+            letter-spacing:0.5px;
+        }
+        #btn-warp.unlocked{display:flex;}
+        #btn-warp.warp-on{background:rgba(100,0,255,0.55);box-shadow:0 0 20px rgba(100,0,255,0.7);}
+
+        /* Warp status bar */
+        #warp-status{
+            position:absolute;bottom:72px;left:50%;transform:translateX(-50%);
+            font-size:11px;font-family:monospace;color:#cc88ff;
+            display:none;pointer-events:none;z-index:12;
+            text-align:center;text-shadow:0 0 10px #8800ff;
+            letter-spacing:2px;background:rgba(0,0,0,0.4);
+            padding:3px 12px;border-radius:8px;
+        }
+
+        /* System Map Overlay */
+        #system-map{
+            position:absolute;inset:0;z-index:50;
+            background:rgba(0,0,8,0.94);
+            display:none;flex-direction:column;align-items:center;justify-content:center;
+        }
+        #system-map.open{display:flex;}
+        #system-map-title{
+            color:#00f0ff;font-size:12px;letter-spacing:4px;margin-bottom:12px;
+            text-shadow:0 0 16px #00f0ff;font-family:monospace;
+        }
+        #system-map-canvas{
+            border-radius:8px;border:1px solid rgba(0,240,255,0.18);
+            max-width:min(520px,96vw);max-height:min(520px,72vh);
+        }
+        #system-map-close{
+            margin-top:12px;padding:8px 28px;border-radius:20px;
+            background:rgba(0,240,255,0.10);border:1px solid rgba(0,240,255,0.28);
+            color:#00f0ff;font-size:12px;cursor:pointer;pointer-events:auto;
+        }
+        #system-map-info{
+            color:#445;font-size:10px;margin-top:6px;font-family:monospace;letter-spacing:1px;
+        }
+
     </style>
 </head>
 <body>
@@ -444,6 +491,9 @@
         <span>[Mouse drag]</span><span>照準</span>
         <span>[Wheel]</span><span>カメラズーム</span>
         <span>[B]</span><span>基地ドッキング</span>
+        <span>[Z 長押し]</span><span>ワープドライブ</span>
+        <span>[N]</span><span>中継局展開</span>
+        <span>[M]</span><span>太陽系マップ</span>
     </div>
     <!-- Touch controls -->
     <div class="controls-grid" id="ctrl-touch" style="display:none">
@@ -515,6 +565,7 @@
     <!-- Action buttons -->
     <div id="btn-laser">LASER</div>
     <div id="btn-boost">BOOST</div>
+    <div id="btn-warp">WARP</div>
 </div>
 
 <!-- Inventory Modal -->
@@ -563,6 +614,17 @@
 
 <!-- Altitude Exit Hint (shown in planet mode when flying high) -->
 <div id="altitude-hint"></div>
+
+<!-- Warp Status HUD -->
+<div id="warp-status">⚡ WARP ACTIVE</div>
+
+<!-- System Map Overlay -->
+<div id="system-map">
+    <div id="system-map-title">🌌 SOLAR SYSTEM MAP</div>
+    <canvas id="system-map-canvas" width="520" height="520"></canvas>
+    <div id="system-map-info">M キーで開閉 ／ 白点 = 現在地</div>
+    <button id="system-map-close">✕ 閉じる</button>
+</div>
 
 <!-- Planet Base Prompt -->
 <div id="planet-base-prompt">
@@ -627,6 +689,9 @@ const CFG = {
     AUTO_SAVE:   30,
     ASTEROID_N:  30,
     WORLD_R:     2400,
+    WARP_SPEED:  [2500, 5000],   // m/s per warp level
+    WARP_ENERGY: 50,              // energy drain per second while warping
+    RELAY_DIST:  35,              // auto-refuel radius around relay station
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -646,6 +711,7 @@ const LANG={
             cargo:{name:'貨物スロット拡張', desc:(s)=>`積載量 ${s.maxCargo} → ${s.maxCargo+50}`},
             engine:{name:'エンジン推力強化',desc:(s)=>`推力 ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`},
             energy:{name:'エネルギー容量拡張',desc:(s)=>`容量 ${s.maxEnergy} → ${s.maxEnergy+40}`},
+            warp:{name:'ワープドライブ',desc:(s)=>s.warpLv===0?'太陽系探索を解放 (2500m/s)':'超高速ワープ解放 (5000m/s)'},
         },
         ui:{
             dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（60m以内）',
@@ -682,6 +748,7 @@ const LANG={
             cargo:{name:'Cargo Expansion',      desc:(s)=>`Capacity ${s.maxCargo} → ${s.maxCargo+50}`},
             engine:{name:'Engine Thrust Upgrade',desc:(s)=>`Thrust ${s.thrust.toFixed(0)} → ${(s.thrust+14).toFixed(0)}`},
             energy:{name:'Energy Capacity Upgrade',desc:(s)=>`Energy ${s.maxEnergy} → ${s.maxEnergy+40}`},
+            warp:{name:'Warp Drive',desc:(s)=>s.warpLv===0?'Unlock solar system (2500m/s)':'Max warp unlock (5000m/s)'},
         },
         ui:{
             dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 60m)',
@@ -768,6 +835,7 @@ const UPGRADES={
     cargo: {costs:[400,800,1500,2800,5000,9000]},
     engine:{costs:[700,2000,5500]},
     energy:{costs:[350,1000,2800]},
+    warp:  {costs:[50000,150000]},
 };
 
 // Station upgrade tables (costs use refined goods + credits)
@@ -1365,7 +1433,7 @@ class MiningShip{
             cargo:0,maxCargo:100,
             thrust:44,boost:2.1,
             miningPow:1.0,laserCost:14,
-            laserLv:1,cargoUpg:0,engineLv:1,energyLv:1,
+            laserLv:1,cargoUpg:0,engineLv:1,energyLv:1,warpLv:0,
         };
         this.inventory={};
         for(const k of Object.values(VT)) this.inventory[k]=0;
@@ -1604,6 +1672,44 @@ class ExhaustEmitter{
 }
 
 // ════════════════════════════════════════════════════════════════
+//  RELAY STATION
+// ════════════════════════════════════════════════════════════════
+class RelayStation{
+    constructor(scene,pos){
+        this.scene=scene;
+        this.group=new THREE.Group();
+        this.group.position.copy(pos);
+        scene.add(this.group);
+        this._blinkT=0;
+        this._build();
+    }
+    _build(){
+        const mat=new THREE.MeshStandardMaterial({color:0x2244aa,metalness:0.85,roughness:0.25});
+        const glowMat=new THREE.MeshBasicMaterial({
+            color:0x00aaff,transparent:true,opacity:0.9,
+            blending:THREE.AdditiveBlending,depthWrite:false});
+        // Main pole
+        this.group.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.5,10,6),mat));
+        // Cross arms
+        const arm1=new THREE.Mesh(new THREE.BoxGeometry(10,0.25,0.25),mat);
+        arm1.position.y=3;this.group.add(arm1);
+        const arm2=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.25,10),mat);
+        arm2.position.y=3;this.group.add(arm2);
+        // Beacon sphere
+        const beacon=new THREE.Mesh(new THREE.SphereGeometry(1.4,8,8),glowMat);
+        beacon.position.y=6;this.group.add(beacon);
+        this._beacon=beacon;
+        // Point light
+        const pt=new THREE.PointLight(0x00aaff,1.8,120);pt.position.y=6;
+        this.group.add(pt);
+    }
+    update(dt){
+        this._blinkT+=dt;
+        this._beacon.material.opacity=0.5+0.5*Math.sin(this._blinkT*3.2);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
 //  MAIN GAME ENGINE
 // ════════════════════════════════════════════════════════════════
 class GameEngine{
@@ -1639,9 +1745,14 @@ class GameEngine{
         this.refineryQueue={};
         for(const k of Object.values(VT)) this.refineryQueue[k]=0;
 
+        this.relayStations=[];
+        this.relayKits=0;
+        this.warpActive=false;
+        this.systemMapOpen=false;
+
         this.inp={
             forward:false,backward:false,left:false,right:false,
-            up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,
+            up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,warp:false,
         };
 
         this._initRenderer();
@@ -1666,8 +1777,8 @@ class GameEngine{
         this.renderer.toneMappingExposure=1.2;
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         this.scene=new THREE.Scene();
-        this.scene.fog=new THREE.FogExp2(0x000008,0.00072);
-        this.camera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,0.1,3000);
+        this.scene.fog=new THREE.FogExp2(0x000008,0.000012);
+        this.camera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,0.1,220000);
     }
 
     _initScene(){
@@ -1678,15 +1789,15 @@ class GameEngine{
         const fill=new THREE.PointLight(0x4488ff,0.4,800);
         fill.position.set(-400,100,-200);this.scene.add(fill);
 
-        // Starfield
-        const nStars=3500;
+        // Starfield — expanded to cover solar-system distances
+        const nStars=4500;
         const sPos=new Float32Array(nStars*3);
         const sCols=new Float32Array(nStars*3);
         for(let i=0;i<nStars;i++){
             const i3=i*3;
-            sPos[i3]=(Math.random()-.5)*2600;
-            sPos[i3+1]=(Math.random()-.5)*2600;
-            sPos[i3+2]=(Math.random()-.5)*2600;
+            sPos[i3]=(Math.random()-.5)*360000;
+            sPos[i3+1]=(Math.random()-.5)*360000;
+            sPos[i3+2]=(Math.random()-.5)*360000;
             const bri=0.5+Math.random()*0.5;
             const warm=Math.random()>0.8;
             sCols[i3]=bri*(warm?1.0:0.9);
@@ -1697,19 +1808,19 @@ class GameEngine{
         sg.setAttribute('position',new THREE.BufferAttribute(sPos,3));
         sg.setAttribute('color',new THREE.BufferAttribute(sCols,3));
         const starsObj=new THREE.Points(sg,new THREE.PointsMaterial({
-            size:1.4,vertexColors:true,sizeAttenuation:false}));
+            size:1.6,vertexColors:true,sizeAttenuation:false}));
         this.scene.add(starsObj);
         this._spaceOnlyObjects.push(starsObj);
 
         // Nebula glow (large back sphere)
-        const nebG=new THREE.SphereGeometry(1400,16,16);
+        const nebG=new THREE.SphereGeometry(120000,16,16);
         const nebM=new THREE.MeshBasicMaterial({
-            color:0x1a0830,side:THREE.BackSide,transparent:true,opacity:0.55});
+            color:0x1a0830,side:THREE.BackSide,transparent:true,opacity:0.45});
         const nebObj=new THREE.Mesh(nebG,nebM);
         this.scene.add(nebObj);
         this._spaceOnlyObjects.push(nebObj);
 
-        // Distant planet
+        // Unknown planet (beyond Neptune — alien enterable world)
         const pG=new THREE.SphereGeometry(55,24,24);
         const pPos=pG.attributes.position;
         const pCol=new Float32Array(pPos.count*3);
@@ -1718,20 +1829,109 @@ class GameEngine{
             const n=SN.n3(px*0.025,py*0.025,pz*0.025);
             const n2=SN.n3(px*0.08,py*0.08,pz*0.08);
             const i3=i*3;
-            // Mars-like orange/brown with some blue
-            const base=0.3+n*0.25;
-            const stripe=Math.sin(py*0.15+n2*3)*0.5+0.5;
-            pCol[i3]=0.55+base*0.35+stripe*0.1;
-            pCol[i3+1]=0.25+base*0.15;
-            pCol[i3+2]=0.1+stripe*0.25;
+            // Dark alien purple/green
+            pCol[i3]=0.18+Math.max(0,n)*0.22;
+            pCol[i3+1]=0.35+Math.max(0,n2)*0.25;
+            pCol[i3+2]=0.28+Math.max(0,n)*0.35;
         }
         pG.setAttribute('color',new THREE.BufferAttribute(pCol,3));
         const pMesh=new THREE.Mesh(pG,new THREE.MeshStandardMaterial({
-            vertexColors:true,roughness:0.9,metalness:0.0}));
-        pMesh.position.set(900,-180,-1100);
+            vertexColors:true,roughness:0.85,metalness:0.05}));
+        pMesh.position.set(95000,-18000,-124000);
         this.scene.add(pMesh);
         this.planet=pMesh;
         this._spaceOnlyObjects.push(pMesh);
+
+        this._buildSolarSystem();
+    }
+
+    _buildSolarSystem(){
+        // Sun — glowing, emissive
+        const sunG=new THREE.SphereGeometry(280,24,16);
+        const sunM=new THREE.MeshStandardMaterial({
+            color:0xffdd44,emissive:0xffbb00,emissiveIntensity:1.8,roughness:0.9});
+        this.sunMesh=new THREE.Mesh(sunG,sunM);
+        this.sunMesh.position.set(0,-400,-7800);
+        this.scene.add(this.sunMesh);
+        this._spaceOnlyObjects.push(this.sunMesh);
+        // Sun point light (large radius)
+        const sunPt=new THREE.PointLight(0xffeecc,1.8,18000);
+        sunPt.position.copy(this.sunMesh.position);
+        this.scene.add(sunPt);
+        this._spaceOnlyObjects.push(sunPt);
+
+        // Planet data: [name, wx, wy, wz, radius, colors callback]
+        const planets=[
+            {name:'Mercury',wx:2800,wy:-200,wz:-7200,r:12,
+             colorFn:(px,py,pz,n,n2)=>{
+                return[0.62+n*0.12,0.58+n*0.1,0.52+n2*0.06];}},
+            {name:'Venus',wx:-4500,wy:-150,wz:-5800,r:28,
+             colorFn:(px,py,pz,n,n2)=>{
+                const band=Math.sin(py*0.18+n*2)*0.5+0.5;
+                return[0.86+band*0.1,0.76+band*0.08,0.32+n2*0.1];}},
+            {name:'Earth',wx:3200,wy:100,wz:-4800,r:30,
+             colorFn:(px,py,pz,n,n2)=>{
+                const land=n>0.05;
+                return land?[0.15+n*0.25,0.38+n*0.22,0.1+n2*0.08]:
+                            [0.06+n2*0.08,0.14+n2*0.12,0.52+n*0.28];}},
+            {name:'Mars',wx:-2600,wy:200,wz:-3200,r:18,
+             colorFn:(px,py,pz,n,n2)=>[0.58+n*0.28,0.18+n*0.1,0.06+n2*0.06]},
+            {name:'Jupiter',wx:7800,wy:-100,wz:5500,r:80,
+             colorFn:(px,py,pz,n,n2)=>{
+                const band=Math.sin(py*0.095+n*1.8)*0.5+0.5;
+                return[0.72+band*0.22,0.52+band*0.16,0.22+n2*0.08];}},
+            {name:'Saturn',wx:-19000,wy:400,wz:8500,r:65,rings:true,
+             colorFn:(px,py,pz,n,n2)=>{
+                const band=Math.sin(py*0.12+n*1.4)*0.5+0.5;
+                return[0.80+band*0.12,0.70+band*0.1,0.42+n2*0.08];}},
+            {name:'Uranus',wx:44000,wy:-800,wz:-22000,r:40,
+             colorFn:(px,py,pz,n,n2)=>[0.32+n*0.1,0.68+n*0.1,0.82+n2*0.08]},
+            {name:'Neptune',wx:-58000,wy:1200,wz:-62000,r:38,
+             colorFn:(px,py,pz,n,n2)=>[0.08+n*0.08,0.18+n*0.1,0.74+n2*0.15]},
+        ];
+
+        for(const p of planets){
+            const g=new THREE.SphereGeometry(p.r,20,16);
+            const vPos=g.attributes.position;
+            const cols=new Float32Array(vPos.count*3);
+            for(let i=0;i<vPos.count;i++){
+                const px=vPos.getX(i),py=vPos.getY(i),pz=vPos.getZ(i);
+                const n=SN.n3(px*0.04+p.wx*0.001,py*0.04,pz*0.04);
+                const n2=SN.n3(px*0.12,py*0.12,pz*0.12+p.wz*0.001);
+                const[r,g2,b]=p.colorFn(px,py,pz,n,n2);
+                cols[i*3]=Math.max(0,Math.min(1,r));
+                cols[i*3+1]=Math.max(0,Math.min(1,g2));
+                cols[i*3+2]=Math.max(0,Math.min(1,b));
+            }
+            g.setAttribute('color',new THREE.BufferAttribute(cols,3));
+            const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+                vertexColors:true,roughness:0.88,metalness:0.04}));
+            mesh.position.set(p.wx,p.wy,p.wz);
+            this.scene.add(mesh);
+            this._spaceOnlyObjects.push(mesh);
+            if(p.rings) this._buildSaturnRings(p.wx,p.wy,p.wz,p.r);
+        }
+    }
+
+    _buildSaturnRings(wx,wy,wz,planetR){
+        const innerR=planetR*1.38,outerR=planetR*2.25;
+        const ringG=new THREE.RingGeometry(innerR,outerR,72);
+        const rPos=ringG.attributes.position;
+        const rCols=new Float32Array(rPos.count*3);
+        for(let i=0;i<rPos.count;i++){
+            const rx=rPos.getX(i),rz_=rPos.getZ(i);
+            const d=Math.sqrt(rx*rx+rz_*rz_);
+            const t=(d-innerR)/(outerR-innerR);
+            const bri=0.65+Math.sin(t*14)*0.18;
+            rCols[i*3]=bri*0.92;rCols[i*3+1]=bri*0.82;rCols[i*3+2]=bri*0.58;
+        }
+        ringG.setAttribute('color',new THREE.BufferAttribute(rCols,3));
+        const ringMesh=new THREE.Mesh(ringG,new THREE.MeshBasicMaterial({
+            vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:0.72}));
+        ringMesh.rotation.x=Math.PI*0.5+0.12;
+        ringMesh.position.set(wx,wy,wz);
+        this.scene.add(ringMesh);
+        this._spaceOnlyObjects.push(ringMesh);
     }
 
     _initEntities(){
@@ -1822,8 +2022,16 @@ class GameEngine{
                 case'KeyB':this._toggleStation();break;
                 case'KeyG':this._toggleSettings();break;
                 case'KeyV':this._toggleCameraView();break;
+                case'KeyZ':this.inp.warp=true;break;
+                case'KeyN':
+                    if(!this.stationOpen&&!this.planetBaseOpen&&this.sceneMode==='space')
+                        this._deployRelay();break;
+                case'KeyM':
+                    if(!this.stationOpen&&!this.planetBaseOpen)
+                        this._toggleSystemMap();break;
                 case'Escape':
-                    if(this.stationOpen) this._closeStation();
+                    if(this.systemMapOpen) this._toggleSystemMap(false);
+                    else if(this.stationOpen) this._closeStation();
                     else if(this.settingsOpen) this._toggleSettings(false);
                     else if(this.inventoryOpen) this._toggleInventory(false);
                     break;
@@ -1840,6 +2048,7 @@ class GameEngine{
                 case'KeyQ':case'KeyE':this.inp.roll=0;break;
                 case'ShiftLeft':case'ShiftRight':this.inp.boost=false;break;
                 case'Space':this.inp.fire=false;break;
+                case'KeyZ':this.inp.warp=false;break;
             }
             if(!this.isLocked){
                 if(e.code==='KeyA'||e.code==='KeyD') this.inp.yaw=0;
@@ -1937,6 +2146,7 @@ class GameEngine{
         hold('btn-down',   () => this.inp.down   = true,  () => this.inp.down   = false);
         hold('btn-laser',  () => this.inp.fire   = true,  () => this.inp.fire   = false);
         hold('btn-boost',  () => this.inp.boost  = true,  () => this.inp.boost  = false);
+        hold('btn-warp',   () => this.inp.warp   = true,  () => this.inp.warp   = false);
 
 
 
@@ -1988,6 +2198,9 @@ class GameEngine{
         document.getElementById('tab-market').addEventListener('click',()=>this._renderStationTab('market'));
         document.getElementById('tab-upgrades').addEventListener('click',()=>this._renderStationTab('upgrades'));
         document.getElementById('btn-close-station').addEventListener('click',()=>this._closeStation());
+
+        // System map close
+        document.getElementById('system-map-close').addEventListener('click',()=>this._toggleSystemMap(false));
 
         // Settings
         document.getElementById('btn-settings-gear').addEventListener('click',()=>this._toggleSettings());
@@ -2225,6 +2438,9 @@ class GameEngine{
             {key:'energy',lvFn:()=>s.energyLv, maxLv:4,
              costFn:()=>UPGRADES.energy.costs[s.energyLv-1]??null,
              apply:()=>{s.maxEnergy+=40;s.energyLv++;}},
+            {key:'warp',  lvFn:()=>s.warpLv,   maxLv:2,
+             costFn:()=>UPGRADES.warp.costs[s.warpLv]??null,
+             apply:()=>{s.warpLv++;}},
         ];
         for(const u of defs){
             const lv=u.lvFn(),cost=u.costFn(),maxed=cost===null||lv>=u.maxLv;
@@ -2269,6 +2485,19 @@ class GameEngine{
             el.appendChild(row);
             if(canBuy&&!maxed) el.querySelector(`#bstupg-${key}`).onclick=()=>this._buyStationUpgrade(key);
         }
+        // ── Relay Station Section ─────────────────────────────────
+        const relHead=document.createElement('div');
+        relHead.className='st-section-head';relHead.textContent='📡 中継ステーション';
+        el.appendChild(relHead);
+        const relCostOk=this.credits>=5000&&(this.refined[VT.IRON]||0)>=10&&(this.refined[VT.TITANIUM]||0)>=3;
+        const relRow=document.createElement('div');relRow.className='st-row';
+        relRow.innerHTML=`<div class="st-info">`+
+            `<span class="st-name">中継キット (所持: ${this.relayKits}個)</span>`+
+            `<span class="st-sub">5000Cr + 鉄バー×10 + チタンバー×3 / 宇宙でNキー展開</span>`+
+            `</div>`+
+            `<button class="btn-st upgrade" id="btn-buy-relay" ${relCostOk?'':'disabled'}>購入</button>`;
+        el.appendChild(relRow);
+        if(relCostOk) el.querySelector('#btn-buy-relay').onclick=()=>this._buyRelayKit();
     }
 
     _buyUpgrade(u){
@@ -2431,6 +2660,178 @@ class GameEngine{
         this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
     }
 
+    // ── Warp Drive ──────────────────────────────────────────────
+    _updateWarp(dt){
+        if(!this.inp.warp||this.ship.stats.warpLv<=0){
+            if(this.warpActive){this.warpActive=false;}
+            return;
+        }
+        if(this.ship.stats.energy<5){this.warpActive=false;return;}
+        this.warpActive=true;
+        this.ship.stats.energy=Math.max(0,this.ship.stats.energy-CFG.WARP_ENERGY*dt);
+        // Get ship facing direction and set velocity to warp speed
+        MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat);
+        const spd=CFG.WARP_SPEED[this.ship.stats.warpLv-1]||2500;
+        this.ship.vel.copy(MP.v1).multiplyScalar(spd);
+    }
+
+    // ── Relay Stations ──────────────────────────────────────────
+    _deployRelay(){
+        if(this.relayKits<=0){Notify.warn('中継キットがありません (N)');return;}
+        const rs=new RelayStation(this.scene,this.ship.pos.clone());
+        this.relayStations.push(rs);
+        this._spaceOnlyObjects.push(rs.group);
+        this.relayKits--;
+        Sound.playPickup(3);
+        Notify.show('📡 中継ステーション展開！','success',3000);
+        this._saveSave();
+    }
+
+    _checkRelayDock(dt){
+        for(const rs of this.relayStations){
+            if(this.ship.pos.distanceTo(rs.group.position)<CFG.RELAY_DIST){
+                const s=this.ship.stats;
+                if(s.energy<s.maxEnergy){
+                    s.energy=Math.min(s.maxEnergy,s.energy+s.maxEnergy*0.25*dt);
+                }
+            }
+        }
+    }
+
+    _buyRelayKit(){
+        const cost={credits:5000,iron:10,titanium:3};
+        if(this.credits<cost.credits||(this.refined[VT.IRON]||0)<cost.iron||(this.refined[VT.TITANIUM]||0)<cost.titanium){
+            Notify.warn(L('ui.noCredit'));return;
+        }
+        this.credits-=cost.credits;
+        this.refined[VT.IRON]-=cost.iron;
+        this.refined[VT.TITANIUM]-=cost.titanium;
+        this.relayKits++;
+        Sound.playPickup(2);
+        Notify.upgrade(`📡 中継キット入手！ (所持: ${this.relayKits}個)`);
+        this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
+    }
+
+    // ── System Map ───────────────────────────────────────────────
+    _toggleSystemMap(force){
+        this.systemMapOpen=force!==undefined?force:!this.systemMapOpen;
+        const el=document.getElementById('system-map');
+        if(this.systemMapOpen){el.classList.add('open');this._renderSystemMap();}
+        else el.classList.remove('open');
+    }
+
+    _renderSystemMap(){
+        const canvas=document.getElementById('system-map-canvas');
+        if(!canvas)return;
+        const W=canvas.width,H=canvas.height;
+        const ctx=canvas.getContext('2d');
+        ctx.fillStyle='#00000c';ctx.fillRect(0,0,W,H);
+
+        // Scale: center map on sun, 1px = 600 world units
+        // Sun world pos: (0, -7800 in Z)
+        const SCALE=600;
+        const cx=W*0.5,cy=H*0.5; // canvas center = station world (0,0)
+        const toMap=(wx,wz)=>({x:cx+wx/SCALE,y:cy+wz/SCALE});
+
+        // Subtle grid
+        ctx.strokeStyle='rgba(0,240,255,0.04)';ctx.lineWidth=0.5;
+        for(let x=0;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+        for(let y=0;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+        // Bodies: [wx, wz, radius, color, label, rings]
+        const bodies=[
+            {wx:0,wz:-7800,r:16,color:'#ffdd44',glow:true,label:'SUN'},
+            {wx:2800,wz:-7200,r:2.5,color:'#aa9988',label:'☿'},
+            {wx:-4500,wz:-5800,r:4,color:'#ddbb44',label:'♀'},
+            {wx:3200,wz:-4800,r:4.5,color:'#4488ff',label:'♁'},
+            {wx:-2600,wz:-3200,r:3,color:'#cc4422',label:'♂'},
+            {wx:7800,wz:5500,r:9,color:'#d4a966',label:'♃'},
+            {wx:-19000,wz:8500,r:8,color:'#e8d46c',rings:true,label:'♄'},
+            {wx:44000,wz:-22000,r:5.5,color:'#88ddff',label:'⛢'},
+            {wx:-58000,wz:-62000,r:5,color:'#2244cc',label:'♆'},
+            {wx:95000,wz:-124000,r:6,color:'#cc44ff',label:'?',unknown:true},
+        ];
+
+        // Draw orbital rings around sun first
+        const sunMap=toMap(0,-7800);
+        for(const b of bodies){
+            if(b.label==='SUN')continue;
+            const dx=b.wx,dz=b.wz+7800;
+            const orbR=Math.sqrt(dx*dx+dz*dz)/SCALE;
+            ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=0.5;
+            ctx.beginPath();ctx.arc(sunMap.x,sunMap.y,orbR,0,Math.PI*2);ctx.stroke();
+        }
+
+        // Draw bodies
+        for(const b of bodies){
+            const pm=toMap(b.wx,b.wz);
+            const onCanvas=pm.x>-20&&pm.x<W+20&&pm.y>-20&&pm.y<H+20;
+            if(!onCanvas)continue;
+
+            if(b.glow){
+                const grad=ctx.createRadialGradient(pm.x,pm.y,0,pm.x,pm.y,b.r*2.5);
+                grad.addColorStop(0,'rgba(255,220,80,1)');
+                grad.addColorStop(0.4,'rgba(255,160,0,0.7)');
+                grad.addColorStop(1,'rgba(255,80,0,0)');
+                ctx.fillStyle=grad;
+                ctx.beginPath();ctx.arc(pm.x,pm.y,b.r*2.5,0,Math.PI*2);ctx.fill();
+            } else {
+                ctx.fillStyle=b.color;
+                ctx.beginPath();ctx.arc(pm.x,pm.y,b.r,0,Math.PI*2);ctx.fill();
+                if(b.rings){
+                    ctx.strokeStyle='rgba(220,200,100,0.55)';ctx.lineWidth=2;
+                    ctx.beginPath();ctx.ellipse(pm.x,pm.y,b.r*2.6,b.r*0.5,0,0,Math.PI*2);ctx.stroke();
+                }
+                if(b.unknown){
+                    ctx.strokeStyle='rgba(204,68,255,0.5)';ctx.lineWidth=1.5;
+                    ctx.beginPath();ctx.arc(pm.x,pm.y,b.r+4,0,Math.PI*2);ctx.stroke();
+                }
+            }
+
+            // Label
+            ctx.fillStyle=b.unknown?'rgba(204,68,255,0.9)':b.glow?'rgba(255,220,80,0.8)':'rgba(200,200,200,0.65)';
+            ctx.font=b.glow||b.unknown?'9px monospace':'8px monospace';
+            ctx.fillText(b.label,pm.x+b.r+2,pm.y+3);
+        }
+
+        // Station
+        const stP={x:cx,y:cy};
+        ctx.fillStyle='rgba(0,255,170,0.8)';
+        ctx.beginPath();ctx.moveTo(stP.x,stP.y-5);ctx.lineTo(stP.x+4,stP.y+3);
+        ctx.lineTo(stP.x-4,stP.y+3);ctx.closePath();ctx.fill();
+        ctx.fillStyle='rgba(0,255,170,0.6)';ctx.font='8px monospace';
+        ctx.fillText('BASE',stP.x+5,stP.y+3);
+
+        // Relay stations (blue dots)
+        for(const rs of this.relayStations){
+            const rp=toMap(rs.group.position.x,rs.group.position.z);
+            if(rp.x<0||rp.x>W||rp.y<0||rp.y>H)continue;
+            ctx.fillStyle='#00aaff';
+            ctx.beginPath();ctx.arc(rp.x,rp.y,2.5,0,Math.PI*2);ctx.fill();
+        }
+
+        // Ship position (clamped to canvas with border margin)
+        const sp=toMap(this.ship.pos.x,this.ship.pos.z);
+        const mg=10;
+        const scx=Math.max(mg,Math.min(W-mg,sp.x));
+        const scy=Math.max(mg,Math.min(H-mg,sp.y));
+        // Heading arrow
+        const hfx=-Math.sin(this.ship.yaw),hfz=-Math.cos(this.ship.yaw);
+        ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(scx,scy);ctx.lineTo(scx+hfx*10,scy+hfz*10);ctx.stroke();
+        ctx.fillStyle='#ffffff';
+        ctx.beginPath();ctx.arc(scx,scy,2.5,0,Math.PI*2);ctx.fill();
+
+        // Scale bar
+        const barLen=Math.round(10000/SCALE); // 10000 units in pixels
+        ctx.fillStyle='rgba(255,255,255,0.25)';
+        ctx.fillRect(10,H-18,barLen,2);
+        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='8px monospace';
+        ctx.fillText('10,000m',10+barLen+3,H-14);
+        ctx.fillStyle='rgba(100,130,160,0.7)';
+        ctx.fillText(`Z キー:WARP / N:中継展開 / M:マップ閉`,10,H-4);
+    }
+
     // ── Planet Interior System ──────────────────────────────────
     _buildPlanetInterior(){
         if(this._planetBuilt)return;
@@ -2587,7 +2988,7 @@ class GameEngine{
         this.ship.vel.copy(pDir).multiplyScalar(14);
         this.ship.angVel.set(0,0,0);
         this.scene.fog.color.set(0x000008);
-        this.scene.fog.density=0.00072;
+        this.scene.fog.density=0.000012;
         this.sceneMode='space';
         this.dockPromptCooldown=5;
         Notify.show('🚀 大気圏脱出完了！','success',2500);
@@ -2970,6 +3371,14 @@ class GameEngine{
             `${totalVal} Cr`;
 
         this._updateCreditsUI();
+
+        // Warp button visibility (touch UI)
+        const warpBtn=document.getElementById('btn-warp');
+        if(warpBtn){
+            if(this.ship.stats.warpLv>0) warpBtn.classList.add('unlocked');
+            else warpBtn.classList.remove('unlocked');
+            warpBtn.classList.toggle('warp-on',this.warpActive);
+        }
     }
 
     _toggleInventory(force){
@@ -3020,7 +3429,11 @@ class GameEngine{
         localStorage.setItem('vam_save',JSON.stringify({
             stats:this.ship.stats,inventory:this.ship.inventory,
             credits:this.credits,refined:this.refined,
-            stationLv:this.stationLv,refineryQueue:this.refineryQueue}));
+            stationLv:this.stationLv,refineryQueue:this.refineryQueue,
+            relayKits:this.relayKits,
+            relayPositions:this.relayStations.map(rs=>({
+                x:rs.group.position.x,y:rs.group.position.y,z:rs.group.position.z})),
+        }));
     }
     _loadSave(){
         try{
@@ -3033,6 +3446,15 @@ class GameEngine{
                 if(d.refined) Object.assign(this.refined,d.refined);
                 if(d.stationLv) Object.assign(this.stationLv,d.stationLv);
                 if(d.refineryQueue) Object.assign(this.refineryQueue,d.refineryQueue);
+                if(d.relayKits!=null) this.relayKits=d.relayKits;
+                if(d.relayPositions){
+                    for(const p of d.relayPositions){
+                        const v=new THREE.Vector3(p.x,p.y,p.z);
+                        const rs=new RelayStation(this.scene,v);
+                        this.relayStations.push(rs);
+                        this._spaceOnlyObjects.push(rs.group);
+                    }
+                }
             }
         }catch(e){}
     }
@@ -3082,9 +3504,13 @@ class GameEngine{
             }
 
             if(canMove) this.ship.update(dt,this.inp);
+            // Warp drive override (must run after ship.update to set vel for next frame)
+            if(canMove&&inSpace) this._updateWarp(dt);
+            else if(inSpace&&!canMove) this.warpActive=false;
 
             if(inSpace){
                 this._checkCollisions();
+                this._checkRelayDock(dt);
             } else if(this.sceneMode==='planet'){
                 // Ground floor (keep ship above terrain)
                 if(this.ship.pos.y<5){
@@ -3101,6 +3527,10 @@ class GameEngine{
             }
             this._updateAltitudeHint();
 
+            // Warp status HUD
+            const warpEl=document.getElementById('warp-status');
+            if(warpEl) warpEl.style.display=(this.warpActive&&inSpace)?'block':'none';
+
             const targets=inPlanet?this.planetRocks:this.asteroids;
             if(this.inp.fire){
                 this.ship.fireLaser(targets,this.sparks,dt,this.camera);
@@ -3116,7 +3546,11 @@ class GameEngine{
 
             if(inSpace){
                 for(const ast of this.asteroids) ast.updateLOD(this.ship.pos);
+                for(const rs of this.relayStations) rs.update(dt);
             }
+
+            // Sun slow rotation
+            if(this.sunMesh) this.sunMesh.rotation.y+=dt*0.002;
 
             if(this.dockPromptCooldown>0) this.dockPromptCooldown-=dt;
             if(this.planetBaseCooldown>0) this.planetBaseCooldown-=dt;
