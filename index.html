@@ -2555,25 +2555,31 @@ class GameEngine{
 
     _renderUpgradesTab(el){
         const s=this.ship.stats;
+        // Cost beyond defined table: last entry × 2^(extra levels)
+        const xCost=(key,idx)=>{
+            const c=UPGRADES[key].costs;
+            if(idx<c.length) return c[idx];
+            return Math.round(c[c.length-1]*Math.pow(2,idx-c.length+1));
+        };
         const defs=[
-            {key:'laser', lvFn:()=>s.laserLv, maxLv:5,
-             costFn:()=>UPGRADES.laser.costs[s.laserLv-1]??null,
+            {key:'laser', lvFn:()=>s.laserLv,
+             costFn:()=>xCost('laser',s.laserLv-1),
              apply:()=>{s.miningPow+=0.5;s.laserLv++;}},
-            {key:'cargo', lvFn:()=>s.cargoUpg, maxLv:6,
-             costFn:()=>UPGRADES.cargo.costs[s.cargoUpg]??null,
+            {key:'cargo', lvFn:()=>s.cargoUpg,
+             costFn:()=>xCost('cargo',s.cargoUpg),
              apply:()=>{s.maxCargo+=50;s.cargoUpg++;}},
-            {key:'engine',lvFn:()=>s.engineLv, maxLv:4,
-             costFn:()=>UPGRADES.engine.costs[s.engineLv-1]??null,
+            {key:'engine',lvFn:()=>s.engineLv,
+             costFn:()=>xCost('engine',s.engineLv-1),
              apply:()=>{s.thrust+=14;s.engineLv++;}},
-            {key:'energy',lvFn:()=>s.energyLv, maxLv:4,
-             costFn:()=>UPGRADES.energy.costs[s.energyLv-1]??null,
+            {key:'energy',lvFn:()=>s.energyLv,
+             costFn:()=>xCost('energy',s.energyLv-1),
              apply:()=>{s.maxEnergy+=40;s.energyLv++;}},
             {key:'warp',  lvFn:()=>s.warpLv,   maxLv:2,
              costFn:()=>UPGRADES.warp.costs[s.warpLv]??null,
              apply:()=>{s.warpLv++;}},
         ];
         for(const u of defs){
-            const lv=u.lvFn(),cost=u.costFn(),maxed=cost===null||lv>=u.maxLv;
+            const lv=u.lvFn(),cost=u.costFn(),maxed=u.maxLv!=null?lv>=u.maxLv:cost===null;
             const canBuy=!maxed&&this.credits>=cost;
             const name=L(`upgrades.${u.key}.name`);
             const sub=maxed?L('ui.maxed'):L(`upgrades.${u.key}.desc`,s)+` ─ ${cost.toLocaleString()} Cr`;
