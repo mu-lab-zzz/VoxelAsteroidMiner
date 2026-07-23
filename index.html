@@ -230,6 +230,25 @@
             overflow:hidden;margin:3px 0 8px;}
         .ref-cap-fill{height:100%;background:rgba(0,240,255,0.4);border-radius:2px;}
 
+        /* ── Station HUD Indicator ──────────────────────────────── */
+        #station-indicator{
+            position:absolute;transform:translate(-50%,-50%);
+            display:none;flex-direction:column;align-items:center;gap:3px;
+            pointer-events:none;z-index:15;
+        }
+        .station-arrow{
+            width:0;height:0;
+            border-left:7px solid transparent;
+            border-right:7px solid transparent;
+            border-bottom:15px solid #00ffaa;
+            filter:drop-shadow(0 0 5px rgba(0,255,170,0.85));
+        }
+        #station-indicator-dist{
+            font:700 9px monospace;color:#00ffaa;
+            text-shadow:0 0 6px rgba(0,255,170,0.7);
+            letter-spacing:.5px;white-space:nowrap;
+        }
+
         /* ── Dock Prompt ─────────────────────────────────────────── */
         #dock-prompt{
             position:absolute;bottom:180px;left:50%;transform:translateX(-50%);
@@ -472,6 +491,12 @@
         style="background:rgba(0,255,170,0.15);color:#00ffaa;border:1px solid rgba(0,255,170,0.3);">
         🚀 出発
     </button>
+</div>
+
+<!-- Station HUD Indicator -->
+<div id="station-indicator">
+    <div class="station-arrow"></div>
+    <div id="station-indicator-dist"></div>
 </div>
 
 <!-- Dock Prompt -->
@@ -2207,6 +2232,58 @@ class GameEngine{
         this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
     }
 
+    _updateStationIndicator(){
+        const el=document.getElementById('station-indicator');
+        if(this.stationOpen){el.style.display='none';return;}
+
+        const W=window.innerWidth,H=window.innerHeight,margin=44;
+
+        // Project station world position into clip space
+        const sp=this.station.group.position.clone();
+        sp.project(this.camera);
+
+        // z > 1 means station is behind the camera — flip the 2-D coords
+        const behind=sp.z>1;
+        if(behind){sp.x=-sp.x;sp.y=-sp.y;}
+
+        const sx=(sp.x*0.5+0.5)*W;
+        const sy=(-sp.y*0.5+0.5)*H;
+        const cx=W/2,cy=H/2;
+
+        const onScreen=!behind&&sx>margin&&sx<W-margin&&sy>margin&&sy<H-margin;
+
+        const dist=Math.round(this.ship.pos.distanceTo(this.station.group.position));
+        document.getElementById('station-indicator-dist').textContent=dist+'m';
+
+        let px,py,angleDeg;
+        if(onScreen){
+            // Indicator sits just above the projected station position
+            px=sx; py=sy-22;
+            angleDeg=180; // triangle points down toward station
+        }else{
+            // Clamp to screen border
+            const dx=sx-cx,dy=sy-cy;
+            if(dx===0&&dy===0){el.style.display='none';return;}
+            const halfW=cx-margin,halfH=cy-margin;
+            let clampX,clampY;
+            if(Math.abs(dx)*halfH>Math.abs(dy)*halfW){
+                const s=halfW/Math.abs(dx);
+                clampX=cx+dx*s;clampY=cy+dy*s;
+            }else{
+                const s=halfH/Math.abs(dy);
+                clampX=cx+dx*s;clampY=cy+dy*s;
+            }
+            px=clampX;py=clampY;
+            // atan2 + 90° converts screen direction to rotation of an up-pointing triangle
+            angleDeg=Math.atan2(dy,dx)*180/Math.PI+90;
+        }
+
+        el.style.left=px+'px';
+        el.style.top=py+'px';
+        el.querySelector('.station-arrow').style.transform=`rotate(${angleDeg}deg)`;
+        el.style.display='flex';
+    }
+
     _toggleCameraView(){
         this.cameraMode=this.cameraMode==='third'?'cockpit':'third';
         this.ship.root.visible=this.cameraMode!=='cockpit';
@@ -2414,6 +2491,7 @@ class GameEngine{
             if(!this.stationOpen) this.ship.update(dt,this.inp);
             this._checkCollisions();
             this._updateCamera();   // before fireLaser so camera dir is current-frame
+            this._updateStationIndicator();
 
             if(this.inp.fire){
                 this.ship.fireLaser(this.asteroids,this.sparks,dt,this.camera);
