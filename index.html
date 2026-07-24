@@ -1524,8 +1524,8 @@ class MiningShip{
         this.stats={
             hp:100,maxHp:100,
             energy:100,maxEnergy:100,
-            cargo:0,maxCargo:20,
-            thrust:20,boost:1.5,
+            cargo:0,maxCargo:50,
+            thrust:30,boost:1.5,
             miningPow:0.5,laserCost:14,
             warpLv:0,
         };
@@ -2638,8 +2638,8 @@ class GameEngine{
     _computeShipStats(){
         const s=this.ship.stats;
         // Reset to base stats
-        s.thrust=20; s.boost=1.5; s.miningPow=0.5;
-        s.maxCargo=20; s.maxEnergy=100;
+        s.thrust=30; s.boost=1.5; s.miningPow=0.5;
+        s.maxCargo=50; s.maxEnergy=100;
         this._warpSpeed=0;
         let bonusSlots=0;
         for(const pid of this.installedParts){
