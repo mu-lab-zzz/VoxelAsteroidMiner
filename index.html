@@ -479,6 +479,163 @@
             color:#445;font-size:10px;margin-top:6px;font-family:monospace;letter-spacing:1px;
         }
 
+        /* ── Cockpit HUD Overlay ─────────────────────────────────── */
+        #cockpit-overlay{
+            display:none;position:absolute;inset:0;z-index:14;
+            pointer-events:none;font-family:'Courier New',monospace;color:#c8d4e0;
+        }
+        #cockpit-overlay.active{display:block;}
+
+        /* top gauges bar */
+        #ck-topbar{
+            position:absolute;top:0;left:0;right:0;height:46px;
+            background:linear-gradient(to bottom,rgba(9,12,18,.96) 70%,transparent);
+            border-bottom:1px solid rgba(255,119,0,.2);
+            display:flex;align-items:center;padding:0 12px;gap:8px;
+        }
+        .ck-grp{display:flex;align-items:center;gap:7px;}
+        .ck-grp.r{margin-left:auto;}
+        .ck-g{display:flex;align-items:center;gap:5px;}
+        .ck-gl{font-size:8px;letter-spacing:.12em;color:#5a6878;text-transform:uppercase;white-space:nowrap;}
+        .ck-gt{width:50px;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;}
+        .ck-gf{height:100%;border-radius:2px;transition:width .4s;}
+        .ck-fe{background:linear-gradient(to right,#0077cc,#00e5ff);}
+        .ck-fh{background:linear-gradient(to right,#22aa44,#39ff7a);}
+        .ck-fc{background:linear-gradient(to right,#bb5500,#ff7700);}
+        .ck-gv{font-size:9px;font-variant-numeric:tabular-nums;min-width:26px;text-align:right;}
+        .ck-ve{color:#00e5ff;}.ck-vh{color:#39ff7a;}.ck-vc{color:#ff7700;}
+        .ck-gdiv{width:1px;height:20px;background:rgba(255,119,0,.18);flex-shrink:0;}
+        #ck-center-top{flex:1;display:flex;justify-content:center;}
+        .ck-chip{font-size:9px;letter-spacing:.14em;color:rgba(0,229,255,.7);text-transform:uppercase;
+            background:rgba(0,20,30,.4);border:1px solid rgba(0,229,255,.15);padding:2px 10px;white-space:nowrap;}
+
+        /* hud viewport area */
+        #ck-hud{position:absolute;top:46px;left:0;right:0;bottom:150px;pointer-events:none;overflow:hidden;}
+        .ck-vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.5) 100%);}
+        .ck-bk{position:absolute;width:28px;height:28px;border-color:rgba(255,119,0,.4);border-style:solid;}
+        .ck-bk.tl{top:12px;left:12px;border-width:2px 0 0 2px;}
+        .ck-bk.tr{top:12px;right:12px;border-width:2px 2px 0 0;}
+        .ck-bk.bl{bottom:12px;left:12px;border-width:0 0 2px 2px;}
+        .ck-bk.br{bottom:12px;right:12px;border-width:0 2px 2px 0;}
+        #ck-spd{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:10px;
+            letter-spacing:.16em;color:rgba(255,170,0,.5);white-space:nowrap;}
+        #ck-ret{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+            width:48px;height:48px;display:flex;align-items:center;justify-content:center;}
+        .ck-rr{position:absolute;border-radius:50%;border:1px solid rgba(255,170,0,.44);}
+        .ck-rr.o{width:48px;height:48px;}.ck-rr.i{width:24px;height:24px;border-color:rgba(255,119,0,.62);}
+        .ck-rdot{width:4px;height:4px;background:#ff7700;border-radius:50%;}
+        .ck-rt{position:absolute;background:rgba(255,119,0,.52);}
+        .ck-rtt{width:1px;height:9px;top:-11px;left:50%;transform:translateX(-50%);}
+        .ck-rtb{width:1px;height:9px;bottom:-11px;left:50%;transform:translateX(-50%);}
+        .ck-rtl{height:1px;width:9px;left:-11px;top:50%;transform:translateY(-50%);}
+        .ck-rtr{height:1px;width:9px;right:-11px;top:50%;transform:translateY(-50%);}
+        #ck-laserind{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+            font-size:9px;letter-spacing:.16em;color:rgba(255,70,0,.72);text-transform:uppercase;display:none;}
+        #ck-laserind.on{display:block;animation:ck-blink .9s step-end infinite;}
+        @keyframes ck-blink{50%{opacity:0}}
+
+        /* dashboard */
+        #ck-dash{
+            position:absolute;bottom:0;left:0;right:0;height:150px;
+            background:linear-gradient(to top,rgba(9,12,18,.98) 65%,transparent);
+            border-top:2px solid #ff7700;
+            display:grid;grid-template-columns:165px 1fr 165px;
+        }
+        .ck-col{
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            padding:8px 10px;pointer-events:auto;touch-action:none;
+        }
+        #ck-lcol{border-right:1px solid rgba(255,119,0,.15);}
+        #ck-rcol{border-left:1px solid rgba(255,119,0,.15);}
+
+        /* d-pad */
+        .ck-dp-grid{display:grid;grid-template:repeat(3,20px)/repeat(3,20px);gap:3px;}
+        .ck-dp{
+            border-radius:4px;background:#1a2232;border:1px solid #28364c;
+            display:flex;align-items:center;justify-content:center;
+            font-size:9px;color:rgba(255,255,255,.28);
+            pointer-events:auto;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;
+        }
+        .ck-dp.g{visibility:hidden;pointer-events:none;}
+        .ck-dp.c{background:#111826;border-radius:50%;pointer-events:none;}
+        .ck-dp.on{background:#243454;color:rgba(255,119,0,.9);border-color:rgba(255,119,0,.45);}
+
+        /* action buttons */
+        .ck-barea{display:flex;flex-direction:column;align-items:center;gap:3px;}
+        .ck-bguard{border-radius:50%;background:#101620;border:1px solid #222e3e;
+            box-shadow:inset 0 2px 5px rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;}
+        .ck-bguard.lg{width:52px;height:52px;} .ck-bguard.sm{width:40px;height:40px;}
+        .ck-bcap{border-radius:50%;display:flex;align-items:center;justify-content:center;
+            cursor:pointer;-webkit-tap-highlight-color:transparent;pointer-events:auto;}
+        .ck-bcap.laser{width:40px;height:40px;font-size:15px;
+            background:radial-gradient(circle at 38% 32%,#ff5533,#bb1100);
+            border:2px solid #dd2200;
+            box-shadow:0 3px 0 #7a0800,0 0 16px rgba(255,40,0,.5),inset 0 1px 0 rgba(255,255,255,.2);}
+        .ck-bcap.boost{width:30px;height:30px;font-size:13px;
+            background:radial-gradient(circle at 38% 32%,#ffaa22,#bb5500);
+            border:2px solid #cc7700;
+            box-shadow:0 3px 0 #664400,0 0 10px rgba(255,140,0,.4),inset 0 1px 0 rgba(255,255,255,.2);}
+        .ck-bcap.warp{width:30px;height:30px;font-size:13px;
+            background:radial-gradient(circle at 38% 32%,#22ddff,#006688);
+            border:2px solid #00aacc;
+            box-shadow:0 3px 0 #004455,0 0 10px rgba(0,210,255,.4),inset 0 1px 0 rgba(255,255,255,.2);}
+        .ck-bname{font-size:7px;letter-spacing:.1em;color:#5a6878;text-transform:uppercase;}
+        .ck-bname.laser{color:#ff6644;} .ck-bname.boost{color:#ffaa00;} .ck-bname.warp{color:#00e5ff;}
+        .ck-clbl{font-size:7px;letter-spacing:.14em;color:#3a4858;text-transform:uppercase;}
+
+        /* left column inner */
+        .ck-li{display:flex;flex-direction:column;align-items:center;gap:7px;}
+        /* right column inner: row layout → [warp col] [boost-over-dpad col] */
+        .ck-ri{display:flex;flex-direction:row;align-items:flex-end;gap:6px;}
+        .ck-right-stack{display:flex;flex-direction:column;align-items:center;gap:5px;}
+        .ck-warp-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+        #ck-warp-area{display:none;}
+        #ck-warp-area.show{display:flex;}
+
+        /* center instruments */
+        #ck-ccol{display:flex;flex-direction:column;justify-content:center;padding:7px 8px;gap:5px;}
+        .ck-ir{display:flex;gap:7px;align-items:center;}
+        .ck-rd{flex:1;min-width:0;background:rgba(10,14,22,.85);
+            border:1px solid rgba(255,119,0,.17);border-radius:3px;
+            padding:5px 7px;display:flex;flex-direction:column;gap:2px;}
+        .ck-rl{font-size:7px;letter-spacing:.12em;color:#5a6878;text-transform:uppercase;}
+        .ck-rv{font-size:14px;letter-spacing:.04em;font-variant-numeric:tabular-nums;line-height:1;}
+        .ck-rve{color:#44bbff;} .ck-rvc{color:#ff7700;} .ck-rvs{color:#00e5ff;} .ck-rvh{color:#39ff7a;}
+        .ck-rs{font-size:7px;color:#5a6878;}
+        /* warp ring (center panel) */
+        .ck-wb{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;}
+        .ck-wl{font-size:7px;letter-spacing:.14em;color:#5a6878;text-transform:uppercase;}
+        .ck-wr{width:36px;height:36px;border-radius:50%;border:2px solid #5a6878;
+            display:flex;align-items:center;justify-content:center;font-size:7px;letter-spacing:.05em;color:#5a6878;}
+        .ck-wr.rdy{border-color:#00e5ff;color:#00e5ff;animation:ck-wp 1.6s ease-in-out infinite;}
+        @keyframes ck-wp{0%,100%{box-shadow:0 0 8px rgba(0,229,255,.3);}50%{box-shadow:0 0 18px rgba(0,229,255,.6);}}
+        .ck-ws{font-size:7px;color:#5a6878;white-space:nowrap;}
+
+        /* decorative overlays */
+        #ck-glass{position:absolute;inset:0;pointer-events:none;
+            background:radial-gradient(ellipse 55% 28% at 28% 5%,rgba(255,255,255,.016) 0%,transparent 70%),
+                       radial-gradient(ellipse 35% 18% at 78% 9%,rgba(255,255,255,.01) 0%,transparent 70%);}
+        #ck-scan{position:absolute;inset:0;pointer-events:none;
+            background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,0,0,.044) 3px,rgba(0,0,0,.044) 4px);}
+
+        /* keep btn-camview above the cockpit overlay */
+        #btn-camview{z-index:16;}
+
+        /* ── Portrait layout ────────────────────────────────── */
+        @media (orientation:portrait){
+            #ck-topbar{height:40px;}
+            #ck-topbar .ck-grp.r{display:none;}
+            #ck-hud{top:40px;bottom:170px;}
+            #ck-dash{height:170px;grid-template-columns:140px 1fr 140px;}
+            .ck-dp-grid{grid-template:repeat(3,18px)/repeat(3,18px);gap:2px;}
+            .ck-dp{font-size:8px;}
+            .ck-bguard.lg{width:46px;height:46px;}
+            .ck-bcap.laser{width:34px;height:34px;font-size:13px;}
+            .ck-gt{width:42px;}
+            .ck-rv{font-size:13px;}
+        }
+
     </style>
 </head>
 <body>
@@ -575,6 +732,158 @@
     <div id="btn-laser">LASER</div>
     <div id="btn-boost">BOOST</div>
     <div id="btn-warp">WARP</div>
+</div>
+
+<!-- Cockpit HUD Overlay (mode: 'hud') -->
+<div id="cockpit-overlay">
+    <!-- Top gauges bar -->
+    <div id="ck-topbar">
+        <div class="ck-grp">
+            <div class="ck-g">
+                <span class="ck-gl">Energy</span>
+                <div class="ck-gt"><div class="ck-gf ck-fe" id="ck-gfe"></div></div>
+                <span class="ck-gv ck-ve" id="ck-vfe">--</span>
+            </div>
+            <div class="ck-gdiv"></div>
+            <div class="ck-g">
+                <span class="ck-gl">Hull</span>
+                <div class="ck-gt"><div class="ck-gf ck-fh" id="ck-gfh"></div></div>
+                <span class="ck-gv ck-vh" id="ck-vfh">--</span>
+            </div>
+            <div class="ck-gdiv"></div>
+            <div class="ck-g">
+                <span class="ck-gl">Cargo</span>
+                <div class="ck-gt"><div class="ck-gf ck-fc" id="ck-gfc"></div></div>
+                <span class="ck-gv ck-vc" id="ck-vfc">--</span>
+            </div>
+        </div>
+        <div id="ck-center-top">
+            <div class="ck-chip" id="ck-mode-chip">🚀 コクピット</div>
+        </div>
+        <div class="ck-grp r">
+            <div class="ck-g">
+                <span class="ck-gl">Speed</span>
+                <div class="ck-gt"><div class="ck-gf" style="background:linear-gradient(to right,#006688,#00e5ff)" id="ck-gfspd"></div></div>
+                <span class="ck-gv" style="color:#00e5ff" id="ck-vspd">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUD viewport layer -->
+    <div id="ck-hud">
+        <div class="ck-vig"></div>
+        <div class="ck-bk tl"></div>
+        <div class="ck-bk tr"></div>
+        <div class="ck-bk bl"></div>
+        <div class="ck-bk br"></div>
+        <div id="ck-spd">▶ 0 m/s</div>
+        <div id="ck-ret">
+            <div class="ck-rr o"></div>
+            <div class="ck-rr i"></div>
+            <div class="ck-rdot"></div>
+            <div class="ck-rt ck-rtt"></div>
+            <div class="ck-rt ck-rtb"></div>
+            <div class="ck-rt ck-rtl"></div>
+            <div class="ck-rt ck-rtr"></div>
+        </div>
+        <div id="ck-laserind">◈ 採掘レーザー稼働中</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="ck-dash">
+        <!-- Left: laser button above, move dpad below -->
+        <div class="ck-col" id="ck-lcol">
+            <div class="ck-li">
+                <div class="ck-barea">
+                    <div class="ck-bguard lg"><div class="ck-bcap laser" id="ck-laser-btn">⚡</div></div>
+                    <div class="ck-bname laser">レーザー</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                    <div class="ck-clbl">移動</div>
+                    <div class="ck-dp-grid" id="ck-dp-move">
+                        <div class="ck-dp g"></div>
+                        <div class="ck-dp" data-inp="forward">▲</div>
+                        <div class="ck-dp g"></div>
+                        <div class="ck-dp" data-inp="left">◀</div>
+                        <div class="ck-dp c"></div>
+                        <div class="ck-dp" data-inp="right">▶</div>
+                        <div class="ck-dp g"></div>
+                        <div class="ck-dp" data-inp="backward">▼</div>
+                        <div class="ck-dp g"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: instruments + warp ring -->
+        <div id="ck-ccol">
+            <div class="ck-ir">
+                <div class="ck-rd">
+                    <div class="ck-rl">Energy</div>
+                    <div class="ck-rv ck-rve" id="ck-re">--</div>
+                    <div class="ck-rs" id="ck-re-sub">--</div>
+                </div>
+                <div class="ck-rd">
+                    <div class="ck-rl">Cargo</div>
+                    <div class="ck-rv ck-rvc" id="ck-rc">--</div>
+                    <div class="ck-rs" id="ck-rc-sub">--</div>
+                </div>
+            </div>
+            <div class="ck-ir">
+                <div class="ck-rd">
+                    <div class="ck-rl">Speed</div>
+                    <div class="ck-rv ck-rvs" id="ck-rspd">0</div>
+                    <div class="ck-rs">m/s</div>
+                </div>
+                <div class="ck-wb">
+                    <div class="ck-wl">Warp</div>
+                    <div class="ck-wr" id="ck-wr">---</div>
+                    <div class="ck-ws" id="ck-ws">未装備</div>
+                </div>
+                <div class="ck-rd">
+                    <div class="ck-rl">Hull</div>
+                    <div class="ck-rv ck-rvh" id="ck-rh">--</div>
+                    <div class="ck-rs" id="ck-rh-sub">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: [warp btn] [boost-above / view-dpad-below] -->
+        <div class="ck-col" id="ck-rcol">
+            <div class="ck-ri">
+                <!-- Warp button (left of view dpad, hidden when no warp part) -->
+                <div class="ck-warp-col" id="ck-warp-area">
+                    <div class="ck-bguard sm"><div class="ck-bcap warp" id="ck-warp-btn">🌀</div></div>
+                    <div class="ck-bname warp">ワープ</div>
+                </div>
+                <!-- Boost above, view dpad below -->
+                <div class="ck-right-stack">
+                    <div class="ck-barea">
+                        <div class="ck-bguard sm"><div class="ck-bcap boost" id="ck-boost-btn">🔥</div></div>
+                        <div class="ck-bname boost">ブースト</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                        <div class="ck-clbl">視点</div>
+                        <div class="ck-dp-grid" id="ck-dp-view">
+                            <div class="ck-dp g"></div>
+                            <div class="ck-dp" data-look="up">▲</div>
+                            <div class="ck-dp g"></div>
+                            <div class="ck-dp" data-look="left">◀</div>
+                            <div class="ck-dp c"></div>
+                            <div class="ck-dp" data-look="right">▶</div>
+                            <div class="ck-dp g"></div>
+                            <div class="ck-dp" data-look="down">▼</div>
+                            <div class="ck-dp g"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decorative overlays -->
+    <div id="ck-glass"></div>
+    <div id="ck-scan"></div>
 </div>
 
 <!-- Inventory Modal -->
@@ -2537,6 +2846,9 @@ class GameEngine{
         // Camera view toggle
         document.getElementById('btn-camview').addEventListener('click',()=>this._toggleCameraView());
 
+        // ── Cockpit overlay controls (pointer events: touch + mouse) ──
+        this._initCockpitControls();
+
         // Dock prompt buttons
         document.getElementById('btn-dock-yes').addEventListener('click',()=>{
             document.getElementById('dock-prompt').style.display='none';
@@ -3865,14 +4177,42 @@ class GameEngine{
     }
 
     _toggleCameraView(){
-        this.cameraMode=this.cameraMode==='third'?'cockpit':'third';
-        this.ship.root.visible=this.cameraMode!=='cockpit';
-        document.getElementById('btn-camview').textContent=
-            this.cameraMode==='cockpit'?'🪟 1ST':'📷 3RD';
+        const prev=this.cameraMode;
+        const cycle=['third','cockpit','hud'];
+        this.cameraMode=cycle[(cycle.indexOf(prev)+1)%3];
+
+        this.ship.root.visible=(this.cameraMode==='third');
+
+        const overlay=document.getElementById('cockpit-overlay');
+        const minimap=document.getElementById('minimap-wrap');
+        const touchCtrl=document.getElementById('touch-controls');
+
+        if(this.cameraMode==='hud'){
+            overlay.classList.add('active');
+            if(touchCtrl) touchCtrl.style.display='none';
+            if(minimap)   minimap.style.display='none';
+        } else {
+            overlay.classList.remove('active');
+            if(minimap) minimap.style.display='';
+            if(touchCtrl){
+                const hasTouch='ontouchstart' in window||navigator.maxTouchPoints>0
+                    ||window.matchMedia('(pointer:coarse)').matches;
+                touchCtrl.style.display=hasTouch?'block':'none';
+            }
+        }
+        // Clear inputs when leaving hud so no stuck keys
+        if(prev==='hud'){
+            this.inp.forward=this.inp.backward=this.inp.left=this.inp.right=false;
+            this.inp.fire=this.inp.boost=this.inp.warp=false;
+            this.inp.yaw=this.inp.pitch=0;
+        }
+
+        const labels={third:'📷 3RD',cockpit:'🪟 1ST',hud:'🎮 HUD'};
+        document.getElementById('btn-camview').textContent=labels[this.cameraMode];
     }
 
     _updateCamera(){
-        if(this.cameraMode==='cockpit'){
+        if(this.cameraMode==='cockpit'||this.cameraMode==='hud'){
             // First-person: camera sits at cockpit position, inherits ship orientation
             MP.v1.set(0,0.3,-0.8).applyQuaternion(this.ship.quat);
             this.camera.position.copy(this.ship.pos).add(MP.v1);
@@ -3979,12 +4319,101 @@ class GameEngine{
             else warpBtn.classList.remove('unlocked');
             warpBtn.classList.toggle('warp-on',this.warpActive);
         }
+
+        // ── Cockpit overlay stats ──────────────────────────────────
+        if(this.cameraMode==='hud'){
+            const sp=this.ship.stats;
+            const spd=Math.round(this.ship.vel.length()*20);
+            const ep=sp.energy/sp.maxEnergy*100;
+            const hp=sp.hp/sp.maxHp*100;
+            const cp=sp.cargo/sp.maxCargo*100;
+            const maxSpd=200;
+            // top bar
+            document.getElementById('ck-gfe').style.width=ep+'%';
+            document.getElementById('ck-gfh').style.width=hp+'%';
+            document.getElementById('ck-gfc').style.width=cp+'%';
+            document.getElementById('ck-vfe').textContent=Math.round(ep)+'%';
+            document.getElementById('ck-vfh').textContent=Math.round(hp)+'%';
+            document.getElementById('ck-vfc').textContent=Math.round(cp)+'%';
+            document.getElementById('ck-gfspd').style.width=Math.min(spd/maxSpd*100,100)+'%';
+            document.getElementById('ck-vspd').textContent=spd;
+            // viewport speed
+            document.getElementById('ck-spd').textContent='▶ '+spd+' m/s';
+            // laser indicator
+            document.getElementById('ck-laserind').classList.toggle('on',!!this.inp.fire);
+            // dashboard readouts
+            document.getElementById('ck-re').textContent=Math.round(ep)+'%';
+            document.getElementById('ck-re-sub').textContent=Math.round(sp.energy)+'/'+sp.maxEnergy+' MJ';
+            document.getElementById('ck-rc').textContent=Math.round(cp)+'%';
+            document.getElementById('ck-rc-sub').textContent=Math.round(sp.cargo)+'/'+sp.maxCargo+' t';
+            document.getElementById('ck-rspd').textContent=spd;
+            const hullEl=document.getElementById('ck-rh');
+            hullEl.textContent=Math.round(hp)+'%';
+            hullEl.style.color=hp<25?'#ff3333':'#39ff7a';
+            document.getElementById('ck-rh-sub').textContent=Math.round(sp.hp)+'/'+sp.maxHp+' HP';
+            // warp
+            const hasWarp=this._warpSpeed>0;
+            document.getElementById('ck-warp-area').style.display=hasWarp?'flex':'none';
+            const wr=document.getElementById('ck-wr');
+            const ws=document.getElementById('ck-ws');
+            if(hasWarp){
+                wr.classList.add('rdy');
+                wr.textContent=this.warpActive?'WARP':'READY';
+                ws.textContent=this._warpSpeed+'u/s';
+            } else {
+                wr.classList.remove('rdy');
+                wr.textContent='---'; ws.textContent='未装備';
+            }
+        }
     }
 
     _toggleInventory(force){
         const modal=document.getElementById('inventory-modal');
         this.inventoryOpen=force!==undefined?force:!this.inventoryOpen;
         modal.style.display=this.inventoryOpen?'flex':'none';
+    }
+
+    _initCockpitControls(){
+        const LOOK_SPD=0.36;
+        // Helper: hold button with visual feedback
+        const ckHold=(el,on,off)=>{
+            if(!el)return;
+            el.addEventListener('pointerdown',e=>{e.preventDefault();on();el.setPointerCapture(e.pointerId);},{passive:false});
+            el.addEventListener('pointerup',  e=>{e.preventDefault();off();},{passive:false});
+            el.addEventListener('pointercancel',e=>{off();},{passive:false});
+        };
+        // Move d-pad: discrete directional inputs
+        document.querySelectorAll('#ck-dp-move .ck-dp[data-inp]').forEach(btn=>{
+            const key=btn.dataset.inp;
+            ckHold(btn,()=>{this.inp[key]=true;btn.classList.add('on');},
+                       ()=>{this.inp[key]=false;btn.classList.remove('on');});
+        });
+        // View d-pad: yaw/pitch
+        const pSign=this.settings.pitchInvert?1:-1;
+        const lookMap={
+            up:   ()=>{this.inp.pitch=pSign*LOOK_SPD;},
+            down: ()=>{this.inp.pitch=-pSign*LOOK_SPD;},
+            left: ()=>{this.inp.yaw=-LOOK_SPD;},
+            right:()=>{this.inp.yaw= LOOK_SPD;},
+        };
+        const lookOff={
+            up:  ()=>{this.inp.pitch=0;},
+            down:()=>{this.inp.pitch=0;},
+            left:()=>{this.inp.yaw=0;},
+            right:()=>{this.inp.yaw=0;},
+        };
+        document.querySelectorAll('#ck-dp-view .ck-dp[data-look]').forEach(btn=>{
+            const dir=btn.dataset.look;
+            ckHold(btn,()=>{lookMap[dir]();btn.classList.add('on');},
+                       ()=>{lookOff[dir]();btn.classList.remove('on');});
+        });
+        // Action buttons
+        ckHold(document.getElementById('ck-laser-btn'),
+            ()=>this.inp.fire=true, ()=>this.inp.fire=false);
+        ckHold(document.getElementById('ck-boost-btn'),
+            ()=>this.inp.boost=true, ()=>this.inp.boost=false);
+        ckHold(document.getElementById('ck-warp-btn'),
+            ()=>this.inp.warp=true, ()=>this.inp.warp=false);
     }
 
     _saveSettings(){
