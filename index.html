@@ -1534,7 +1534,6 @@ class MiningShip{
         this._shipGroup=grp;
         this.root.add(grp);
         this._hullLv=hullLv;
-        this._flameMeshes=[];      // {mesh, lx,ly} for ExhaustEmitter
         this._nozzleOffsets=[];    // THREE.Vector3 local positions
 
         const hullCol=[0x2a3848,0x2e4458,0x344e66,0x1c2f40][hullLv]??0x1c2f40;
@@ -1632,16 +1631,6 @@ class MiningShip{
         const iG=new THREE.CylinderGeometry(0.14,0.14,0.1,8);iG.rotateX(Math.PI/2);
         const inner=new THREE.Mesh(iG,new THREE.MeshBasicMaterial({color:0x000408}));
         inner.position.set(x,y,z+0.08);grp.add(inner);
-        // Flame cone (small nozzle glow only — particles handle the exhaust trail)
-        const fG=new THREE.ConeGeometry(0.09,0.4,8);fG.rotateX(-Math.PI/2);
-        const fMat=new THREE.MeshBasicMaterial({
-            color:flameCol,transparent:true,opacity:0.15,
-            blending:THREE.AdditiveBlending,depthWrite:false});
-        const flame=new THREE.Mesh(fG,fMat);
-        flame.position.set(x,y,z+0.28);
-        flame.visible=false;
-        grp.add(flame);
-        this._flameMeshes.push({mesh:flame,lx:x,ly:y});
         this._nozzleOffsets.push(new THREE.Vector3(x,y,z+0.2));
     }
 
@@ -1851,36 +1840,12 @@ class ExhaustEmitter{
         // Wide heat wash — boost only
         this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,0.7);
         this.timer=0;
-        this._boostIntensity=0; // smooth blend for flame mesh animation
     }
     update(dt,inp){
         const thrusting=inp.forward||inp.backward||inp.left||inp.right||inp.up||inp.down;
         const boost=!!(inp.boost&&thrusting);
-        const active=thrusting?1:0;
-        this._boostIntensity+=(boost?1:0-this._boostIntensity)*Math.min(1,dt*10);
 
         const offsets=this.ship._nozzleOffsets;
-        const flames=this.ship._flameMeshes;
-
-        // ── Animate flame cone meshes ─────────────────────────
-        if(flames){
-            for(const f of flames){
-                f.mesh.visible=active>0;
-                if(active){
-                    const bi=this._boostIntensity;
-                    const flicker=0.88+Math.random()*0.24;
-                    f.mesh.scale.set(
-                        1+bi*0.2,
-                        1+bi*0.2,
-                        (0.5+bi*0.35)*flicker
-                    );
-                    // color: blue(normal) → orange(boost)
-                    const r=bi*0.9, g=0.15+bi*0.2, b=1-bi*0.85;
-                    f.mesh.material.color.setRGB(r,g,b);
-                    f.mesh.material.opacity=0.35+bi*0.1;
-                }
-            }
-        }
 
         // ── Particle emission ─────────────────────────────────
         this.timer+=dt;
