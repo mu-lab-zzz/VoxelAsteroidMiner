@@ -1306,24 +1306,28 @@ class Asteroid{
         const searchR2=hitR*hitR;
         let changed=false;
 
+        // Hit surface normal: direction from asteroid center toward hit point
+        // All vertices displace in this shared direction → uniform crater, no spikes
+        const lpLen=Math.sqrt(lp.x*lp.x+lp.y*lp.y+lp.z*lp.z)||1;
+        const hnx=-lp.x/lpLen, hny=-lp.y/lpLen, hnz=-lp.z/lpLen;
+
         for(const i of this._querySpatial(lp.x,lp.y,lp.z,hitR)){
             const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
             const dx=vx-lp.x,dy=vy-lp.y,dz=vz-lp.z;
             const d2=dx*dx+dy*dy+dz*dz;
             if(d2>searchR2)continue;
-            const vlen=Math.sqrt(vx*vx+vy*vy+vz*vz);
-            if(vlen<0.5)continue;
-            const falloff=1-Math.sqrt(d2)/hitR;
-            const depth=hitR*falloff*falloff*0.9;
-            pos.setXYZ(i,
-                vx-(vx/vlen)*depth,
-                vy-(vy/vlen)*depth,
-                vz-(vz/vlen)*depth);
+            if(Math.sqrt(vx*vx+vy*vy+vz*vz)<0.5)continue;
+            // smoothstep falloff: C1-smooth at rim → no cliff edge
+            const t=Math.sqrt(d2)/hitR;
+            const falloff=1-t*t*(3-2*t);
+            const depth=hitR*falloff*0.85;
+            pos.setXYZ(i, vx+hnx*depth, vy+hny*depth, vz+hnz*depth);
             changed=true;
         }
 
         if(changed){
             pos.needsUpdate=true;
+            this.mesh.geometry.computeVertexNormals();
             this.mesh.geometry.computeBoundingSphere();
 
             const seed=this.seed;
@@ -1416,19 +1420,23 @@ class PlanetRock{
         const lp=MP.v1.copy(worldPt).sub(this.group.position);
         const pos=this.mesh.geometry.attributes.position;
         const searchR2=hitR*hitR;let changed=false;
+        const lpLen=Math.sqrt(lp.x*lp.x+lp.y*lp.y+lp.z*lp.z)||1;
+        const hnx=-lp.x/lpLen,hny=-lp.y/lpLen,hnz=-lp.z/lpLen;
         for(const i of this._querySpatial(lp.x,lp.y,lp.z,hitR)){
             const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
             const dx=vx-lp.x,dy=vy-lp.y,dz=vz-lp.z;
-            if(dx*dx+dy*dy+dz*dz>searchR2)continue;
-            const vlen=Math.sqrt(vx*vx+vy*vy+vz*vz);if(vlen<0.5)continue;
             const d2=dx*dx+dy*dy+dz*dz;
-            const falloff=1-Math.sqrt(d2)/hitR;
-            const depth=hitR*falloff*falloff*0.9;
-            pos.setXYZ(i,vx-(vx/vlen)*depth,vy-(vy/vlen)*depth,vz-(vz/vlen)*depth);
+            if(d2>searchR2)continue;
+            if(Math.sqrt(vx*vx+vy*vy+vz*vz)<0.5)continue;
+            const t=Math.sqrt(d2)/hitR;
+            const falloff=1-t*t*(3-2*t);
+            const depth=hitR*falloff*0.85;
+            pos.setXYZ(i,vx+hnx*depth,vy+hny*depth,vz+hnz*depth);
             changed=true;
         }
         if(changed){
             pos.needsUpdate=true;
+            this.mesh.geometry.computeVertexNormals();
             this.mesh.geometry.computeBoundingSphere();
             const seed=this.seed;
             const nOre=SN.n3((lp.x-seed)*0.07,(lp.y-seed)*0.07,(lp.z-seed)*0.07);
