@@ -1632,13 +1632,13 @@ class MiningShip{
         const iG=new THREE.CylinderGeometry(0.14,0.14,0.1,8);iG.rotateX(Math.PI/2);
         const inner=new THREE.Mesh(iG,new THREE.MeshBasicMaterial({color:0x000408}));
         inner.position.set(x,y,z+0.08);grp.add(inner);
-        // Flame cone (emissive, shown while thrusting)
-        const fG=new THREE.ConeGeometry(0.17,1.5,8);fG.rotateX(-Math.PI/2);
+        // Flame cone (small nozzle glow only — particles handle the exhaust trail)
+        const fG=new THREE.ConeGeometry(0.09,0.4,8);fG.rotateX(-Math.PI/2);
         const fMat=new THREE.MeshBasicMaterial({
-            color:flameCol,transparent:true,opacity:0.45,
-            blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.BackSide});
+            color:flameCol,transparent:true,opacity:0.15,
+            blending:THREE.AdditiveBlending,depthWrite:false});
         const flame=new THREE.Mesh(fG,fMat);
-        flame.position.set(x,y,z+0.62);
+        flame.position.set(x,y,z+0.28);
         flame.visible=false;
         grp.add(flame);
         this._flameMeshes.push({mesh:flame,lx:x,ly:y});
