@@ -1945,7 +1945,7 @@ class MiningShip{
     _addNozzle(grp,x,y,z,matNoz,flameCol){
         // Outer nozzle ring
         const nG=new THREE.CylinderGeometry(0.2,0.27,0.38,8);nG.rotateX(Math.PI/2);
-        grp.add(Object.assign(new THREE.Mesh(nG,matNoz),{position:new THREE.Vector3(x,y,z-0.12)}));
+        const outerNoz=new THREE.Mesh(nG,matNoz);outerNoz.position.set(x,y,z-0.12);grp.add(outerNoz);
         // Inner dark opening
         const iG=new THREE.CylinderGeometry(0.14,0.14,0.1,8);iG.rotateX(Math.PI/2);
         const inner=new THREE.Mesh(iG,new THREE.MeshBasicMaterial({color:0x000408}));
@@ -2421,12 +2421,15 @@ class GameEngine{
             up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,warp:false,
         };
 
-        try{
-            this._initRenderer();
-            this._initScene();
-            this._initEntities();
-            this._initInputs();
-        }catch(e){console.error('[VAM] init error:',e);}
+        this._initError=null;
+        try{this._initRenderer();}catch(e){console.error('[VAM] renderer:',e);this._initError='[R]'+e.message;}
+        if(this.scene){
+            try{this._initScene();}catch(e){console.error('[VAM] scene:',e);if(!this._initError)this._initError='[S]'+e.message;}
+            try{this._initEntities();}catch(e){console.error('[VAM] entities:',e);if(!this._initError)this._initError='[E]'+e.message;}
+        }
+        if(this.renderer){
+            try{this._initInputs();}catch(e){console.error('[VAM] inputs:',e);if(!this._initError)this._initError='[I]'+e.message;}
+        }
 
         this._initUI();   // must always run — registers start button
 
@@ -2846,6 +2849,7 @@ class GameEngine{
         document.getElementById('btn-start').addEventListener('click',()=>{
             Sound.init();Sound.resume();
             document.getElementById('start-screen').style.display='none';
+            if(this._initError) setTimeout(()=>Notify.warn('Init error: '+this._initError),600);
         });
 
         // Camera view toggle
@@ -4523,12 +4527,19 @@ class GameEngine{
 
     _animate(){
         requestAnimationFrame(()=>this._animate());
+        if(!this.renderer||!this.scene||!this.camera) return;
         const dt=Math.min(this.clock.getDelta(),0.1);
 
         // Start screen guard
         if(document.getElementById('start-screen').style.display==='none'){
             // Atmosphere transition overlay (always runs)
             this._updateAtmoOverlay(dt);
+
+            // Entity guard: if _initEntities() crashed, skip game logic but still render
+            if(!this.ship||!this.station||!this.sparks||!this.exhaust){
+                this.renderer.render(this.scene,this.camera);
+                return;
+            }
 
             const inSpace=this.sceneMode==='space'||this.sceneMode==='entering';
             const inPlanet=this.sceneMode==='planet'||this.sceneMode==='leaving';
