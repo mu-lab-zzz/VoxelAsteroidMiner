@@ -847,26 +847,27 @@ const REFINE=Object.fromEntries(
 );
 
 // Parts manufacturing catalog
+// craft values are quantities of REFINED items (this.refined[vt])
 const PARTS={
-    thruster_1:{name:'スラスターMk1',  tier:1,icon:'🔥',stats:{thrust:14},             craft:{[VT.IRON]:8,[VT.COPPER]:3}},
-    laser_1:   {name:'採掘レーザーMk1',tier:1,icon:'⚡',stats:{miningPow:0.5},         craft:{[VT.COPPER]:8,[VT.IRON]:4}},
-    cargo_s:   {name:'貨物コンテナS',  tier:1,icon:'📦',stats:{maxCargo:50},            craft:{[VT.IRON]:12}},
-    energy_s:  {name:'エネルギーセルS',tier:1,icon:'🔋',stats:{maxEnergy:40},           craft:{[VT.COPPER]:6,[VT.IRON]:4}},
-    hull_1:    {name:'船体フレームMk1',tier:1,icon:'🔩',stats:{slots:2},               craft:{[VT.IRON]:15,[VT.NICKEL]:3}},
-    thruster_2:{name:'スラスターMk2',  tier:2,icon:'🔥',stats:{thrust:22,boost:0.3},   craft:{[VT.TITANIUM]:5,[VT.NICKEL]:4}},
-    laser_2:   {name:'採掘レーザーMk2',tier:2,icon:'⚡',stats:{miningPow:1.0},         craft:{[VT.CRYSTAL]:4,[VT.NICKEL]:6}},
-    cargo_m:   {name:'貨物コンテナM',  tier:2,icon:'📦',stats:{maxCargo:100},           craft:{[VT.NICKEL]:8,[VT.TITANIUM]:4}},
-    energy_m:  {name:'エネルギーセルM',tier:2,icon:'🔋',stats:{maxEnergy:80},           craft:{[VT.NICKEL]:5,[VT.URANIUM]:2}},
-    hull_2:    {name:'船体フレームMk2',tier:2,icon:'🔩',stats:{slots:3},               craft:{[VT.TITANIUM]:8,[VT.NICKEL]:6}},
-    thruster_3:{name:'スラスターMk3',  tier:3,icon:'🔥',stats:{thrust:32,boost:0.5},   craft:{[VT.PLATINUM]:4,[VT.GOLD]:3}},
-    laser_3:   {name:'採掘レーザーMk3',tier:3,icon:'⚡',stats:{miningPow:1.5},         craft:{[VT.CRYSTAL]:8,[VT.PLATINUM]:3}},
-    cargo_l:   {name:'貨物コンテナL',  tier:3,icon:'📦',stats:{maxCargo:200},           craft:{[VT.TITANIUM]:10,[VT.GOLD]:2}},
-    energy_l:  {name:'エネルギーセルL',tier:3,icon:'🔋',stats:{maxEnergy:160},          craft:{[VT.URANIUM]:5,[VT.PLATINUM]:2}},
-    hull_3:    {name:'船体フレームMk3',tier:3,icon:'🔩',stats:{slots:4},               craft:{[VT.PLATINUM]:5,[VT.GOLD]:4}},
-    warp_1:    {name:'ワープドライブ', tier:4,icon:'🌀',stats:{warpSpeed:2500},         craft:{[VT.PLATINUM]:10,[VT.URANIUM]:6,[VT.CRYSTAL]:8}},
-    warp_2:    {name:'超光速ワープ炉', tier:5,icon:'🌀',stats:{warpSpeed:5000},         craft:{[VT.XENITE]:5,[VT.URANIUM]:10,[VT.METALLIC_HYDRO]:3}},
-    storm_lens:{name:'嵐晶レンズ',    tier:5,icon:'⚡',stats:{miningPow:2.0},          craft:{[VT.STORM_CRYSTAL]:8,[VT.PLATINUM]:5}},
-    hydro_eng: {name:'水素核エンジン', tier:5,icon:'🔥',stats:{thrust:50,boost:1.0},    craft:{[VT.METALLIC_HYDRO]:5,[VT.TITANIUM]:10}},
+    thruster_1:{name:'スラスターMk1',  tier:1,icon:'🔥',stats:{thrust:14},             craft:{[VT.IRON]:4,[VT.COPPER]:2}},
+    laser_1:   {name:'採掘レーザーMk1',tier:1,icon:'⚡',stats:{miningPow:0.5},         craft:{[VT.COPPER]:4,[VT.IRON]:2}},
+    cargo_s:   {name:'貨物コンテナS',  tier:1,icon:'📦',stats:{maxCargo:50},            craft:{[VT.IRON]:5}},
+    energy_s:  {name:'エネルギーセルS',tier:1,icon:'🔋',stats:{maxEnergy:40},           craft:{[VT.COPPER]:3,[VT.IRON]:2}},
+    hull_1:    {name:'船体フレームMk1',tier:1,icon:'🔩',stats:{slots:2},               craft:{[VT.IRON]:6,[VT.NICKEL]:2}},
+    thruster_2:{name:'スラスターMk2',  tier:2,icon:'🔥',stats:{thrust:22,boost:0.3},   craft:{[VT.TITANIUM]:3,[VT.NICKEL]:2}},
+    laser_2:   {name:'採掘レーザーMk2',tier:2,icon:'⚡',stats:{miningPow:1.0},         craft:{[VT.CRYSTAL]:3,[VT.NICKEL]:3}},
+    cargo_m:   {name:'貨物コンテナM',  tier:2,icon:'📦',stats:{maxCargo:100},           craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
+    energy_m:  {name:'エネルギーセルM',tier:2,icon:'🔋',stats:{maxEnergy:80},           craft:{[VT.NICKEL]:3,[VT.URANIUM]:1}},
+    hull_2:    {name:'船体フレームMk2',tier:2,icon:'🔩',stats:{slots:3},               craft:{[VT.TITANIUM]:4,[VT.NICKEL]:3}},
+    thruster_3:{name:'スラスターMk3',  tier:3,icon:'🔥',stats:{thrust:32,boost:0.5},   craft:{[VT.PLATINUM]:2,[VT.GOLD]:2}},
+    laser_3:   {name:'採掘レーザーMk3',tier:3,icon:'⚡',stats:{miningPow:1.5},         craft:{[VT.CRYSTAL]:5,[VT.PLATINUM]:2}},
+    cargo_l:   {name:'貨物コンテナL',  tier:3,icon:'📦',stats:{maxCargo:200},           craft:{[VT.TITANIUM]:5,[VT.GOLD]:2}},
+    energy_l:  {name:'エネルギーセルL',tier:3,icon:'🔋',stats:{maxEnergy:160},          craft:{[VT.URANIUM]:3,[VT.PLATINUM]:1}},
+    hull_3:    {name:'船体フレームMk3',tier:3,icon:'🔩',stats:{slots:4},               craft:{[VT.PLATINUM]:3,[VT.GOLD]:2}},
+    warp_1:    {name:'ワープドライブ', tier:4,icon:'🌀',stats:{warpSpeed:2500},         craft:{[VT.PLATINUM]:5,[VT.URANIUM]:4,[VT.CRYSTAL]:5}},
+    warp_2:    {name:'超光速ワープ炉', tier:5,icon:'🌀',stats:{warpSpeed:5000},         craft:{[VT.XENITE]:3,[VT.URANIUM]:6,[VT.METALLIC_HYDRO]:2}},
+    storm_lens:{name:'嵐晶レンズ',    tier:5,icon:'⚡',stats:{miningPow:2.0},          craft:{[VT.STORM_CRYSTAL]:5,[VT.PLATINUM]:3}},
+    hydro_eng: {name:'水素核エンジン', tier:5,icon:'🔥',stats:{thrust:50,boost:1.0},    craft:{[VT.METALLIC_HYDRO]:3,[VT.TITANIUM]:6}},
 };
 
 // Station upgrade tables (costs use refined goods + credits)
@@ -2702,12 +2703,13 @@ class GameEngine{
                 el.appendChild(th);
             }
             const inv=this.partInventory[pid]||0;
-            // check if player can craft
-            const canCraft=Object.entries(p.craft).every(([vt,n])=>(this.ship.inventory[+vt]||0)>=n);
+            // check if player can craft (uses refined items)
+            const canCraft=Object.entries(p.craft).every(([vt,n])=>(this.refined[+vt]||0)>=n);
             const matStr=Object.entries(p.craft).map(([vt,n])=>{
-                const have=this.ship.inventory[+vt]||0;
+                const have=this.refined[+vt]||0;
                 const col=have>=n?'#8f8':'#f88';
-                return `<span style="color:${col}">${VPROPS[+vt].name}×${n}</span>`;
+                const rname=REFINE[+vt]?.name??VPROPS[+vt].name;
+                return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
             }).join(' ');
             const statStr=Object.entries(p.stats).map(([k,v])=>{
                 const labels={thrust:'推力',boost:'加速',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',warpSpeed:'ワープ',slots:'スロット'};
@@ -2798,10 +2800,10 @@ class GameEngine{
     _craftPart(pid){
         const p=PARTS[pid];
         for(const[vt,n] of Object.entries(p.craft)){
-            if((this.ship.inventory[+vt]||0)<n){Notify.warn('素材が足りません');return;}
+            if((this.refined[+vt]||0)<n){Notify.warn('素材が足りません');return;}
         }
         for(const[vt,n] of Object.entries(p.craft)){
-            this.ship.inventory[+vt]=(this.ship.inventory[+vt]||0)-n;
+            this.refined[+vt]=(this.refined[+vt]||0)-n;
         }
         this.partInventory[pid]=(this.partInventory[pid]||0)+1;
         Sound.playPickup(3);
