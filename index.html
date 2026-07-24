@@ -2421,18 +2421,22 @@ class GameEngine{
             up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,warp:false,
         };
 
-        this._initRenderer();
-        this._initScene();
-        this._initEntities();
-        this._initInputs();
-        this._initUI();
-        this._loadSave();
-        this._applyStationStats();
-        this._loadSettings();
+        try{
+            this._initRenderer();
+            this._initScene();
+            this._initEntities();
+            this._initInputs();
+        }catch(e){console.error('[VAM] init error:',e);}
+
+        this._initUI();   // must always run — registers start button
+
+        try{this._loadSave();}catch(e){}
+        try{this._applyStationStats();}catch(e){}
+        try{this._loadSettings();}catch(e){}
 
         window.addEventListener('resize',()=>this._onResize());
-        this._animate();
-        try{this._initCockpitControls();}catch(e){console.error('Cockpit init error:',e);}
+        this._animate();  // must always run — starts game loop
+        try{this._initCockpitControls();}catch(e){console.error('[VAM] cockpit init:',e);}
     }
 
     _initRenderer(){
@@ -4672,7 +4676,14 @@ class GameEngine{
 //  BOOTSTRAP
 // ════════════════════════════════════════════════════════════════
 let Game=null;
-window.addEventListener('DOMContentLoaded',()=>{Game=new GameEngine();});
+window.addEventListener('DOMContentLoaded',()=>{
+    // Fail-safe: wire start button before GameEngine init (in case init throws)
+    const btnStart=document.getElementById('btn-start');
+    if(btnStart) btnStart.addEventListener('click',()=>{
+        document.getElementById('start-screen').style.display='none';
+    });
+    try{Game=new GameEngine();}catch(e){console.error('[VAM] fatal init:',e);}
+});
 </script>
 </body>
 </html>
