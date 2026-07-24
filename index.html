@@ -1770,23 +1770,35 @@ class MiningShip{
 //  MULTI-PURPOSE PARTICLE ENGINE
 // ════════════════════════════════════════════════════════════════
 class ParticleEngine{
+    static _makeSoftTex(){
+        const c=document.createElement('canvas');
+        c.width=c.height=64;
+        const ctx=c.getContext('2d');
+        const g=ctx.createRadialGradient(32,32,0,32,32,32);
+        g.addColorStop(0,'rgba(255,255,255,1)');
+        g.addColorStop(0.35,'rgba(255,255,255,0.7)');
+        g.addColorStop(0.7,'rgba(255,255,255,0.15)');
+        g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=g;ctx.fillRect(0,0,64,64);
+        return new THREE.CanvasTexture(c);
+    }
     constructor(scene,max,color,size,blend){
         this.max=max;
         this.pos=new Float32Array(max*3);
         this.vel=new Float32Array(max*3);
         this.life=new Float32Array(max);
+        this.maxLife=new Float32Array(max);
+        this.colBase=new Float32Array(max*3);
         this.colArr=new Float32Array(max*3);
         this.head=0;
-        // Park all slots off-screen; colArr is already all-zeros (Float32Array)
         for(let i=0;i<max;i++) this.pos[i*3+1]=-99999;
+        const tex=ParticleEngine._tex||(ParticleEngine._tex=ParticleEngine._makeSoftTex());
         const g=new THREE.BufferGeometry();
         g.setAttribute('position',new THREE.BufferAttribute(this.pos,3));
         g.setAttribute('color',new THREE.BufferAttribute(this.colArr,3));
         this.sys=new THREE.Points(g,new THREE.PointsMaterial({
-            size,vertexColors:true,transparent:true,
+            size,map:tex,vertexColors:true,transparent:true,
             blending:blend||THREE.AdditiveBlending,depthWrite:false}));
-        // Skip bounding-sphere frustum culling — parked particles at Y=-99999
-        // would make the computed sphere huge and trigger unexpected culling.
         this.sys.frustumCulled=false;
         scene.add(this.sys);
     }
@@ -1796,6 +1808,8 @@ class ParticleEngine{
         this.pos[i3]=pos.x;this.pos[i3+1]=pos.y;this.pos[i3+2]=pos.z;
         this.vel[i3]=vel.x;this.vel[i3+1]=vel.y;this.vel[i3+2]=vel.z;
         this.life[i]=life;
+        this.maxLife[i]=life;
+        this.colBase[i3]=r;this.colBase[i3+1]=gg;this.colBase[i3+2]=b;
         this.colArr[i3]=r;this.colArr[i3+1]=gg;this.colArr[i3+2]=b;
         this.head++;
     }
@@ -1808,19 +1822,21 @@ class ParticleEngine{
         }
     }
     update(dt){
-        const p=this.pos,v=this.vel,l=this.life,c=this.colArr;
+        const p=this.pos,v=this.vel,l=this.life,ml=this.maxLife;
+        const c=this.colArr,cb=this.colBase;
         const active=Math.min(this.head,this.max);
         for(let i=0;i<active;i++){
             if(l[i]>0){
                 l[i]-=dt;
                 const i3=i*3;
                 if(l[i]<=0){
-                    // Kill: park off-screen AND zero color so additive blending
-                    // contributes nothing even if GPU somehow renders this vertex.
                     p[i3+1]=-99999;
                     c[i3]=0;c[i3+1]=0;c[i3+2]=0;
                 } else {
                     p[i3]+=v[i3]*dt;p[i3+1]+=v[i3+1]*dt;p[i3+2]+=v[i3+2]*dt;
+                    // Fade out as lifetime depletes
+                    const f=l[i]/ml[i];
+                    c[i3]=cb[i3]*f;c[i3+1]=cb[i3+1]*f;c[i3+2]=cb[i3+2]*f;
                 }
             }
         }
@@ -1836,9 +1852,9 @@ class ExhaustEmitter{
     constructor(scene,ship){
         this.ship=ship;
         // Tight bright core stream
-        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.75),null,0.65);
+        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.75),null,1.1);
         // Wide heat wash — boost only
-        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,0.7);
+        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,1.4);
         this.timer=0;
     }
     update(dt,inp){
