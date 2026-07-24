@@ -2432,6 +2432,7 @@ class GameEngine{
 
         window.addEventListener('resize',()=>this._onResize());
         this._animate();
+        try{this._initCockpitControls();}catch(e){console.error('Cockpit init error:',e);}
     }
 
     _initRenderer(){
@@ -2845,9 +2846,6 @@ class GameEngine{
 
         // Camera view toggle
         document.getElementById('btn-camview').addEventListener('click',()=>this._toggleCameraView());
-
-        // ── Cockpit overlay controls (pointer events: touch + mouse) ──
-        this._initCockpitControls();
 
         // Dock prompt buttons
         document.getElementById('btn-dock-yes').addEventListener('click',()=>{
