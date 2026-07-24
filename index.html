@@ -592,7 +592,7 @@
     <div class="tab-bar">
         <button class="tab-btn active" id="tab-refinery">⚗ 精錬所</button>
         <button class="tab-btn"        id="tab-market">💹 市場</button>
-        <button class="tab-btn"        id="tab-upgrades">🔧 整備</button>
+        <button class="tab-btn"        id="tab-workshop">🔧 工作室</button>
     </div>
     <div id="station-content"></div>
     <button class="btn-close-modal" id="btn-close-station"
@@ -846,13 +846,27 @@ const REFINE=Object.fromEntries(
         }])
 );
 
-// Upgrade cost tables (names/descs live in LANG.*.upgrades)
-const UPGRADES={
-    laser: {costs:[600,1800,5000,12000]},
-    cargo: {costs:[400,800,1500,2800,5000,9000]},
-    engine:{costs:[700,2000,5500]},
-    energy:{costs:[350,1000,2800]},
-    warp:  {costs:[50000,150000]},
+// Parts manufacturing catalog
+const PARTS={
+    thruster_1:{name:'スラスターMk1',  tier:1,icon:'🔥',stats:{thrust:14},             craft:{[VT.IRON]:8,[VT.COPPER]:3}},
+    laser_1:   {name:'採掘レーザーMk1',tier:1,icon:'⚡',stats:{miningPow:0.5},         craft:{[VT.COPPER]:8,[VT.IRON]:4}},
+    cargo_s:   {name:'貨物コンテナS',  tier:1,icon:'📦',stats:{maxCargo:50},            craft:{[VT.IRON]:12}},
+    energy_s:  {name:'エネルギーセルS',tier:1,icon:'🔋',stats:{maxEnergy:40},           craft:{[VT.COPPER]:6,[VT.IRON]:4}},
+    hull_1:    {name:'船体フレームMk1',tier:1,icon:'🔩',stats:{slots:2},               craft:{[VT.IRON]:15,[VT.NICKEL]:3}},
+    thruster_2:{name:'スラスターMk2',  tier:2,icon:'🔥',stats:{thrust:22,boost:0.3},   craft:{[VT.TITANIUM]:5,[VT.NICKEL]:4}},
+    laser_2:   {name:'採掘レーザーMk2',tier:2,icon:'⚡',stats:{miningPow:1.0},         craft:{[VT.CRYSTAL]:4,[VT.NICKEL]:6}},
+    cargo_m:   {name:'貨物コンテナM',  tier:2,icon:'📦',stats:{maxCargo:100},           craft:{[VT.NICKEL]:8,[VT.TITANIUM]:4}},
+    energy_m:  {name:'エネルギーセルM',tier:2,icon:'🔋',stats:{maxEnergy:80},           craft:{[VT.NICKEL]:5,[VT.URANIUM]:2}},
+    hull_2:    {name:'船体フレームMk2',tier:2,icon:'🔩',stats:{slots:3},               craft:{[VT.TITANIUM]:8,[VT.NICKEL]:6}},
+    thruster_3:{name:'スラスターMk3',  tier:3,icon:'🔥',stats:{thrust:32,boost:0.5},   craft:{[VT.PLATINUM]:4,[VT.GOLD]:3}},
+    laser_3:   {name:'採掘レーザーMk3',tier:3,icon:'⚡',stats:{miningPow:1.5},         craft:{[VT.CRYSTAL]:8,[VT.PLATINUM]:3}},
+    cargo_l:   {name:'貨物コンテナL',  tier:3,icon:'📦',stats:{maxCargo:200},           craft:{[VT.TITANIUM]:10,[VT.GOLD]:2}},
+    energy_l:  {name:'エネルギーセルL',tier:3,icon:'🔋',stats:{maxEnergy:160},          craft:{[VT.URANIUM]:5,[VT.PLATINUM]:2}},
+    hull_3:    {name:'船体フレームMk3',tier:3,icon:'🔩',stats:{slots:4},               craft:{[VT.PLATINUM]:5,[VT.GOLD]:4}},
+    warp_1:    {name:'ワープドライブ', tier:4,icon:'🌀',stats:{warpSpeed:2500},         craft:{[VT.PLATINUM]:10,[VT.URANIUM]:6,[VT.CRYSTAL]:8}},
+    warp_2:    {name:'超光速ワープ炉', tier:5,icon:'🌀',stats:{warpSpeed:5000},         craft:{[VT.XENITE]:5,[VT.URANIUM]:10,[VT.METALLIC_HYDRO]:3}},
+    storm_lens:{name:'嵐晶レンズ',    tier:5,icon:'⚡',stats:{miningPow:2.0},          craft:{[VT.STORM_CRYSTAL]:8,[VT.PLATINUM]:5}},
+    hydro_eng: {name:'水素核エンジン', tier:5,icon:'🔥',stats:{thrust:50,boost:1.0},    craft:{[VT.METALLIC_HYDRO]:5,[VT.TITANIUM]:10}},
 };
 
 // Station upgrade tables (costs use refined goods + credits)
@@ -1447,10 +1461,10 @@ class MiningShip{
         this.stats={
             hp:100,maxHp:100,
             energy:100,maxEnergy:100,
-            cargo:0,maxCargo:100,
-            thrust:44,boost:2.1,
-            miningPow:1.0,laserCost:14,
-            laserLv:1,cargoUpg:0,engineLv:1,energyLv:1,warpLv:0,
+            cargo:0,maxCargo:20,
+            thrust:20,boost:1.5,
+            miningPow:0.5,laserCost:14,
+            warpLv:0,
         };
         this.inventory={};
         for(const k of Object.values(VT)) this.inventory[k]=0;
@@ -1876,6 +1890,10 @@ class GameEngine{
         this.activePlanet=null;
         this._currentLayer=-1;
         this._builtPlanetName=null;
+        this.installedParts=[];   // array of partId strings (slots)
+        this.partInventory={};    // {partId: count}
+        this.totalSlots=4;        // base slots; hull parts add more
+        this._warpSpeed=0;        // computed from parts
 
         this.inp={
             forward:false,backward:false,left:false,right:false,
@@ -2326,7 +2344,7 @@ class GameEngine{
         // Station modal tabs
         document.getElementById('tab-refinery').addEventListener('click',()=>this._renderStationTab('refinery'));
         document.getElementById('tab-market').addEventListener('click',()=>this._renderStationTab('market'));
-        document.getElementById('tab-upgrades').addEventListener('click',()=>this._renderStationTab('upgrades'));
+        document.getElementById('tab-workshop').addEventListener('click',()=>this._renderStationTab('workshop'));
         document.getElementById('btn-close-station').addEventListener('click',()=>this._closeStation());
 
         // System map close
@@ -2408,8 +2426,8 @@ class GameEngine{
 
     _renderStationTab(tab){
         this.activeStationTab=tab;
-        const tabLabels={refinery:L('ui.tabRefinery'),market:L('ui.tabMarket'),upgrades:L('ui.tabUpgrades')};
-        ['refinery','market','upgrades'].forEach(t=>{
+        const tabLabels={refinery:L('ui.tabRefinery'),market:L('ui.tabMarket'),workshop:'🔧 工作室'};
+        ['refinery','market','workshop'].forEach(t=>{
             const b=document.getElementById(`tab-${t}`);
             if(b){b.classList.toggle('active',t===tab);b.textContent=tabLabels[t];}
         });
@@ -2418,7 +2436,7 @@ class GameEngine{
         el.innerHTML='';
         if(tab==='refinery')  this._renderRefinery(el);
         else if(tab==='market')    this._renderMarket(el);
-        else                       this._renderUpgradesTab(el);
+        else                       this._renderWorkshopTab(el);
     }
 
     _renderRefinery(el){
@@ -2553,43 +2571,97 @@ class GameEngine{
         btn.onclick=()=>this._sellAll();el.appendChild(btn);
     }
 
-    _renderUpgradesTab(el){
+    _computeShipStats(){
         const s=this.ship.stats;
-        // Cost beyond defined table: last entry × 2^(extra levels)
-        const xCost=(key,idx)=>{
-            const c=UPGRADES[key].costs;
-            if(idx<c.length) return c[idx];
-            return Math.round(c[c.length-1]*Math.pow(2,idx-c.length+1));
-        };
-        const defs=[
-            {key:'laser', lvFn:()=>s.laserLv,
-             costFn:()=>xCost('laser',s.laserLv-1),
-             apply:()=>{s.miningPow+=0.5;s.laserLv++;}},
-            {key:'cargo', lvFn:()=>s.cargoUpg,
-             costFn:()=>xCost('cargo',s.cargoUpg),
-             apply:()=>{s.maxCargo+=50;s.cargoUpg++;}},
-            {key:'engine',lvFn:()=>s.engineLv,
-             costFn:()=>xCost('engine',s.engineLv-1),
-             apply:()=>{s.thrust+=14;s.engineLv++;}},
-            {key:'energy',lvFn:()=>s.energyLv,
-             costFn:()=>xCost('energy',s.energyLv-1),
-             apply:()=>{s.maxEnergy+=40;s.energyLv++;}},
-            {key:'warp',  lvFn:()=>s.warpLv,   maxLv:2,
-             costFn:()=>UPGRADES.warp.costs[s.warpLv]??null,
-             apply:()=>{s.warpLv++;}},
-        ];
-        for(const u of defs){
-            const lv=u.lvFn(),cost=u.costFn(),maxed=u.maxLv!=null?lv>=u.maxLv:cost===null;
-            const canBuy=!maxed&&this.credits>=cost;
-            const name=L(`upgrades.${u.key}.name`);
-            const sub=maxed?L('ui.maxed'):L(`upgrades.${u.key}.desc`,s)+` ─ ${cost.toLocaleString()} Cr`;
-            const row=document.createElement('div');row.className='st-row';
-            row.innerHTML=`<div class="st-info"><span class="st-name">${name}</span>`+
-                `<span class="st-sub">${sub}</span></div>`+
-                `<button class="btn-st upgrade" id="bupg-${u.key}" ${(!canBuy||maxed)?'disabled':''}>${L('ui.upgradeBtn')}</button>`;
-            el.appendChild(row);
-            if(canBuy&&!maxed) el.querySelector(`#bupg-${u.key}`).onclick=()=>this._buyUpgrade(u);
+        // Reset to base stats
+        s.thrust=20; s.boost=1.5; s.miningPow=0.5;
+        s.maxCargo=20; s.maxEnergy=100;
+        this._warpSpeed=0;
+        let bonusSlots=0;
+        for(const pid of this.installedParts){
+            const p=PARTS[pid]; if(!p) continue;
+            if(p.stats.thrust)    s.thrust+=p.stats.thrust;
+            if(p.stats.boost)     s.boost+=p.stats.boost;
+            if(p.stats.miningPow) s.miningPow+=p.stats.miningPow;
+            if(p.stats.maxCargo)  s.maxCargo+=p.stats.maxCargo;
+            if(p.stats.maxEnergy) s.maxEnergy+=p.stats.maxEnergy;
+            if(p.stats.warpSpeed) this._warpSpeed=Math.max(this._warpSpeed,p.stats.warpSpeed);
+            if(p.stats.slots)     bonusSlots+=p.stats.slots;
         }
+        this.totalSlots=4+bonusSlots;
+        s.warpLv=this._warpSpeed>0?1:0;
+        s.cargo=Math.min(s.cargo,s.maxCargo);
+        s.energy=Math.min(s.energy,s.maxEnergy);
+    }
+
+    _renderWorkshopTab(el){
+        const workshopHead=document.createElement('div');
+        workshopHead.className='st-section-head';workshopHead.textContent='🛸 装備スロット';
+        el.appendChild(workshopHead);
+
+        const slotGrid=document.createElement('div');
+        slotGrid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;';
+        for(let i=0;i<this.totalSlots;i++){
+            const pid=this.installedParts[i]??null;
+            const p=pid?PARTS[pid]:null;
+            const cell=document.createElement('div');
+            cell.style.cssText='border:1px solid #556;border-radius:6px;padding:6px 4px;text-align:center;cursor:pointer;min-height:60px;font-size:11px;position:relative;background:rgba(30,40,60,0.7)';
+            if(p){
+                cell.innerHTML=`<div style="font-size:18px">${p.icon}</div><div style="color:#cde">${p.name}</div>`;
+                const rm=document.createElement('div');
+                rm.textContent='✕';
+                rm.style.cssText='position:absolute;top:2px;right:4px;color:#f77;cursor:pointer;font-size:13px;';
+                rm.onclick=(e)=>{e.stopPropagation();this._unequipPart(i);};
+                cell.appendChild(rm);
+            }else{
+                cell.innerHTML='<div style="color:#556;font-size:11px;padding-top:12px">空きスロット</div>';
+                cell.onclick=()=>this._showEquipMenu(i,el);
+            }
+            slotGrid.appendChild(cell);
+        }
+        el.appendChild(slotGrid);
+
+        // inventory + craft section
+        const craftHead=document.createElement('div');
+        craftHead.className='st-section-head';craftHead.textContent='🔧 パーツ製造';
+        el.appendChild(craftHead);
+
+        const tierColors=['','#aaddaa','#88aaff','#ffcc66','#ff88cc','#ff6666'];
+        const tierLabels=['','Tier1 基本','Tier2 中級','Tier3 高性能','Tier4 特殊','Tier5 伝説'];
+        let curTier=0;
+        for(const[pid,p] of Object.entries(PARTS)){
+            if(p.tier!==curTier){
+                curTier=p.tier;
+                const th=document.createElement('div');
+                th.style.cssText=`font-size:10px;color:${tierColors[curTier]};margin:8px 0 4px;font-weight:bold;letter-spacing:1px;`;
+                th.textContent=tierLabels[curTier];
+                el.appendChild(th);
+            }
+            const inv=this.partInventory[pid]||0;
+            // check if player can craft
+            const canCraft=Object.entries(p.craft).every(([vt,n])=>(this.ship.inventory[+vt]||0)>=n);
+            const matStr=Object.entries(p.craft).map(([vt,n])=>{
+                const have=this.ship.inventory[+vt]||0;
+                const col=have>=n?'#8f8':'#f88';
+                return `<span style="color:${col}">${VPROPS[+vt].name}×${n}</span>`;
+            }).join(' ');
+            const statStr=Object.entries(p.stats).map(([k,v])=>{
+                const labels={thrust:'推力',boost:'加速',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',warpSpeed:'ワープ',slots:'スロット'};
+                return `${labels[k]||k}+${v}`;
+            }).join(' / ');
+            const row=document.createElement('div');row.className='st-row';
+            row.style.cssText='align-items:flex-start;flex-direction:column;gap:4px;';
+            row.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">`+
+                `<span style="font-size:13px">${p.icon} ${p.name} <span style="color:#8af;font-size:11px">${statStr}</span></span>`+
+                `<span style="display:flex;align-items:center;gap:6px">`+
+                `<span style="color:#aaa;font-size:11px">在庫: ${inv}</span>`+
+                `<button class="btn-st upgrade" id="bcraft-${pid}" ${canCraft?'':'disabled'}>製造</button>`+
+                `</span></div>`+
+                `<div style="font-size:10px">${matStr}</div>`;
+            el.appendChild(row);
+            if(canCraft) el.querySelector(`#bcraft-${pid}`).onclick=()=>this._craftPart(pid);
+        }
+
         // ── Station upgrades ──────────────────────────────────────
         const sHead=document.createElement('div');
         sHead.className='st-section-head';sHead.textContent=L('ui.sectionStation');
@@ -2636,16 +2708,71 @@ class GameEngine{
         if(relCostOk) el.querySelector('#btn-buy-relay').onclick=()=>this._buyRelayKit();
     }
 
-    _buyUpgrade(u){
-        const cost=u.costFn();
-        if(cost===null||this.credits<cost){Notify.warn(L('ui.noCredit'));return;}
-        this.credits-=cost;
-        u.apply();
+    _showEquipMenu(slotIdx,parentEl){
+        const avail=Object.keys(this.partInventory).filter(pid=>(this.partInventory[pid]||0)>0);
+        if(avail.length===0){Notify.warn('在庫にパーツがありません');return;}
+        const popup=document.createElement('div');
+        popup.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a2235;border:1px solid #445;border-radius:10px;padding:16px;z-index:9999;min-width:240px;max-height:60vh;overflow-y:auto;';
+        popup.innerHTML='<div style="font-weight:bold;margin-bottom:10px;color:#cde">パーツを選択</div>';
+        const close=document.createElement('div');
+        close.textContent='✕';close.style.cssText='position:absolute;top:8px;right:12px;cursor:pointer;color:#aaa;font-size:16px;';
+        close.onclick=()=>document.body.removeChild(popup);
+        popup.appendChild(close);
+        for(const pid of avail){
+            const p=PARTS[pid];const inv=this.partInventory[pid];
+            const btn=document.createElement('div');
+            btn.style.cssText='padding:8px;margin:4px 0;background:rgba(60,80,120,0.5);border-radius:6px;cursor:pointer;border:1px solid transparent;';
+            btn.innerHTML=`${p.icon} ${p.name} <span style="color:#aaa;font-size:11px">(${inv}個)</span>`;
+            btn.onmouseenter=()=>btn.style.borderColor='#88aaff';
+            btn.onmouseleave=()=>btn.style.borderColor='transparent';
+            btn.onclick=()=>{document.body.removeChild(popup);this._equipPart(slotIdx,pid);};
+            popup.appendChild(btn);
+        }
+        document.body.appendChild(popup);
+    }
+
+    _craftPart(pid){
+        const p=PARTS[pid];
+        for(const[vt,n] of Object.entries(p.craft)){
+            if((this.ship.inventory[+vt]||0)<n){Notify.warn('素材が足りません');return;}
+        }
+        for(const[vt,n] of Object.entries(p.craft)){
+            this.ship.inventory[+vt]=(this.ship.inventory[+vt]||0)-n;
+        }
+        this.partInventory[pid]=(this.partInventory[pid]||0)+1;
         Sound.playPickup(3);
-        Notify.upgrade(L('ui.upgraded',L(`upgrades.${u.key}.name`)));
+        Notify.upgrade(`${p.icon} ${p.name} を製造しました`);
         this._saveSave();
-        this._renderStationTab('upgrades');
-        this._updateCreditsUI();
+        this._renderStationTab('workshop');
+    }
+
+    _equipPart(slotIdx,pid){
+        if(slotIdx>=this.totalSlots){Notify.warn('スロットがありません');return;}
+        if(!(this.partInventory[pid]>0)){Notify.warn('在庫がありません');return;}
+        const prev=this.installedParts[slotIdx];
+        if(prev){
+            this.partInventory[prev]=(this.partInventory[prev]||0)+1;
+        }
+        this.installedParts[slotIdx]=pid;
+        this.partInventory[pid]=(this.partInventory[pid]||0)-1;
+        if(this.partInventory[pid]<=0) delete this.partInventory[pid];
+        this._computeShipStats();
+        Sound.playPickup(2);
+        Notify.upgrade(`${PARTS[pid].icon} ${PARTS[pid].name} を装備しました`);
+        this._saveSave();
+        this._renderStationTab('workshop');
+    }
+
+    _unequipPart(slotIdx){
+        const pid=this.installedParts[slotIdx];
+        if(!pid)return;
+        this.installedParts.splice(slotIdx,1);
+        this.partInventory[pid]=(this.partInventory[pid]||0)+1;
+        this._computeShipStats();
+        Sound.playPickup(1);
+        Notify.show(`${PARTS[pid].icon} ${PARTS[pid].name} を取り外しました`,'info',2000);
+        this._saveSave();
+        this._renderStationTab('workshop');
     }
 
     _sell(vt){
@@ -2793,7 +2920,7 @@ class GameEngine{
         this._applyStationStats();
         Sound.playPickup(3);
         Notify.upgrade(L('ui.upgraded',L(`stationUpgrades.${key}.name`)));
-        this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
+        this._saveSave();this._renderStationTab('workshop');this._updateCreditsUI();
     }
 
     // ── Warp Drive ──────────────────────────────────────────────
@@ -2807,7 +2934,7 @@ class GameEngine{
         this.ship.stats.energy=Math.max(0,this.ship.stats.energy-CFG.WARP_ENERGY*dt);
         // Get ship facing direction and set velocity to warp speed
         MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat);
-        const spd=CFG.WARP_SPEED[this.ship.stats.warpLv-1]||2500;
+        const spd=this._warpSpeed||2500;
         this.ship.vel.copy(MP.v1).multiplyScalar(spd);
     }
 
@@ -2845,7 +2972,7 @@ class GameEngine{
         this.relayKits++;
         Sound.playPickup(2);
         Notify.upgrade(`📡 中継キット入手！ (所持: ${this.relayKits}個)`);
-        this._saveSave();this._renderStationTab('upgrades');this._updateCreditsUI();
+        this._saveSave();this._renderStationTab('workshop');this._updateCreditsUI();
     }
 
     // ── System Map ───────────────────────────────────────────────
@@ -3684,6 +3811,8 @@ class GameEngine{
             credits:this.credits,refined:this.refined,
             stationLv:this.stationLv,refineryQueue:this.refineryQueue,
             relayKits:this.relayKits,
+            installedParts:this.installedParts,
+            partInventory:this.partInventory,
             relayPositions:this.relayStations.map(rs=>({
                 x:rs.group.position.x,y:rs.group.position.y,z:rs.group.position.z})),
         }));
@@ -3693,13 +3822,21 @@ class GameEngine{
             const raw=localStorage.getItem('vam_save');
             if(raw){
                 const d=JSON.parse(raw);
-                Object.assign(this.ship.stats,d.stats);
-                Object.assign(this.ship.inventory,d.inventory);
+                // Merge only known stats keys (ignore old upgrade level fields)
+                const knownStats=['hp','maxHp','energy','maxEnergy','cargo','maxCargo','thrust','boost','miningPow','laserCost','warpLv'];
+                if(d.stats) for(const k of knownStats) if(d.stats[k]!=null) this.ship.stats[k]=d.stats[k];
+                Object.assign(this.ship.inventory,d.inventory||{});
                 if(d.credits!=null) this.credits=d.credits;
                 if(d.refined) Object.assign(this.refined,d.refined);
                 if(d.stationLv) Object.assign(this.stationLv,d.stationLv);
                 if(d.refineryQueue) Object.assign(this.refineryQueue,d.refineryQueue);
                 if(d.relayKits!=null) this.relayKits=d.relayKits;
+                if(d.installedParts) this.installedParts=d.installedParts.filter(p=>PARTS[p]);
+                if(d.partInventory){
+                    for(const[k,v] of Object.entries(d.partInventory))
+                        if(PARTS[k]) this.partInventory[k]=v;
+                }
+                this._computeShipStats();
                 if(d.relayPositions){
                     for(const p of d.relayPositions){
                         const v=new THREE.Vector3(p.x,p.y,p.z);
