@@ -1635,7 +1635,7 @@ class MiningShip{
         // Flame cone (emissive, shown while thrusting)
         const fG=new THREE.ConeGeometry(0.17,1.5,8);fG.rotateX(-Math.PI/2);
         const fMat=new THREE.MeshBasicMaterial({
-            color:flameCol,transparent:true,opacity:0.82,
+            color:flameCol,transparent:true,opacity:0.45,
             blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.BackSide});
         const flame=new THREE.Mesh(fG,fMat);
         flame.position.set(x,y,z+0.62);
@@ -1834,9 +1834,9 @@ class ExhaustEmitter{
     constructor(scene,ship){
         this.ship=ship;
         // Tight bright core stream
-        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.65),null,0.9);
+        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.75),null,0.65);
         // Wide heat wash — boost only
-        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.35),null,2.8);
+        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,0.7);
         this.timer=0;
         this._boostIntensity=0; // smooth blend for flame mesh animation
     }
@@ -1857,26 +1857,26 @@ class ExhaustEmitter{
                     const bi=this._boostIntensity;
                     const flicker=0.88+Math.random()*0.24;
                     f.mesh.scale.set(
-                        1+bi*0.35,
-                        1+bi*0.35,
-                        (0.55+bi*0.6)*flicker
+                        1+bi*0.2,
+                        1+bi*0.2,
+                        (0.5+bi*0.35)*flicker
                     );
-                    // color: blue(normal) → orange-white(boost)
+                    // color: blue(normal) → orange(boost)
                     const r=bi*0.9, g=0.15+bi*0.2, b=1-bi*0.85;
                     f.mesh.material.color.setRGB(r,g,b);
-                    f.mesh.material.opacity=0.65+bi*0.2;
+                    f.mesh.material.opacity=0.35+bi*0.1;
                 }
             }
         }
 
         // ── Particle emission ─────────────────────────────────
         this.timer+=dt;
-        const interval=boost?0.008:0.013;
+        const interval=boost?0.014:0.016;
         if(thrusting&&this.timer>interval){
             this.timer=0;
             const spd=boost?38:20;
             const spread=boost?5:2;
-            const life=boost?0.25:0.18;
+            const life=boost?0.20:0.15;
             const src=offsets&&offsets.length?offsets:[new THREE.Vector3(0,0,2.1)];
             for(const off of src){
                 // transform local nozzle pos → world
@@ -1886,17 +1886,17 @@ class ExhaustEmitter{
                 MP.v2.x+=(Math.random()-.5)*spread;
                 MP.v2.y+=(Math.random()-.5)*spread;
                 // Core: white-cyan tinted
-                const wb=0.6+Math.random()*0.4;
+                const wb=0.45+Math.random()*0.25;
                 this.core.spawn(MP.v1,MP.v2,life,wb,wb,1.0);
 
                 if(boost){
                     // Heat wash: wider, orange-red
                     MP.v3.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd*0.55);
-                    MP.v3.x+=(Math.random()-.5)*12;
-                    MP.v3.y+=(Math.random()-.5)*12;
-                    const rr=0.9+Math.random()*0.1;
-                    const gg=0.2+Math.random()*0.35;
-                    this.heat.spawn(MP.v1,MP.v3,0.32,rr,gg,0);
+                    MP.v3.x+=(Math.random()-.5)*6;
+                    MP.v3.y+=(Math.random()-.5)*6;
+                    const rr=0.6+Math.random()*0.15;
+                    const gg=0.1+Math.random()*0.2;
+                    this.heat.spawn(MP.v1,MP.v3,0.16,rr,gg,0);
                 }
             }
         }
