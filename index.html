@@ -2330,7 +2330,7 @@ class GameEngine{
     _buildSolarSystem(){
         // Sun — glowing, emissive
         const sunG=new THREE.SphereGeometry(10000,32,20);
-        const sunM=new THREE.MeshBasicMaterial({color:0xfffbe8});
+        const sunM=new THREE.MeshBasicMaterial({color:0xfffbe8,fog:false});
         this.sunMesh=new THREE.Mesh(sunG,sunM);
         this.sunMesh.position.set(0,-4000,-78000);
         this.scene.add(this.sunMesh);
@@ -2353,7 +2353,7 @@ class GameEngine{
         [[38000,0xfffbe8,0.92],[72000,0xffdd88,0.45],[130000,0xff9900,0.18]].forEach(([sz,col,a])=>{
             const sp=new THREE.Sprite(new THREE.SpriteMaterial({
                 map:_mkSunGlow(sz,col,a),blending:THREE.AdditiveBlending,
-                transparent:true,depthWrite:false}));
+                transparent:true,depthWrite:false,fog:false}));
             sp.scale.setScalar(sz);
             sp.position.copy(this.sunMesh.position);
             this.scene.add(sp);
