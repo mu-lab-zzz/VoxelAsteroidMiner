@@ -1766,16 +1766,24 @@ class MiningShip{
             this.laserBeams[i].visible=true;
         }
 
-        if(hitPt&&hitAst&&this.stats.cargo<this.stats.maxCargo){
-            const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
-            let didMine=false;
-            hitAst.mine(hitPt,mineR,(vt)=>{
-                this.addResource(vt,1);
-                sparks.spawnMine(hitPt,vt);
-                floatText.spawn(hitPt,vt);
-                didMine=true;
-            });
-            if(didMine) Sound.playHit();
+        if(hitPt&&hitAst){
+            if(this.stats.cargo>=this.stats.maxCargo){
+                const now=performance.now();
+                if(!this._cargoFullWarnT||now-this._cargoFullWarnT>3000){
+                    this._cargoFullWarnT=now;
+                    Notify.warn(L('ui.cargoFull'));
+                }
+            }else{
+                const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
+                let didMine=false;
+                hitAst.mine(hitPt,mineR,(vt)=>{
+                    this.addResource(vt,1);
+                    sparks.spawnMine(hitPt,vt);
+                    floatText.spawn(hitPt,vt);
+                    didMine=true;
+                });
+                if(didMine) Sound.playHit();
+            }
         }
     }
 
