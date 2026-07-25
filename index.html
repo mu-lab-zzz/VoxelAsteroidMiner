@@ -1974,9 +1974,16 @@ class SpaceDust{
         this._attr=new THREE.BufferAttribute(this._pos,3);
         this._attr.setUsage(THREE.DynamicDrawUsage);
         geo.setAttribute('position',this._attr);
+        const _circleTex=(()=>{
+            const c=document.createElement('canvas');c.width=c.height=16;
+            const x=c.getContext('2d');
+            x.beginPath();x.arc(8,8,8,0,Math.PI*2);
+            x.fillStyle='#fff';x.fill();
+            return new THREE.CanvasTexture(c);
+        })();
         this._mat=new THREE.PointsMaterial({
-            size:1.2,color:0xaac8ee,transparent:true,
-            opacity:0.0,sizeAttenuation:true,depthWrite:false});
+            size:0.96,map:_circleTex,color:0xaac8ee,transparent:true,
+            opacity:0.0,sizeAttenuation:true,depthWrite:false,alphaTest:0.1});
         this._pts=new THREE.Points(geo,this._mat);
         this._pts.frustumCulled=false;
         scene.add(this._pts);
