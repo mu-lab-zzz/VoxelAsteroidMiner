@@ -724,7 +724,7 @@
 <div id="atmo-overlay"></div>
 
 <!-- Planet HUD Indicator -->
-<div id="planet-indicator">
+<div id="planet-indicator" style="display:none">
     <div class="planet-arrow"></div>
     <div id="planet-indicator-label">🌍</div>
 </div>
@@ -4843,7 +4843,6 @@ class GameEngine{
 
             if(inSpace){
                 this._updateStationIndicator();
-                this._updatePlanetIndicator();
                 this._updateMarkerIndicator();
             }
             this._updateAltimeter();
