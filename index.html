@@ -2707,7 +2707,7 @@ class GameEngine{
     _toggleStation(){
         if(this.stationOpen) this._closeStation();
         else {
-            const dist=this.ship.pos.length();
+            const dist=this.ship.pos.distanceTo(this.station.group.position);
             if(dist<60) this._openStation();
             else Notify.warn(L('ui.tooFar'));
         }
@@ -2732,15 +2732,16 @@ class GameEngine{
         this.stationOpen=false;
         document.getElementById('station-modal').style.display='none';
         this.dockPromptCooldown=0;
-        const d=this.ship.pos.length();
-        const dir=d>0.01?this.ship.pos.clone().normalize():new THREE.Vector3(0,0,1);
-        if(d<70) this.ship.pos.copy(dir.multiplyScalar(70));
-        this.ship.vel.copy(dir.normalize().multiplyScalar(8));
+        const stPos=this.station.group.position;
+        const d=this.ship.pos.distanceTo(stPos);
+        const dir=d>0.01?this.ship.pos.clone().sub(stPos).normalize():new THREE.Vector3(0,0,1);
+        if(d<70) this.ship.pos.copy(stPos).addScaledVector(dir,70);
+        this.ship.vel.copy(dir).multiplyScalar(8);
         Notify.show(L('ui.depart'),'info',1500);
     }
 
     _checkDocking(){
-        const dist=this.ship.pos.length();
+        const dist=this.ship.pos.distanceTo(this.station.group.position);
         const prompt=document.getElementById('dock-prompt');
         if(this.stationOpen||this.dockPromptCooldown>0){
             prompt.style.display='none';
