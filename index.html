@@ -2372,17 +2372,21 @@ class GameEngine{
         this.ship=new MiningShip(this.scene);
         this.exhaust=new ExhaustEmitter(this.scene,this.ship);
         this.station=new BaseStation(this.scene);
+        // Asteroid belt ~2.7 AU from Sun (Sun at wz=-78000, 1AU=44150 → 2.7AU offset=+119200)
+        this.station.group.position.set(0,0,41200);
         this._spaceOnlyObjects.push(this.station.group);
         // Start ship near station docking collar, facing outward
-        this.ship.pos.set(0,0,90);
+        this.ship.pos.set(0,0,41290);
 
         let placed=0;
         const seed=Date.now();
+        const stx=this.station.group.position.x,stz=this.station.group.position.z;
         for(let i=0;i<200&&placed<CFG.ASTEROID_N;i++){
             const a=(seed+i*377)%1000/1000,b=(seed+i*631)%1000/1000,c=(seed+i*919)%1000/1000;
-            const x=(a-.5)*CFG.WORLD_R,y=(b-.5)*(CFG.WORLD_R*0.28),z=(c-.5)*CFG.WORLD_R;
-            if(x*x+y*y+z*z<160*160)continue;
-            const dist=Math.sqrt(x*x+y*y+z*z);
+            const x=stx+(a-.5)*CFG.WORLD_R,y=(b-.5)*(CFG.WORLD_R*0.28),z=stz+(c-.5)*CFG.WORLD_R;
+            const lx=x-stx,lz=z-stz;
+            if(lx*lx+y*y+lz*lz<160*160)continue;
+            const dist=Math.sqrt(lx*lx+y*y+lz*lz);
             const zone=ZONES.find(z=>dist<z.maxDist);
             let sz,orePool;
             if(zone.rareChance>0&&Math.random()<zone.rareChance){
