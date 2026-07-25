@@ -1965,6 +1965,56 @@ class ExhaustEmitter{
 // ════════════════════════════════════════════════════════════════
 //  RELAY STATION
 // ════════════════════════════════════════════════════════════════
+class SpaceDust{
+    constructor(scene){
+        const N=180;
+        this._N=N;
+        this._pos=new Float32Array(N*3);
+        const geo=new THREE.BufferGeometry();
+        this._attr=new THREE.BufferAttribute(this._pos,3);
+        this._attr.setUsage(THREE.DynamicDrawUsage);
+        geo.setAttribute('position',this._attr);
+        this._mat=new THREE.PointsMaterial({
+            size:1.2,color:0xaac8ee,transparent:true,
+            opacity:0.0,sizeAttenuation:true,depthWrite:false});
+        this._pts=new THREE.Points(geo,this._mat);
+        this._pts.frustumCulled=false;
+        scene.add(this._pts);
+        this._R=90;
+        this._ready=false;
+    }
+    update(shipPos,shipVel){
+        const R=this._R;
+        const spd=shipVel.length();
+        // Fade opacity with speed (invisible when still, max at speed>=8)
+        this._mat.opacity=Math.min(1,spd/8)*0.45;
+        if(!this._ready){
+            for(let i=0;i<this._N;i++) this._spawn(i,shipPos,null);
+            this._ready=true;
+        }
+        // Direction bias: spawn new particles ahead of travel
+        const bias=spd>1?shipVel.clone().normalize().multiplyScalar(R*0.5):null;
+        for(let i=0;i<this._N;i++){
+            const i3=i*3;
+            const dx=this._pos[i3]-shipPos.x;
+            const dy=this._pos[i3+1]-shipPos.y;
+            const dz=this._pos[i3+2]-shipPos.z;
+            if(dx*dx+dy*dy+dz*dz>R*R) this._spawn(i,shipPos,bias);
+        }
+        this._attr.needsUpdate=true;
+    }
+    _spawn(i,pos,bias){
+        const R=this._R,i3=i*3;
+        const phi=Math.acos(2*Math.random()-1);
+        const theta=Math.random()*Math.PI*2;
+        const r=Math.cbrt(Math.random())*R;
+        this._pos[i3  ]=pos.x+(bias?bias.x:0)+r*Math.sin(phi)*Math.cos(theta);
+        this._pos[i3+1]=pos.y+(bias?bias.y:0)+r*Math.sin(phi)*Math.sin(theta);
+        this._pos[i3+2]=pos.z+(bias?bias.z:0)+r*Math.cos(phi);
+    }
+    setVisible(v){this._pts.visible=v;}
+}
+
 class RelayStation{
     constructor(scene,pos){
         this.scene=scene;
@@ -2475,6 +2525,7 @@ class GameEngine{
 
     _initEntities(){
         this.sparks=new ParticleEngine(this.scene,CFG.SPARKS_MAX,null,0.7);
+        this.spaceDust=new SpaceDust(this.scene);
         this.ship=new MiningShip(this.scene);
         this.exhaust=new ExhaustEmitter(this.scene,this.ship);
         this.station=new BaseStation(this.scene);
@@ -4471,6 +4522,7 @@ class GameEngine{
 
             this.sparks.update(dt);
             this.exhaust.update(dt,this.inp);
+            this.spaceDust.update(this.ship.pos,this.ship.vel);
             floatText.update(dt,this.camera);
 
             if(inSpace){
