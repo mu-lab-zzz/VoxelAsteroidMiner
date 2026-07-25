@@ -3425,7 +3425,7 @@ class GameEngine{
         for(const b of bodies){
             if(b.label==='SUN')continue;
             const dx=b.wx,dz=b.wz+78000;
-            const orbR=Math.sqrt(dx*dx+dz*dz)/SCALE;
+            const orbR=Math.sqrt(dx*dx+dz*dz)/SC;
             ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=0.5;
             ctx.beginPath();ctx.arc(sunMap.x,sunMap.y,orbR,0,Math.PI*2);ctx.stroke();
         }
