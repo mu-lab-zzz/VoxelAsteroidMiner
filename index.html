@@ -2214,10 +2214,10 @@ class GameEngine{
 
         // Planet data: [name, wx, wy, wz, radius, colors callback]
         const planets=[
-            {name:'Mercury',wx:2800,wy:-200,wz:-7200,r:12,
+            {name:'Mercury',wx:1667,wy:-281,wz:-7443,r:12,
              colorFn:(px,py,pz,n,n2)=>{
                 return[0.62+n*0.12,0.58+n*0.1,0.52+n2*0.06];}},
-            {name:'Venus',wx:-4500,wy:-150,wz:-5800,r:28,
+            {name:'Venus',wx:-2913,wy:-238,wz:-6505,r:28,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.18+n*2)*0.5+0.5;
                 return[0.86+band*0.1,0.76+band*0.08,0.32+n2*0.1];}},
@@ -2226,19 +2226,19 @@ class GameEngine{
                 const land=n>0.05;
                 return land?[0.15+n*0.25,0.38+n*0.22,0.1+n2*0.08]:
                             [0.06+n2*0.08,0.14+n2*0.12,0.52+n*0.28];}},
-            {name:'Mars',wx:-2600,wy:200,wz:-3200,r:18,
+            {name:'Mars',wx:-3289,wy:359,wz:-1980,r:18,
              colorFn:(px,py,pz,n,n2)=>[0.58+n*0.28,0.18+n*0.1,0.06+n2*0.06]},
-            {name:'Jupiter',wx:7800,wy:-100,wz:5500,r:80,
+            {name:'Jupiter',wx:11619,wy:47,wz:12011,r:80,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.095+n*1.8)*0.5+0.5;
                 return[0.72+band*0.22,0.52+band*0.16,0.22+n2*0.08];}},
-            {name:'Saturn',wx:-19000,wy:400,wz:8500,r:65,rings:true,
+            {name:'Saturn',wx:-31941,wy:945,wz:19602,r:65,rings:true,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.12+n*1.4)*0.5+0.5;
                 return[0.80+band*0.12,0.70+band*0.1,0.42+n2*0.08];}},
-            {name:'Uranus',wx:44000,wy:-800,wz:-22000,r:40,
+            {name:'Uranus',wx:80630,wy:-1133,wz:-33821,r:40,
              colorFn:(px,py,pz,n,n2)=>[0.32+n*0.1,0.68+n*0.1,0.82+n2*0.08]},
-            {name:'Neptune',wx:-58000,wy:1200,wz:-62000,r:38,
+            {name:'Neptune',wx:-96976,wy:2275,wz:-98422,r:38,
              colorFn:(px,py,pz,n,n2)=>[0.08+n*0.08,0.18+n*0.1,0.74+n2*0.15]},
         ];
 
@@ -3232,15 +3232,15 @@ class GameEngine{
         // Bodies: [wx, wz, radius, color, label, rings]
         const bodies=[
             {wx:0,wz:-7800,r:16,color:'#ffdd44',glow:true,label:'SUN'},
-            {wx:2800,wz:-7200,r:2.5,color:'#aa9988',label:'☿'},
-            {wx:-4500,wz:-5800,r:4,color:'#ddbb44',label:'♀'},
+            {wx:1667,wz:-7443,r:2.5,color:'#aa9988',label:'☿'},
+            {wx:-2913,wz:-6505,r:4,color:'#ddbb44',label:'♀'},
             {wx:3200,wz:-4800,r:4.5,color:'#4488ff',label:'♁'},
-            {wx:-2600,wz:-3200,r:3,color:'#cc4422',label:'♂'},
-            {wx:7800,wz:5500,r:9,color:'#d4a966',label:'♃'},
-            {wx:-19000,wz:8500,r:8,color:'#e8d46c',rings:true,label:'♄'},
-            {wx:44000,wz:-22000,r:5.5,color:'#88ddff',label:'⛢'},
-            {wx:-58000,wz:-62000,r:5,color:'#2244cc',label:'♆'},
-            {wx:95000,wz:-124000,r:6,color:'#cc44ff',label:'?',unknown:true},
+            {wx:-3289,wz:-1980,r:3,color:'#cc4422',label:'♂'},
+            {wx:11619,wz:12011,r:9,color:'#d4a966',label:'♃'},
+            {wx:-31941,wz:19602,r:8,color:'#e8d46c',rings:true,label:'♄'},
+            {wx:80630,wz:-33821,r:5.5,color:'#88ddff',label:'⛢'},
+            {wx:-96976,wz:-98422,r:5,color:'#2244cc',label:'♆'},
+            {wx:175000,wz:-120000,r:6,color:'#cc44ff',label:'?',unknown:true},
         ];
 
         // Draw orbital rings around sun first
