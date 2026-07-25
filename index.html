@@ -2089,6 +2089,7 @@ class GameEngine{
         this._builtPlanetName=null;
         this.installedParts=[];   // array of partId strings (slots)
         this.partInventory={};    // {partId: count}
+        this.hullCraftCounts={};  // {hull_1/2/3: total times crafted} — drives cost doubling
         this.totalSlots=4;        // base slots; hull parts add more
         this._warpSpeed=0;        // computed from parts
 
@@ -2846,9 +2847,10 @@ class GameEngine{
                 el.appendChild(th);
             }
             const inv=this.partInventory[pid]||0;
-            // check if player can craft (uses refined items)
-            const canCraft=Object.entries(p.craft).every(([vt,n])=>(this.refined[+vt]||0)>=n);
-            const matStr=Object.entries(p.craft).map(([vt,n])=>{
+            const eff=this._effectiveCraft(pid);
+            const mul=pid.startsWith('hull_')?Math.pow(2,this.hullCraftCounts[pid]||0):1;
+            const canCraft=Object.entries(eff).every(([vt,n])=>(this.refined[+vt]||0)>=n);
+            const matStr=Object.entries(eff).map(([vt,n])=>{
                 const have=this.refined[+vt]||0;
                 const col=have>=n?'#8f8':'#f88';
                 const rname=REFINE[+vt]?.name??VPROPS[+vt].name;
@@ -2858,10 +2860,11 @@ class GameEngine{
                 const labels={thrust:'推力',boost:'加速',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',warpSpeed:'ワープ',slots:'スロット'};
                 return `${labels[k]||k}+${v}`;
             }).join(' / ');
+            const mulBadge=mul>1?` <span style="color:#fa8;font-size:10px">コスト×${mul}</span>`:'';
             const row=document.createElement('div');row.className='st-row';
             row.style.cssText='align-items:flex-start;flex-direction:column;gap:4px;';
             row.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">`+
-                `<span style="font-size:13px">${p.icon} ${p.name} <span style="color:#8af;font-size:11px">${statStr}</span></span>`+
+                `<span style="font-size:13px">${p.icon} ${p.name}${mulBadge} <span style="color:#8af;font-size:11px">${statStr}</span></span>`+
                 `<span style="display:flex;align-items:center;gap:6px">`+
                 `<span style="color:#aaa;font-size:11px">在庫: ${inv}</span>`+
                 `<button class="btn-st upgrade" id="bcraft-${pid}" ${canCraft?'':'disabled'}>製造</button>`+
@@ -2940,15 +2943,25 @@ class GameEngine{
         document.body.appendChild(popup);
     }
 
+    _effectiveCraft(pid){
+        const base=PARTS[pid].craft;
+        const mul=pid.startsWith('hull_')?Math.pow(2,this.hullCraftCounts[pid]||0):1;
+        if(mul===1) return base;
+        const out={};
+        for(const[vt,n] of Object.entries(base)) out[vt]=Math.ceil(n*mul);
+        return out;
+    }
     _craftPart(pid){
         const p=PARTS[pid];
-        for(const[vt,n] of Object.entries(p.craft)){
+        const cost=this._effectiveCraft(pid);
+        for(const[vt,n] of Object.entries(cost)){
             if((this.refined[+vt]||0)<n){Notify.warn('素材が足りません');return;}
         }
-        for(const[vt,n] of Object.entries(p.craft)){
+        for(const[vt,n] of Object.entries(cost)){
             this.refined[+vt]=(this.refined[+vt]||0)-n;
         }
         this.partInventory[pid]=(this.partInventory[pid]||0)+1;
+        if(pid.startsWith('hull_')) this.hullCraftCounts[pid]=(this.hullCraftCounts[pid]||0)+1;
         Sound.playPickup(3);
         Notify.upgrade(`${p.icon} ${p.name} を製造しました`);
         this._saveSave();
@@ -4009,6 +4022,7 @@ class GameEngine{
             relayKits:this.relayKits,
             installedParts:this.installedParts,
             partInventory:this.partInventory,
+            hullCraftCounts:this.hullCraftCounts,
             relayPositions:this.relayStations.map(rs=>({
                 x:rs.group.position.x,y:rs.group.position.y,z:rs.group.position.z})),
         }));
@@ -4031,6 +4045,10 @@ class GameEngine{
                 if(d.partInventory){
                     for(const[k,v] of Object.entries(d.partInventory))
                         if(PARTS[k]) this.partInventory[k]=v;
+                }
+                if(d.hullCraftCounts){
+                    for(const[k,v] of Object.entries(d.hullCraftCounts))
+                        if(/^hull_\d+$/.test(k)) this.hullCraftCounts[k]=v;
                 }
                 this._computeShipStats();
                 if(d.relayPositions){
