@@ -257,6 +257,14 @@
             color:#00ffaa;transition:background .15s;
         }
         #btn-dock-yes:hover{background:rgba(0,255,170,0.32);}
+        #cargo-warn{
+            position:absolute;bottom:180px;left:50%;transform:translateX(-50%);
+            background:rgba(24,10,0,0.95);border:1.5px solid rgba(255,160,0,0.65);
+            border-radius:12px;padding:12px 24px;display:none;z-index:20;
+            pointer-events:none;text-align:center;white-space:nowrap;
+            color:#ffaa00;font-size:13px;font-weight:700;font-family:monospace;
+            box-shadow:0 0 28px rgba(255,140,0,0.18);
+        }
 
         /* ── Atmosphere Overlay ─────────────────────────────────── */
         #atmo-overlay{
@@ -637,6 +645,7 @@
 <div id="dock-prompt">
     <button id="btn-dock-yes">🏭 ドッキング</button>
 </div>
+<div id="cargo-warn">⚠ 貨物スペースが不足</div>
 
 <!-- Atmosphere Overlay -->
 <div id="atmo-overlay"></div>
@@ -1758,7 +1767,11 @@ class MiningShip{
             this.laserBeams.push(grp);
         }
     }
-    hideLaser(){for(const b of this.laserBeams) b.visible=false;}
+    hideLaser(){
+        for(const b of this.laserBeams) b.visible=false;
+        const cw=document.getElementById('cargo-warn');
+        if(cw) cw.style.display='none';
+    }
 
     update(dt,inp){
         const thrust=this.stats.thrust*(inp.boost?this.stats.boost:1);
@@ -1839,12 +1852,11 @@ class MiningShip{
 
         if(hitPt&&hitAst){
             if(this.stats.cargo>=this.stats.maxCargo){
-                const now=performance.now();
-                if(!this._cargoFullWarnT||now-this._cargoFullWarnT>3000){
-                    this._cargoFullWarnT=now;
-                    Notify.warn(L('ui.cargoFull'));
-                }
+                const cw=document.getElementById('cargo-warn');
+                if(cw) cw.style.display='block';
             }else{
+                const cw=document.getElementById('cargo-warn');
+                if(cw) cw.style.display='none';
                 const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
                 let didMine=false;
                 hitAst.mine(hitPt,mineR,(vt)=>{
