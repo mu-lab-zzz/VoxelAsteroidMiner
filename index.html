@@ -2199,7 +2199,7 @@ class GameEngine{
 
     _buildSolarSystem(){
         // Sun — glowing, emissive
-        const sunG=new THREE.SphereGeometry(280,24,16);
+        const sunG=new THREE.SphereGeometry(1000,32,20);
         const sunM=new THREE.MeshStandardMaterial({
             color:0xffdd44,emissive:0xffbb00,emissiveIntensity:1.8,roughness:0.9});
         this.sunMesh=new THREE.Mesh(sunG,sunM);
@@ -2214,31 +2214,31 @@ class GameEngine{
 
         // Planet data: [name, wx, wy, wz, radius, colors callback]
         const planets=[
-            {name:'Mercury',wx:1667,wy:-281,wz:-7443,r:12,
+            {name:'Mercury',wx:1667,wy:-281,wz:-7443,r:8,ns:0.15,
              colorFn:(px,py,pz,n,n2)=>{
                 return[0.62+n*0.12,0.58+n*0.1,0.52+n2*0.06];}},
-            {name:'Venus',wx:-2913,wy:-238,wz:-6505,r:28,
+            {name:'Venus',wx:-2913,wy:-238,wz:-6505,r:19,ns:0.065,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.18+n*2)*0.5+0.5;
                 return[0.86+band*0.1,0.76+band*0.08,0.32+n2*0.1];}},
-            {name:'Earth',wx:3200,wy:100,wz:-4800,r:30,
+            {name:'Earth',wx:3200,wy:100,wz:-4800,r:20,ns:0.06,
              colorFn:(px,py,pz,n,n2)=>{
                 const land=n>0.05;
                 return land?[0.15+n*0.25,0.38+n*0.22,0.1+n2*0.08]:
                             [0.06+n2*0.08,0.14+n2*0.12,0.52+n*0.28];}},
-            {name:'Mars',wx:-3289,wy:359,wz:-1980,r:18,
+            {name:'Mars',wx:-3289,wy:359,wz:-1980,r:11,ns:0.11,
              colorFn:(px,py,pz,n,n2)=>[0.58+n*0.28,0.18+n*0.1,0.06+n2*0.06]},
-            {name:'Jupiter',wx:11619,wy:47,wz:12011,r:80,
+            {name:'Jupiter',wx:11619,wy:47,wz:12011,r:219,ns:0.006,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.095+n*1.8)*0.5+0.5;
                 return[0.72+band*0.22,0.52+band*0.16,0.22+n2*0.08];}},
-            {name:'Saturn',wx:-31941,wy:945,wz:19602,r:65,rings:true,
+            {name:'Saturn',wx:-31941,wy:945,wz:19602,r:183,rings:true,ns:0.007,
              colorFn:(px,py,pz,n,n2)=>{
                 const band=Math.sin(py*0.12+n*1.4)*0.5+0.5;
                 return[0.80+band*0.12,0.70+band*0.1,0.42+n2*0.08];}},
-            {name:'Uranus',wx:80630,wy:-1133,wz:-33821,r:40,
+            {name:'Uranus',wx:80630,wy:-1133,wz:-33821,r:80,ns:0.015,
              colorFn:(px,py,pz,n,n2)=>[0.32+n*0.1,0.68+n*0.1,0.82+n2*0.08]},
-            {name:'Neptune',wx:-96976,wy:2275,wz:-98422,r:38,
+            {name:'Neptune',wx:-96976,wy:2275,wz:-98422,r:77,ns:0.016,
              colorFn:(px,py,pz,n,n2)=>[0.08+n*0.08,0.18+n*0.1,0.74+n2*0.15]},
         ];
 
@@ -2248,8 +2248,9 @@ class GameEngine{
             const cols=new Float32Array(vPos.count*3);
             for(let i=0;i<vPos.count;i++){
                 const px=vPos.getX(i),py=vPos.getY(i),pz=vPos.getZ(i);
-                const n=SN.n3(px*0.04+p.wx*0.001,py*0.04,pz*0.04);
-                const n2=SN.n3(px*0.12,py*0.12,pz*0.12+p.wz*0.001);
+                const ns=p.ns||0.04;
+                const n=SN.n3(px*ns+p.wx*0.001,py*ns,pz*ns);
+                const n2=SN.n3(px*ns*3,py*ns*3,pz*ns*3+p.wz*0.001);
                 const[r,g2,b]=p.colorFn(px,py,pz,n,n2);
                 cols[i*3]=Math.max(0,Math.min(1,r));
                 cols[i*3+1]=Math.max(0,Math.min(1,g2));
@@ -3231,15 +3232,15 @@ class GameEngine{
 
         // Bodies: [wx, wz, radius, color, label, rings]
         const bodies=[
-            {wx:0,wz:-7800,r:16,color:'#ffdd44',glow:true,label:'SUN'},
-            {wx:1667,wz:-7443,r:2.5,color:'#aa9988',label:'☿'},
-            {wx:-2913,wz:-6505,r:4,color:'#ddbb44',label:'♀'},
+            {wx:0,wz:-7800,r:20,color:'#ffdd44',glow:true,label:'SUN'},
+            {wx:1667,wz:-7443,r:2,color:'#aa9988',label:'☿'},
+            {wx:-2913,wz:-6505,r:4.5,color:'#ddbb44',label:'♀'},
             {wx:3200,wz:-4800,r:4.5,color:'#4488ff',label:'♁'},
-            {wx:-3289,wz:-1980,r:3,color:'#cc4422',label:'♂'},
-            {wx:11619,wz:12011,r:9,color:'#d4a966',label:'♃'},
-            {wx:-31941,wz:19602,r:8,color:'#e8d46c',rings:true,label:'♄'},
-            {wx:80630,wz:-33821,r:5.5,color:'#88ddff',label:'⛢'},
-            {wx:-96976,wz:-98422,r:5,color:'#2244cc',label:'♆'},
+            {wx:-3289,wz:-1980,r:2.5,color:'#cc4422',label:'♂'},
+            {wx:11619,wz:12011,r:10,color:'#d4a966',label:'♃'},
+            {wx:-31941,wz:19602,r:9.5,color:'#e8d46c',rings:true,label:'♄'},
+            {wx:80630,wz:-33821,r:7,color:'#88ddff',label:'⛢'},
+            {wx:-96976,wz:-98422,r:7,color:'#2244cc',label:'♆'},
             {wx:175000,wz:-120000,r:6,color:'#cc44ff',label:'?',unknown:true},
         ];
 
