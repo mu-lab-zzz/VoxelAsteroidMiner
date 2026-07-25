@@ -326,13 +326,40 @@
         #planet-base-credits{text-align:center;font-family:monospace;font-size:15px;
             font-weight:700;color:#ffcc44;
             background:rgba(255,200,0,0.08);border-radius:7px;padding:6px;}
-        /* ── Altitude Exit Hint ─────────────────────────────────── */
-        #altitude-hint{
-            position:absolute;top:64px;left:50%;transform:translateX(-50%);
-            background:rgba(4,0,18,0.88);border:1px solid rgba(170,68,255,0.4);
-            border-radius:8px;padding:5px 14px;font:700 11px monospace;
-            color:#cc88ff;display:none;z-index:16;pointer-events:none;
-            text-shadow:0 0 8px rgba(170,68,255,0.6);white-space:nowrap;
+        /* ── Altimeter (planet mode, left side) ─────────────────── */
+        #altimeter{
+            position:absolute;left:12px;top:50%;transform:translateY(-50%);
+            display:none;flex-direction:column;align-items:center;gap:3px;
+            z-index:15;pointer-events:none;font-family:monospace;
+        }
+        #altimeter-escape-label{
+            font-size:9px;color:#ffcc44;letter-spacing:0.05em;
+            text-shadow:0 0 6px rgba(255,200,60,0.7);
+        }
+        #altimeter-bar-wrap{
+            width:14px;height:110px;
+            background:rgba(4,10,26,0.82);
+            border:1px solid rgba(0,240,255,0.25);
+            border-radius:7px;overflow:hidden;position:relative;
+        }
+        #altimeter-fill{
+            position:absolute;bottom:0;width:100%;height:0%;
+            background:linear-gradient(to top,#0099cc 0%,#00ddaa 100%);
+            border-radius:0 0 6px 6px;transition:height 0.12s;
+        }
+        #altimeter.near-escape #altimeter-fill{
+            background:linear-gradient(to top,#00cc66 0%,#ffff44 100%);
+        }
+        #altimeter-alt{
+            font-size:11px;color:#00e8ff;font-weight:700;
+            text-shadow:0 0 6px rgba(0,220,255,0.6);
+        }
+        #altimeter.near-escape #altimeter-alt{
+            color:#ffff44;text-shadow:0 0 8px rgba(255,255,80,0.9);
+        }
+        #altimeter-depth{
+            font-size:9px;color:#aa66ff;display:none;
+            text-shadow:0 0 5px rgba(170,80,255,0.6);
         }
         /* ── Settings Modal ─────────────────────────────────────── */
         #settings-modal{
@@ -671,8 +698,13 @@
     <div id="planet-indicator-label">🌍</div>
 </div>
 
-<!-- Altitude Exit Hint (shown in planet mode when flying high) -->
-<div id="altitude-hint"></div>
+<!-- Altimeter (shown in planet mode, left side) -->
+<div id="altimeter">
+    <div id="altimeter-escape-label">ESCAPE</div>
+    <div id="altimeter-bar-wrap"><div id="altimeter-fill"></div></div>
+    <div id="altimeter-alt">0</div>
+    <div id="altimeter-depth"></div>
+</div>
 
 <!-- Warp Status HUD -->
 <div id="warp-status">⚡ WARP ACTIVE</div>
@@ -796,14 +828,14 @@ const LANG={
             warp:{name:'ワープドライブ',desc:(s)=>s.warpLv===0?'太陽系探索を解放 (2500m/s)':'超高速ワープ解放 (5000m/s)'},
         },
         ui:{
-            dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（60m以内）',
+            dock:'🏭 ドッキング完了',depart:'🚀 出発！',tooFar:'基地に近づいてください（60以内）',
             refineBtn:'精錬',refineAll:'全精錬',refineAllDone:'全精錬完了！',
             sellBtn:'売却',sellAll:'全売却',
             noCredit:'クレジットが不足しています',maxed:'MAX',upgraded:(n)=>`${n}！`,
             tabRefinery:'⚗ 精錬所',tabMarket:'💹 市場',tabUpgrades:'🔧 整備',
             stationName:'🏭 採掘基地 Alpha',invTitle:'💎 採取済み資源',
             close:'✕ 閉じる',departBtn:'🚀 出発',
-            baseDist:(d)=>`🏭 基地まで ${d}m`,emptyRefine:'精錬できる資源がありません',
+            baseDist:(d)=>`🏭 基地まで ${d}`,emptyRefine:'精錬できる資源がありません',
             emptySell:'売却できるものがありません',upgradeBtn:'強化',
             sectionRefined:'精錬品',sectionRaw:'生鉱石',
             loadBtn:'投入',unloadBtn:'戻す',loadAll:'全投入',
@@ -835,14 +867,14 @@ const LANG={
             warp:{name:'Warp Drive',desc:(s)=>s.warpLv===0?'Unlock solar system (2500m/s)':'Max warp unlock (5000m/s)'},
         },
         ui:{
-            dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 60m)',
+            dock:'🏭 Docked',depart:'🚀 Departing!',tooFar:'Get closer to base (within 60)',
             refineBtn:'Refine',refineAll:'Refine All',refineAllDone:'All refined!',
             sellBtn:'Sell',sellAll:'Sell All',
             noCredit:'Insufficient credits',maxed:'MAX',upgraded:(n)=>`${n} upgraded!`,
             tabRefinery:'⚗ Refinery',tabMarket:'💹 Market',tabUpgrades:'🔧 Upgrades',
             stationName:'🏭 Mining Base Alpha',invTitle:'💎 Cargo Hold',
             close:'✕ Close',departBtn:'🚀 Depart',
-            baseDist:(d)=>`🏭 Base: ${d}m`,emptyRefine:'No ore to refine',
+            baseDist:(d)=>`🏭 Base: ${d}`,emptyRefine:'No ore to refine',
             emptySell:'Nothing to sell',upgradeBtn:'Upgrade',
             sectionRefined:'Refined Goods',sectionRaw:'Raw Ore',
             loadBtn:'Load',unloadBtn:'Unload',loadAll:'Load All',
@@ -4201,7 +4233,7 @@ class GameEngine{
         const cx=W/2,cy=H/2;
         const dist=Math.round(closestDist);
         const icon=closest.cfg.icon??'🌍';
-        document.getElementById('planet-indicator-label').textContent=`${icon} ${dist}m`;
+        document.getElementById('planet-indicator-label').textContent=`${icon} ${dist}`;
         const onScreen=!behind&&sx>margin&&sx<W-margin&&sy>margin&&sy<H-margin;
         let px,py,angleDeg;
         if(onScreen){px=sx;py=sy-22;angleDeg=180;}
@@ -4223,15 +4255,34 @@ class GameEngine{
         el.style.display='flex';
     }
 
-    _updateAltitudeHint(){
-        const hint=document.getElementById('altitude-hint');
-        if(this.sceneMode!=='planet'){hint.style.display='none';return;}
-        const alt=Math.round(this.ship.pos.y);
-        if(alt>140){
-            hint.style.display='block';
-            hint.textContent=`↑ 高度 ${alt}m / 220m で大気圏脱出`;
-        }else{
-            hint.style.display='none';
+    _updateAltimeter(){
+        const el=document.getElementById('altimeter');
+        if(!el)return;
+        const inPlanet=this.sceneMode==='planet'||this.sceneMode==='leaving';
+        if(!inPlanet){el.style.display='none';return;}
+        el.style.display='flex';
+
+        const ESCAPE=220;
+        const y=this.ship.pos.y;
+        const pct=Math.max(0,Math.min(1,y/ESCAPE));
+
+        const fill=document.getElementById('altimeter-fill');
+        if(fill) fill.style.height=(pct*100).toFixed(1)+'%';
+
+        const altNum=document.getElementById('altimeter-alt');
+        if(altNum) altNum.textContent=Math.round(y);
+
+        el.classList.toggle('near-escape',y>160);
+
+        const depthEl=document.getElementById('altimeter-depth');
+        const isGas=this.activePlanet?.cfg?.type==='gas';
+        if(depthEl){
+            if(isGas&&y<0){
+                depthEl.style.display='block';
+                depthEl.textContent='▼ '+Math.round(-y);
+            }else{
+                depthEl.style.display='none';
+            }
         }
     }
 
@@ -4312,7 +4363,7 @@ class GameEngine{
         const onScreen=!behind&&sx>margin&&sx<W-margin&&sy>margin&&sy<H-margin;
 
         const dist=Math.round(this.ship.pos.distanceTo(this.station.group.position));
-        document.getElementById('station-indicator-dist').textContent=dist+'m';
+        document.getElementById('station-indicator-dist').textContent=dist;
 
         let px,py,angleDeg;
         if(onScreen){
@@ -4644,7 +4695,7 @@ class GameEngine{
                 this._updateStationIndicator();
                 this._updatePlanetIndicator();
             }
-            this._updateAltitudeHint();
+            this._updateAltimeter();
 
             // Warp status HUD
             const warpEl=document.getElementById('warp-status');
