@@ -2352,6 +2352,39 @@ class GameEngine{
             const cfg=PLANET_CFGS[p.name];
             if(cfg) this.planetMeshes.push({mesh,cfg,r:p.r});
         }
+        this._buildBeltSprites();
+    }
+
+    _buildBeltSprites(){
+        const N=4000;
+        const pos=new Float32Array(N*3);
+        const cols=new Float32Array(N*3);
+        // Torus around Sun in XZ plane, 2.2–3.2 AU
+        const sunX=0,sunZ=-78000;
+        const innerR=97130,outerR=141280,beltH=5500;
+        for(let i=0;i<N;i++){
+            const theta=Math.random()*Math.PI*2;
+            // sqrt gives uniform area distribution in the annulus
+            const t=Math.sqrt(Math.random());
+            const r=innerR+(outerR-innerR)*t;
+            pos[i*3  ]=sunX+r*Math.cos(theta);
+            pos[i*3+1]=(Math.random()-.5)*beltH;
+            pos[i*3+2]=sunZ+r*Math.sin(theta);
+            // Rock palette: siliceous grey / iron tan / carbonaceous dark
+            const bri=0.32+Math.random()*0.44;
+            const rv=Math.random();
+            if(rv<0.55){cols[i*3]=bri*0.90;cols[i*3+1]=bri*0.87;cols[i*3+2]=bri*0.83;}
+            else if(rv<0.82){cols[i*3]=bri*1.0;cols[i*3+1]=bri*0.74;cols[i*3+2]=bri*0.52;}
+            else{cols[i*3]=bri*0.54;cols[i*3+1]=bri*0.51;cols[i*3+2]=bri*0.49;}
+        }
+        const bg=new THREE.BufferGeometry();
+        bg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+        bg.setAttribute('color',new THREE.BufferAttribute(cols,3));
+        const bpts=new THREE.Points(bg,new THREE.PointsMaterial({
+            size:22,vertexColors:true,sizeAttenuation:true,
+            transparent:true,opacity:0.82,depthWrite:false}));
+        this.scene.add(bpts);
+        this._spaceOnlyObjects.push(bpts);
     }
 
     _buildSaturnRings(wx,wy,wz,planetR){
@@ -2391,9 +2424,12 @@ class GameEngine{
         const stx=this.station.group.position.x,stz=this.station.group.position.z;
         for(let i=0;i<200&&placed<CFG.ASTEROID_N;i++){
             const a=(seed+i*377)%1000/1000,b=(seed+i*631)%1000/1000,c=(seed+i*919)%1000/1000;
-            const x=stx+(a-.5)*CFG.WORLD_R,y=(b-.5)*(CFG.WORLD_R*0.28),z=stz+(c-.5)*CFG.WORLD_R;
+            // Annular distribution: flat disk around station (belt-like)
+            const theta=a*Math.PI*2;
+            const r=200+Math.sqrt(b)*(CFG.WORLD_R-200);
+            const x=stx+r*Math.cos(theta),z=stz+r*Math.sin(theta);
+            const y=(c-.5)*(CFG.WORLD_R*0.12);
             const lx=x-stx,lz=z-stz;
-            if(lx*lx+y*y+lz*lz<160*160)continue;
             const dist=Math.sqrt(lx*lx+y*y+lz*lz);
             const zone=ZONES.find(z=>dist<z.maxDist);
             let sz,orePool;
