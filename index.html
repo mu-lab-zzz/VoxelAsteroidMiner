@@ -94,6 +94,18 @@
         }
         #lock-indicator{font-size:9px;color:#ffaa00;display:none;}
 
+        /* Debug mode badge */
+        #debug-badge{
+            position:absolute;top:64px;left:50%;transform:translateX(-50%);
+            background:rgba(255,0,80,0.18);border:1.5px solid rgba(255,60,120,0.7);
+            border-radius:8px;padding:4px 14px;display:none;z-index:25;
+            pointer-events:none;color:#ff4488;font-size:11px;font-weight:700;
+            font-family:monospace;letter-spacing:0.08em;
+            text-shadow:0 0 8px rgba(255,60,120,0.8);
+            animation:debug-pulse 2s ease-in-out infinite;
+        }
+        @keyframes debug-pulse{0%,100%{opacity:0.8;}50%{opacity:1;}}
+
         /* Inventory modal */
         #inventory-modal{
             position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -575,6 +587,9 @@
     <button id="btn-inv-badge">📦&nbsp;<span id="inv-total-badge">0</span></button>
     <button id="btn-settings-gear">⚙</button>
 </div>
+
+<!-- Debug mode badge -->
+<div id="debug-badge">🐛 DEBUG MODE</div>
 
 <!-- Debug info (hidden by default) -->
 <div id="sys-stats">
@@ -2253,6 +2268,9 @@ class GameEngine{
         this.settingsOpen=false;
         this.inventoryOpen=false;
         this.settings={pitchInvert:true,showDebug:false,brightness:1.0};
+        this.debugMode=false;
+        this._settingsTapCount=0;
+        this._settingsTapTimer=null;
         this.credits=0;
         this.refined={};
         for(const k of Object.values(VT)) this.refined[k]=0;
@@ -2884,8 +2902,23 @@ class GameEngine{
             if(!this.stationOpen&&!this.planetBaseOpen) this._toggleSystemMap();
         });
 
-        // Settings
-        document.getElementById('btn-settings-gear').addEventListener('click',()=>this._toggleSettings());
+        // Settings (5 rapid taps toggles debug mode)
+        document.getElementById('btn-settings-gear').addEventListener('click',()=>{
+            this._settingsTapCount++;
+            clearTimeout(this._settingsTapTimer);
+            this._settingsTapTimer=setTimeout(()=>{ this._settingsTapCount=0; },1800);
+            if(this._settingsTapCount>=5){
+                this._settingsTapCount=0;
+                this.debugMode=!this.debugMode;
+                const badge=document.getElementById('debug-badge');
+                if(badge) badge.style.display=this.debugMode?'block':'none';
+                Notify[this.debugMode?'upgrade':'show'](
+                    this.debugMode?'🐛 デバッグモード ON':'デバッグモード OFF',
+                    this.debugMode?undefined:'info',2500);
+                return;
+            }
+            this._toggleSettings();
+        });
         document.getElementById('btn-close-settings').addEventListener('click',()=>this._toggleSettings(false));
         document.getElementById('btn-pitch-normal').addEventListener('click',()=>{
             this.settings.pitchInvert=false; this._applySettings(); this._saveSettings();
@@ -3186,13 +3219,13 @@ class GameEngine{
             const inv=this.partInventory[pid]||0;
             const eff=this._effectiveCraft(pid);
             const mul=pid.startsWith('hull_')?Math.pow(2,this.hullCraftCounts[pid]||0):1;
-            const canCraft=Object.entries(eff).every(([vt,n])=>(this.refined[+vt]||0)>=n);
+            const canCraft=this.debugMode||Object.entries(eff).every(([vt,n])=>(this.refined[+vt]||0)>=n);
             const matStr=Object.entries(eff).map(([vt,n])=>{
                 const have=this.refined[+vt]||0;
-                const col=have>=n?'#8f8':'#f88';
+                const col=(this.debugMode||have>=n)?'#8f8':'#f88';
                 const rname=REFINE[+vt]?.name??VPROPS[+vt].name;
                 return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
-            }).join(' ');
+            }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
             const statStr=Object.entries(p.stats).map(([k,v])=>{
                 const labels={thrust:'推力',boost:'加速',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',warpSpeed:'ワープ',slots:'スロット'};
                 return `${labels[k]||k}+${v}`;
@@ -3291,11 +3324,13 @@ class GameEngine{
     _craftPart(pid){
         const p=PARTS[pid];
         const cost=this._effectiveCraft(pid);
-        for(const[vt,n] of Object.entries(cost)){
-            if((this.refined[+vt]||0)<n){Notify.warn('素材が足りません');return;}
-        }
-        for(const[vt,n] of Object.entries(cost)){
-            this.refined[+vt]=(this.refined[+vt]||0)-n;
+        if(!this.debugMode){
+            for(const[vt,n] of Object.entries(cost)){
+                if((this.refined[+vt]||0)<n){Notify.warn('素材が足りません');return;}
+            }
+            for(const[vt,n] of Object.entries(cost)){
+                this.refined[+vt]=(this.refined[+vt]||0)-n;
+            }
         }
         this.partInventory[pid]=(this.partInventory[pid]||0)+1;
         if(pid.startsWith('hull_')) this.hullCraftCounts[pid]=(this.hullCraftCounts[pid]||0)+1;
@@ -3484,13 +3519,15 @@ class GameEngine{
 
     // ── Warp Drive ──────────────────────────────────────────────
     _updateWarp(dt){
-        if(!this.inp.warp||this.ship.stats.warpLv<=0){
+        const hasWarp=this.ship.stats.warpLv>0||this.debugMode;
+        if(!this.inp.warp||!hasWarp){
             if(this.warpActive){this.warpActive=false;}
             return;
         }
-        if(this.ship.stats.energy<5){this.warpActive=false;return;}
+        if(!this.debugMode&&this.ship.stats.energy<5){this.warpActive=false;return;}
         this.warpActive=true;
-        this.ship.stats.energy=Math.max(0,this.ship.stats.energy-CFG.WARP_ENERGY*dt);
+        if(!this.debugMode)
+            this.ship.stats.energy=Math.max(0,this.ship.stats.energy-CFG.WARP_ENERGY*dt);
         // Get ship facing direction and set velocity to warp speed
         MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat);
         const spd=this._warpSpeed||2500;
@@ -4407,7 +4444,7 @@ class GameEngine{
         // Warp button visibility (touch UI)
         const warpBtn=document.getElementById('btn-warp');
         if(warpBtn){
-            if(this.ship.stats.warpLv>0) warpBtn.classList.add('unlocked');
+            if(this.ship.stats.warpLv>0||this.debugMode) warpBtn.classList.add('unlocked');
             else warpBtn.classList.remove('unlocked');
             warpBtn.classList.toggle('warp-on',this.warpActive);
         }
