@@ -1766,7 +1766,7 @@ class MiningShip{
             this.laserBeams[i].visible=true;
         }
 
-        if(hitPt&&hitAst){
+        if(hitPt&&hitAst&&this.stats.cargo<this.stats.maxCargo){
             const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
             let didMine=false;
             hitAst.mine(hitPt,mineR,(vt)=>{
