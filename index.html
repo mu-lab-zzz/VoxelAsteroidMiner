@@ -2328,14 +2328,37 @@ class GameEngine{
     _buildSolarSystem(){
         // Sun — glowing, emissive
         const sunG=new THREE.SphereGeometry(10000,32,20);
-        const sunM=new THREE.MeshStandardMaterial({
-            color:0xffdd44,emissive:0xffbb00,emissiveIntensity:1.8,roughness:0.9});
+        const sunM=new THREE.MeshBasicMaterial({color:0xfffbe8});
         this.sunMesh=new THREE.Mesh(sunG,sunM);
         this.sunMesh.position.set(0,-4000,-78000);
         this.scene.add(this.sunMesh);
         this._spaceOnlyObjects.push(this.sunMesh);
+        // Corona glow sprite (additive, billboard)
+        const _mkSunGlow=(r,col,alpha)=>{
+            const sz=256,cv=document.createElement('canvas');
+            cv.width=cv.height=sz;
+            const ctx=cv.getContext('2d'),half=sz/2;
+            const grad=ctx.createRadialGradient(half,half,0,half,half,half);
+            const c=new THREE.Color(col);
+            const rgb=`${Math.round(c.r*255)},${Math.round(c.g*255)},${Math.round(c.b*255)}`;
+            grad.addColorStop(0,  `rgba(${rgb},${alpha})`);
+            grad.addColorStop(0.18,`rgba(${rgb},${(alpha*0.85).toFixed(2)})`);
+            grad.addColorStop(0.5, `rgba(${rgb},${(alpha*0.3).toFixed(2)})`);
+            grad.addColorStop(1,   `rgba(${rgb},0)`);
+            ctx.fillStyle=grad;ctx.fillRect(0,0,sz,sz);
+            return new THREE.CanvasTexture(cv);
+        };
+        [[38000,0xfffbe8,0.92],[72000,0xffdd88,0.45],[130000,0xff9900,0.18]].forEach(([sz,col,a])=>{
+            const sp=new THREE.Sprite(new THREE.SpriteMaterial({
+                map:_mkSunGlow(sz,col,a),blending:THREE.AdditiveBlending,
+                transparent:true,depthWrite:false}));
+            sp.scale.setScalar(sz);
+            sp.position.copy(this.sunMesh.position);
+            this.scene.add(sp);
+            this._spaceOnlyObjects.push(sp);
+        });
         // Sun point light (large radius)
-        const sunPt=new THREE.PointLight(0xffeecc,1.8,200000);
+        const sunPt=new THREE.PointLight(0xffeecc,2.2,250000);
         sunPt.position.copy(this.sunMesh.position);
         this.scene.add(sunPt);
         this._spaceOnlyObjects.push(sunPt);
