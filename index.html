@@ -2201,22 +2201,10 @@ class GameEngine{
         this._spaceOnlyObjects.push(nebObj);
 
         // Unknown planet (beyond Neptune — alien enterable world)
-        const pG=new THREE.SphereGeometry(550,24,24);
-        const pPos=pG.attributes.position;
-        const pCol=new Float32Array(pPos.count*3);
-        for(let i=0;i<pPos.count;i++){
-            const px=pPos.getX(i),py=pPos.getY(i),pz=pPos.getZ(i);
-            const n=SN.n3(px*0.0025,py*0.0025,pz*0.0025);
-            const n2=SN.n3(px*0.008,py*0.008,pz*0.008);
-            const i3=i*3;
-            // Dark alien purple/green
-            pCol[i3]=0.18+Math.max(0,n)*0.22;
-            pCol[i3+1]=0.35+Math.max(0,n2)*0.25;
-            pCol[i3+2]=0.28+Math.max(0,n)*0.35;
-        }
-        pG.setAttribute('color',new THREE.BufferAttribute(pCol,3));
+        const pG=new THREE.SphereGeometry(550,64,32);
+        const pTex=this._makePlanetTex('Unknown');
         const pMesh=new THREE.Mesh(pG,new THREE.MeshStandardMaterial({
-            vertexColors:true,roughness:0.85,metalness:0.05}));
+            map:pTex,roughness:0.82,metalness:0.06}));
         pMesh.position.set(950000,-180000,-1240000);
         this.scene.add(pMesh);
         this.planet=pMesh;
@@ -2224,6 +2212,83 @@ class GameEngine{
         this.planetMeshes.push({mesh:pMesh,cfg:PLANET_CFGS.Unknown,r:550});
 
         this._buildSolarSystem();
+    }
+
+    _makePlanetTex(name){
+        const W=512,H=256,cv=document.createElement('canvas');
+        cv.width=W;cv.height=H;
+        const ctx=cv.getContext('2d'),id=ctx.createImageData(W,H),d=id.data;
+        for(let y=0;y<H;y++){
+            const theta=(y/H)*Math.PI,sinT=Math.sin(theta),cosT=Math.cos(theta);
+            for(let x=0;x<W;x++){
+                const phi=(x/W)*Math.PI*2;
+                const nx=sinT*Math.cos(phi),ny=cosT,nz=sinT*Math.sin(phi);
+                let r,g,b;
+                switch(name){
+                case'Mercury':{
+                    const n=SN.n3(nx*6,ny*6,nz*6),n2=SN.n3(nx*15,ny*15,nz*15+1),n3=SN.n3(nx*30+2,ny*30,nz*30);
+                    const lum=0.48+n*0.22+n2*0.09+n3*0.04;
+                    r=lum*0.96;g=lum*0.93;b=lum*0.88;break;}
+                case'Venus':{
+                    const n=SN.n3(nx*2,ny*9,nz*2),n2=SN.n3(nx*5+2,ny*5,nz*5),n3=SN.n3(nx*11+4,ny*6,nz*11);
+                    const c=0.78+n*0.12+n2*0.06+n3*0.04;
+                    r=c*0.96;g=c*0.87;b=c*0.47;break;}
+                case'Earth':{
+                    const n=SN.n3(nx*4.5,ny*4.5,nz*4.5),n2=SN.n3(nx*9+1.5,ny*9,nz*9),nc=SN.n3(nx*5+7,ny*3,nz*5+3);
+                    const pv=Math.abs(ny),pt=0.82+n2*0.05,pf=pv>pt?Math.min(1,(pv-pt)*15):0;
+                    let lr,lg,lb;
+                    if(n>-0.08){
+                        if(n>0.55){lr=0.72;lg=0.68;lb=0.55;}
+                        else if(n>0.30){lr=0.28;lg=0.52;lb=0.20;}
+                        else if(n>0.05){lr=0.22;lg=0.46;lb=0.18;}
+                        else{lr=0.55;lg=0.62;lb=0.32;}
+                    }else{const dep=n*0.5+0.5;lr=0.04+dep*0.05;lg=0.12+dep*0.15;lb=0.42+dep*0.30;}
+                    r=lr*(1-pf)+0.92*pf;g=lg*(1-pf)+0.95*pf;b=lb*(1-pf)+0.98*pf;
+                    if(nc>0.08){const cf=Math.min(1,(nc-0.08)*4);r=r*(1-cf)+0.88*cf;g=g*(1-cf)+0.92*cf;b=b*(1-cf)+0.96*cf;}
+                    break;}
+                case'Mars':{
+                    const n=SN.n3(nx*5,ny*5,nz*5),n2=SN.n3(nx*11+3,ny*11,nz*11);
+                    const pv=Math.abs(ny),pt=0.80+n2*0.07,pf=pv>pt?Math.min(1,(pv-pt)*12):0;
+                    let lr,lg,lb;
+                    if(n<-0.22){lr=0.38+(n+1)*0.14;lg=0.13;lb=0.04;}
+                    else{lr=0.62+n*0.26;lg=0.22+n*0.12;lb=0.07+n2*0.05;}
+                    r=lr*(1-pf)+0.88*pf;g=lg*(1-pf)+0.84*pf;b=lb*(1-pf)+0.80*pf;break;}
+                case'Jupiter':{
+                    const n=SN.n3(nx*1.5,ny*10,nz*1.5),n2=SN.n3(nx*3+1,ny*5,nz*3),n3=SN.n3(nx*6,ny*6,nz*6+2);
+                    const lat=0.5-ny*0.5,bv=Math.sin((lat+n*0.045+n2*0.02)*12*Math.PI*2)*0.5+0.5;
+                    r=0.62+bv*0.30+n3*0.04;g=0.44+bv*0.24+n3*0.03;b=0.20+bv*0.08;
+                    const gu=((x/W-0.28+1)%1)*2-1,gv=(lat-0.612)/0.05,gd=gu*gu*0.25+gv*gv;
+                    if(gd<1){const gf=Math.max(0,1-gd)*0.7;r=r*(1-gf)+0.82*gf;g=g*(1-gf)+0.30*gf;b=b*(1-gf)+0.16*gf;}
+                    break;}
+                case'Saturn':{
+                    const n=SN.n3(nx*1.2,ny*8,nz*1.2),n2=SN.n3(nx*3+1,ny*4,nz*3);
+                    const bv=Math.sin((0.5-ny*0.5+n*0.04+n2*0.015)*8*Math.PI*2)*0.5+0.5;
+                    r=0.82+bv*0.12;g=0.74+bv*0.10;b=0.48+bv*0.04;break;}
+                case'Uranus':{
+                    const n=SN.n3(nx*2,ny*4,nz*2),n2=SN.n3(nx*5,ny*5,nz*5);
+                    const pol=Math.abs(ny)*0.12;
+                    r=0.30+n*0.04+pol;g=0.78+n*0.05;b=0.85+n2*0.04;break;}
+                case'Neptune':{
+                    const n=SN.n3(nx*2,ny*6,nz*2),n2=SN.n3(nx*5+3,ny*4,nz*5);
+                    const lat=0.5-ny*0.5;
+                    r=0.08+n*0.06;g=0.20+n*0.08;b=0.72+n2*0.18;
+                    const du=((x/W-0.5+1)%1)*2-1,dv=(lat-0.42)/0.06,dd=du*du*0.5+dv*dv;
+                    if(dd<1){const df=Math.max(0,1-dd)*0.45;r-=df*0.04;g-=df*0.06;b-=df*0.20;}
+                    break;}
+                default:{
+                    const n=SN.n3(nx*3,ny*3,nz*3),n2=SN.n3(nx*7+1,ny*7,nz*7),nc=SN.n3(nx*4+3,ny*2,nz*4);
+                    r=0.14+Math.max(0,n)*0.20;g=0.32+Math.max(0,n2)*0.22;b=0.20+Math.max(0,n)*0.32;
+                    if(nc>0.15){const cf=Math.min(1,(nc-0.15)*3);r=r*(1-cf*0.6)+0.22*cf*0.6;g=g*(1-cf*0.6)+0.50*cf*0.6;b=b*(1-cf*0.6)+0.42*cf*0.6;}
+                }}
+                const i=(y*W+x)*4;
+                d[i]=Math.floor(Math.max(0,Math.min(1,r))*255);
+                d[i+1]=Math.floor(Math.max(0,Math.min(1,g))*255);
+                d[i+2]=Math.floor(Math.max(0,Math.min(1,b))*255);
+                d[i+3]=255;
+            }
+        }
+        ctx.putImageData(id,0,0);
+        return new THREE.CanvasTexture(cv);
     }
 
     _buildSolarSystem(){
@@ -2241,57 +2306,41 @@ class GameEngine{
         this.scene.add(sunPt);
         this._spaceOnlyObjects.push(sunPt);
 
-        // Planet data: [name, wx, wy, wz, radius, colors callback]
+        const atmVS=`varying vec3 vNormal;varying vec3 vViewPos;void main(){vNormal=normalize(normalMatrix*normal);vViewPos=(modelViewMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
+        const atmFS=`uniform vec3 glowColor;uniform float intensity;varying vec3 vNormal;varying vec3 vViewPos;void main(){float edge=pow(1.0-abs(dot(vNormal,normalize(-vViewPos))),3.5)*intensity;gl_FragColor=vec4(glowColor,edge);}`;
+
         const planets=[
-            {name:'Mercury',wx:16670,wy:-2810,wz:-74430,r:80,ns:0.015,
-             colorFn:(px,py,pz,n,n2)=>{
-                return[0.62+n*0.12,0.58+n*0.1,0.52+n2*0.06];}},
-            {name:'Venus',wx:-29130,wy:-2380,wz:-65050,r:190,ns:0.0065,
-             colorFn:(px,py,pz,n,n2)=>{
-                const band=Math.sin(py*0.018+n*2)*0.5+0.5;
-                return[0.86+band*0.1,0.76+band*0.08,0.32+n2*0.1];}},
-            {name:'Earth',wx:32000,wy:1000,wz:-48000,r:200,ns:0.006,
-             colorFn:(px,py,pz,n,n2)=>{
-                const land=n>0.05;
-                return land?[0.15+n*0.25,0.38+n*0.22,0.1+n2*0.08]:
-                            [0.06+n2*0.08,0.14+n2*0.12,0.52+n*0.28];}},
-            {name:'Mars',wx:-32890,wy:3590,wz:-19800,r:110,ns:0.011,
-             colorFn:(px,py,pz,n,n2)=>[0.58+n*0.28,0.18+n*0.1,0.06+n2*0.06]},
-            {name:'Jupiter',wx:116190,wy:470,wz:120110,r:2190,ns:0.0006,
-             colorFn:(px,py,pz,n,n2)=>{
-                const band=Math.sin(py*0.0095+n*1.8)*0.5+0.5;
-                return[0.72+band*0.22,0.52+band*0.16,0.22+n2*0.08];}},
-            {name:'Saturn',wx:-319410,wy:9450,wz:196020,r:1830,rings:true,ns:0.0007,
-             colorFn:(px,py,pz,n,n2)=>{
-                const band=Math.sin(py*0.012+n*1.4)*0.5+0.5;
-                return[0.80+band*0.12,0.70+band*0.1,0.42+n2*0.08];}},
-            {name:'Uranus',wx:806300,wy:-11330,wz:-338210,r:800,ns:0.0015,
-             colorFn:(px,py,pz,n,n2)=>[0.32+n*0.1,0.68+n*0.1,0.82+n2*0.08]},
-            {name:'Neptune',wx:-969760,wy:22750,wz:-984220,r:770,ns:0.0016,
-             colorFn:(px,py,pz,n,n2)=>[0.08+n*0.08,0.18+n*0.1,0.74+n2*0.15]},
+            {name:'Mercury',wx:16670,wy:-2810,wz:-74430,r:80,rough:0.96},
+            {name:'Venus',wx:-29130,wy:-2380,wz:-65050,r:190,rough:0.72,atm:{c:0xffcc66,i:0.9}},
+            {name:'Earth',wx:32000,wy:1000,wz:-48000,r:200,rough:0.82,atm:{c:0x4499ff,i:0.8}},
+            {name:'Mars',wx:-32890,wy:3590,wz:-19800,r:110,rough:0.94,atm:{c:0xff5522,i:0.35}},
+            {name:'Jupiter',wx:116190,wy:470,wz:120110,r:2190,rough:0.85,atm:{c:0xddbb88,i:0.30}},
+            {name:'Saturn',wx:-319410,wy:9450,wz:196020,r:1830,rings:true,rough:0.88},
+            {name:'Uranus',wx:806300,wy:-11330,wz:-338210,r:800,rough:0.90,atm:{c:0x66ddee,i:0.25}},
+            {name:'Neptune',wx:-969760,wy:22750,wz:-984220,r:770,rough:0.88,atm:{c:0x3355ff,i:0.45}},
         ];
 
         for(const p of planets){
-            const g=new THREE.SphereGeometry(p.r,20,16);
-            const vPos=g.attributes.position;
-            const cols=new Float32Array(vPos.count*3);
-            for(let i=0;i<vPos.count;i++){
-                const px=vPos.getX(i),py=vPos.getY(i),pz=vPos.getZ(i);
-                const ns=p.ns||0.04;
-                const n=SN.n3(px*ns+p.wx*0.001,py*ns,pz*ns);
-                const n2=SN.n3(px*ns*3,py*ns*3,pz*ns*3+p.wz*0.001);
-                const[r,g2,b]=p.colorFn(px,py,pz,n,n2);
-                cols[i*3]=Math.max(0,Math.min(1,r));
-                cols[i*3+1]=Math.max(0,Math.min(1,g2));
-                cols[i*3+2]=Math.max(0,Math.min(1,b));
-            }
-            g.setAttribute('color',new THREE.BufferAttribute(cols,3));
+            const tex=this._makePlanetTex(p.name);
+            const g=new THREE.SphereGeometry(p.r,64,32);
             const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
-                vertexColors:true,roughness:0.88,metalness:0.04}));
+                map:tex,roughness:p.rough||0.88,metalness:0.02}));
             mesh.position.set(p.wx,p.wy,p.wz);
             this.scene.add(mesh);
             this._spaceOnlyObjects.push(mesh);
             if(p.rings) this._buildSaturnRings(p.wx,p.wy,p.wz,p.r);
+            if(p.atm){
+                const aG=new THREE.SphereGeometry(p.r*1.06,32,16);
+                const aM=new THREE.ShaderMaterial({
+                    uniforms:{glowColor:{value:new THREE.Color(p.atm.c)},intensity:{value:p.atm.i}},
+                    vertexShader:atmVS,fragmentShader:atmFS,
+                    transparent:true,side:THREE.FrontSide,
+                    depthWrite:false,blending:THREE.AdditiveBlending});
+                const atm=new THREE.Mesh(aG,aM);
+                atm.position.set(p.wx,p.wy,p.wz);
+                this.scene.add(atm);
+                this._spaceOnlyObjects.push(atm);
+            }
             const cfg=PLANET_CFGS[p.name];
             if(cfg) this.planetMeshes.push({mesh,cfg,r:p.r});
         }
