@@ -2188,7 +2188,7 @@ class GameEngine{
         this.renderer.setSize(window.innerWidth,window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.6));
         this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure=1.2;
+        this.renderer.toneMappingExposure=1.5;
         document.getElementById('canvas-container').appendChild(this.renderer.domElement);
         this.scene=new THREE.Scene();
         this.scene.fog=new THREE.FogExp2(0x000008,0.000012);
@@ -2196,12 +2196,14 @@ class GameEngine{
     }
 
     _initScene(){
-        // Lighting
-        const sun=new THREE.DirectionalLight(0xffeedd,1.6);
-        sun.position.set(600,250,400);this.scene.add(sun);
-        this.scene.add(new THREE.AmbientLight(0x112233,0.55));
-        const fill=new THREE.PointLight(0x4488ff,0.4,800);
-        fill.position.set(-400,100,-200);this.scene.add(fill);
+        // Lighting — sun is at (0,-4000,-78000), so key light comes from that direction
+        const sun=new THREE.DirectionalLight(0xfff4dd,2.4);
+        sun.position.set(0,-4000,-78000);this.scene.add(sun);
+        // Ambient: brighter so shadow sides aren't pure black
+        this.scene.add(new THREE.AmbientLight(0x334466,1.2));
+        // Soft fill from opposite side to reduce harsh shadows
+        const fill=new THREE.DirectionalLight(0x6699cc,0.6);
+        fill.position.set(0,3000,80000);this.scene.add(fill);
 
         // Starfield — expanded to cover solar-system distances
         const nStars=4500;
@@ -4298,7 +4300,7 @@ class GameEngine{
         document.getElementById('sys-stats').style.display=
             this.settings.showDebug?'block':'none';
         const bri=this.settings.brightness??1.0;
-        if(this.renderer) this.renderer.toneMappingExposure=1.2*bri;
+        if(this.renderer) this.renderer.toneMappingExposure=1.5*bri;
         const sl=document.getElementById('slider-brightness');
         const vl=document.getElementById('val-brightness');
         if(sl){
