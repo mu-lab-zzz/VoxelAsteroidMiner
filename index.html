@@ -553,6 +553,31 @@
         #system-map-info{
             color:#445;font-size:10px;margin-top:6px;font-family:monospace;letter-spacing:1px;
         }
+        #smap-clear-marker{
+            margin-top:4px;padding:5px 20px;border-radius:12px;display:none;
+            background:rgba(255,120,0,0.12);border:1px solid rgba(255,120,0,0.5);
+            color:#ff9900;font-size:11px;cursor:pointer;font-family:monospace;letter-spacing:1px;
+        }
+        #smap-clear-marker:hover{background:rgba(255,120,0,0.28);}
+
+        /* ── Marker HUD Indicator ───────────────────────────────── */
+        #marker-indicator{
+            position:absolute;transform:translate(-50%,-50%);
+            display:none;flex-direction:column;align-items:center;gap:3px;
+            pointer-events:none;z-index:15;
+        }
+        .marker-arrow{
+            width:0;height:0;
+            border-left:7px solid transparent;
+            border-right:7px solid transparent;
+            border-bottom:15px solid #ff8800;
+            filter:drop-shadow(0 0 5px rgba(255,136,0,0.9));
+        }
+        #marker-indicator-dist{
+            font:700 9px monospace;color:#ff8800;
+            text-shadow:0 0 6px rgba(255,136,0,0.7);
+            letter-spacing:.5px;white-space:nowrap;
+        }
 
     </style>
 </head>
@@ -683,6 +708,12 @@
     <div id="station-indicator-dist"></div>
 </div>
 
+<!-- Marker HUD Indicator -->
+<div id="marker-indicator">
+    <div class="marker-arrow"></div>
+    <div id="marker-indicator-dist"></div>
+</div>
+
 <!-- Dock Prompt -->
 <div id="dock-prompt">
     <button id="btn-dock-yes">🏭 ドッキング</button>
@@ -723,7 +754,8 @@
             <button id="smz-inner">内惑星</button>
         </div>
     </div>
-    <div id="system-map-info">ドラッグ：移動　ピンチ／ホイール：ズーム　ダブルタップ：リセット</div>
+    <div id="system-map-info">ドラッグ：移動　ピンチ／ホイール：ズーム　ダブルタップ：リセット　タップ：マーカー</div>
+    <button id="smap-clear-marker">📍 マーカー削除</button>
     <button id="system-map-close">✕ 閉じる</button>
 </div>
 
@@ -2316,6 +2348,7 @@ class GameEngine{
         this.relayStations=[];
         this.relayKits=0;
         this.warpActive=false;
+        this.mapMarker=null;
         this.systemMapOpen=false;
         this._mapZoom=1;this._mapPanX=0;this._mapPanY=0;
         this.planetMeshes=[];
@@ -3627,7 +3660,7 @@ class GameEngine{
             const{x,y}=toC(e.clientX,e.clientY);
             zoomAt(x,y,this._mapZoom*(e.deltaY<0?1.25:0.8));
         },{passive:false});
-        // Mouse drag
+        // Mouse drag + click-to-set-marker
         let md=null;
         canvas.addEventListener('mousedown',e=>{
             md={x:e.clientX,y:e.clientY,px:this._mapPanX,py:this._mapPanY};
@@ -3641,7 +3674,16 @@ class GameEngine{
             this._mapPanY=md.py+(e.clientY-md.y)*sc;
             this._renderSystemMap();
         });
-        canvas.addEventListener('mouseup',()=>{md=null;});
+        canvas.addEventListener('mouseup',e=>{
+            if(md){
+                const dx=e.clientX-md.x,dy=e.clientY-md.y;
+                if(dx*dx+dy*dy<25){
+                    const{x,y}=toC(e.clientX,e.clientY);
+                    this._setMapMarker(x,y);
+                }
+            }
+            md=null;
+        });
         canvas.addEventListener('mouseleave',()=>{md=null;});
         // Double-click / double-tap reset
         canvas.addEventListener('dblclick',()=>{
@@ -3678,10 +3720,22 @@ class GameEngine{
             }
             this._renderSystemMap();
         },{passive:false});
-        const endT=()=>{tc=null;};
+        const endT=e=>{
+            if(tc&&tc.ts.length===1&&e.changedTouches.length===1){
+                const cur=toC(e.changedTouches[0].clientX,e.changedTouches[0].clientY);
+                const dx=cur.x-tc.ts[0].x,dy=cur.y-tc.ts[0].y;
+                if(dx*dx+dy*dy<25) this._setMapMarker(cur.x,cur.y);
+            }
+            tc=null;
+        };
         canvas.addEventListener('touchend',endT);
-        canvas.addEventListener('touchcancel',endT);
+        canvas.addEventListener('touchcancel',()=>{tc=null;});
         // Buttons
+        document.getElementById('smap-clear-marker').addEventListener('click',()=>{
+            this.mapMarker=null;
+            document.getElementById('smap-clear-marker').style.display='none';
+            this._renderSystemMap();
+        });
         document.getElementById('smz-in').addEventListener('click',()=>zoomAt(cx,cy,this._mapZoom*2));
         document.getElementById('smz-out').addEventListener('click',()=>zoomAt(cx,cy,this._mapZoom*0.5));
         document.getElementById('smz-reset').addEventListener('click',()=>{
@@ -3695,6 +3749,28 @@ class GameEngine{
             this._mapPanY=78000/SC; // bring sun (wz:-78000) to canvas center
             this._renderSystemMap();
         });
+    }
+
+    _setMapMarker(cX,cY){
+        const W=520,H=520,cx=W*0.5,cy=H*0.5;
+        const SC=6000/this._mapZoom;
+        const wx=(cX-cx-this._mapPanX)*SC;
+        const wz=(cY-cy-this._mapPanY)*SC;
+        // If tapping within 10px of existing marker → remove it
+        if(this.mapMarker){
+            const mpx=cx+this._mapPanX+this.mapMarker.wx/SC;
+            const mpy=cy+this._mapPanY+this.mapMarker.wz/SC;
+            const dx=cX-mpx,dy=cY-mpy;
+            if(dx*dx+dy*dy<100){
+                this.mapMarker=null;
+                document.getElementById('smap-clear-marker').style.display='none';
+                this._renderSystemMap();
+                return;
+            }
+        }
+        this.mapMarker={wx,wz};
+        document.getElementById('smap-clear-marker').style.display='block';
+        this._renderSystemMap();
     }
 
     _toggleSystemMap(force){
@@ -3811,6 +3887,28 @@ class GameEngine{
         ctx.beginPath();ctx.moveTo(scx,scy);ctx.lineTo(scx+hfx*10,scy+hfz*10);ctx.stroke();
         ctx.fillStyle='#ffffff';
         ctx.beginPath();ctx.arc(scx,scy,2.5,0,Math.PI*2);ctx.fill();
+
+        // User marker (orange pin)
+        if(this.mapMarker){
+            const mp=toMap(this.mapMarker.wx,this.mapMarker.wz);
+            if(mp.x>-20&&mp.x<W+20&&mp.y>-20&&mp.y<H+20){
+                // Stem
+                ctx.strokeStyle='rgba(255,120,0,0.85)';ctx.lineWidth=2;
+                ctx.beginPath();ctx.moveTo(mp.x,mp.y);ctx.lineTo(mp.x,mp.y-14);ctx.stroke();
+                // Head (filled circle with bright center)
+                ctx.fillStyle='rgba(255,120,0,0.9)';
+                ctx.beginPath();ctx.arc(mp.x,mp.y-18,5.5,0,Math.PI*2);ctx.fill();
+                ctx.fillStyle='rgba(255,220,120,0.95)';
+                ctx.beginPath();ctx.arc(mp.x,mp.y-18,2.5,0,Math.PI*2);ctx.fill();
+                // Label
+                ctx.fillStyle='rgba(255,160,60,0.85)';ctx.font='8px monospace';
+                ctx.fillText('📍',mp.x+7,mp.y-12);
+            }
+            // Always update clear-button visibility when re-rendering
+            document.getElementById('smap-clear-marker').style.display='block';
+        } else {
+            document.getElementById('smap-clear-marker').style.display='none';
+        }
 
         // Scale bar (adaptive to zoom)
         const candidates=[500,1000,5000,10000,50000,100000,500000,1000000,5000000];
@@ -4394,6 +4492,43 @@ class GameEngine{
         el.style.display='flex';
     }
 
+    _updateMarkerIndicator(){
+        const el=document.getElementById('marker-indicator');
+        if(!el)return;
+        if(!this.mapMarker||this.sceneMode!=='space'){el.style.display='none';return;}
+        const W=window.innerWidth,H=window.innerHeight,margin=44;
+        const mPos=new THREE.Vector3(this.mapMarker.wx,0,this.mapMarker.wz);
+        const sp=mPos.clone();
+        sp.project(this.camera);
+        const behind=sp.z>1;
+        if(behind){sp.x=-sp.x;sp.y=-sp.y;}
+        const sx=(sp.x*0.5+0.5)*W,sy=(-sp.y*0.5+0.5)*H;
+        const cx=W/2,cy=H/2;
+        const onScreen=!behind&&sx>margin&&sx<W-margin&&sy>margin&&sy<H-margin;
+        const dist=Math.round(this.ship.pos.distanceTo(mPos));
+        document.getElementById('marker-indicator-dist').textContent=dist;
+        let px,py,angleDeg;
+        if(onScreen){
+            px=sx;py=sy-22;angleDeg=180;
+        }else{
+            const dx=sx-cx,dy=sy-cy;
+            if(dx===0&&dy===0){el.style.display='none';return;}
+            const halfW=cx-margin,halfH=cy-margin;
+            let clampX,clampY;
+            if(Math.abs(dx)*halfH>Math.abs(dy)*halfW){
+                const s=halfW/Math.abs(dx);clampX=cx+dx*s;clampY=cy+dy*s;
+            }else{
+                const s=halfH/Math.abs(dy);clampX=cx+dx*s;clampY=cy+dy*s;
+            }
+            px=clampX;py=clampY;
+            angleDeg=Math.atan2(dy,dx)*180/Math.PI+90;
+        }
+        el.style.left=px+'px';
+        el.style.top=py+'px';
+        el.querySelector('.marker-arrow').style.transform=`rotate(${angleDeg}deg)`;
+        el.style.display='flex';
+    }
+
     _updateCamera(){
         // Smooth follow camera (third-person only)
         MP.v1.set(0,3.2,this.camDist).applyQuaternion(this.ship.quat);
@@ -4437,6 +4572,19 @@ class GameEngine{
         ctx.fillStyle=sl>maxR?'#ffdd00':'#00ffaa';
         ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();
         ctx.restore();
+        // Marker (orange diamond, clamped to edge)
+        if(this.mapMarker){
+            const mdx=(this.mapMarker.wx-this.ship.pos.x)*S;
+            const mdz=(this.mapMarker.wz-this.ship.pos.z)*S;
+            const ml=Math.sqrt(mdx*mdx+mdz*mdz);
+            const mx2=ml>maxR?mdx/ml*maxR:mdx;
+            const mz2=ml>maxR?mdz/ml*maxR:mdz;
+            ctx.save();
+            ctx.translate(R+mx2,R+mz2);
+            ctx.fillStyle=ml>maxR?'rgba(255,180,0,0.7)':'rgba(255,130,0,0.9)';
+            ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();
+            ctx.restore();
+        }
         // Heading arrow
         const hfx=-Math.sin(this.ship.yaw);
         const hfz=-Math.cos(this.ship.yaw);
@@ -4567,6 +4715,7 @@ class GameEngine{
             hullCraftCounts:this.hullCraftCounts,
             relayPositions:this.relayStations.map(rs=>({
                 x:rs.group.position.x,y:rs.group.position.y,z:rs.group.position.z})),
+            mapMarker:this.mapMarker,
         }));
     }
     _loadSave(){
@@ -4606,6 +4755,7 @@ class GameEngine{
                         this._spaceOnlyObjects.push(rs.group);
                     }
                 }
+                if(d.mapMarker) this.mapMarker=d.mapMarker;
             }
         }catch(e){}
     }
@@ -4694,6 +4844,7 @@ class GameEngine{
             if(inSpace){
                 this._updateStationIndicator();
                 this._updatePlanetIndicator();
+                this._updateMarkerIndicator();
             }
             this._updateAltimeter();
 
