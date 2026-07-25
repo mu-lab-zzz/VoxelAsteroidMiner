@@ -4619,10 +4619,22 @@ class GameEngine{
                 this._checkCollisions();
                 this._checkRelayDock(dt);
             } else if(this.sceneMode==='planet'){
-                // Ground floor (keep ship above terrain)
-                if(this.ship.pos.y<5){
-                    this.ship.pos.y=5;
-                    if(this.ship.vel.y<0) this.ship.vel.y*=-0.4;
+                const isGas=this.activePlanet?.cfg?.type==='gas';
+                if(isGas){
+                    // Gas planet: no surface floor — ship descends into negative y
+                    // Soft lower bound 400 units below the deepest layer
+                    const layers=this.activePlanet.cfg.layers;
+                    const bottomY=layers[layers.length-1].y-400;
+                    if(this.ship.pos.y<bottomY){
+                        this.ship.pos.y=bottomY;
+                        if(this.ship.vel.y<0) this.ship.vel.y*=-0.3;
+                    }
+                } else {
+                    // Rocky planet: ground floor collision
+                    if(this.ship.pos.y<5){
+                        this.ship.pos.y=5;
+                        if(this.ship.vel.y<0) this.ship.vel.y*=-0.4;
+                    }
                 }
             }
 
