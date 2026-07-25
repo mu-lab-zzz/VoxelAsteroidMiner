@@ -336,6 +336,21 @@
             transition:background 0.15s,color 0.15s,border-color 0.15s;
         }
         .toggle-btn.active{background:#00f0ff;color:#000;border-color:#00f0ff;}
+        .brightness-slider{
+            -webkit-appearance:none;appearance:none;
+            width:120px;height:6px;border-radius:3px;outline:none;cursor:pointer;
+            background:linear-gradient(to right,#00f0ff var(--pct,50%),rgba(255,255,255,0.15) var(--pct,50%));
+        }
+        .brightness-slider::-webkit-slider-thumb{
+            -webkit-appearance:none;appearance:none;
+            width:16px;height:16px;border-radius:50%;background:#00f0ff;cursor:pointer;
+            box-shadow:0 0 6px rgba(0,240,255,0.6);
+        }
+        .brightness-slider::-moz-range-thumb{
+            width:16px;height:16px;border-radius:50%;background:#00f0ff;
+            border:none;cursor:pointer;box-shadow:0 0 6px rgba(0,240,255,0.6);
+        }
+        .brightness-val{font-size:11px;color:#00f0ff;font-weight:700;min-width:36px;text-align:right;}
 
         /* ── Touch Controls (Dual Joystick) ────────────────────── */
         #touch-controls{
@@ -693,6 +708,17 @@
         <div class="toggle-group">
             <button class="toggle-btn active" id="btn-debug-hide">非表示</button>
             <button class="toggle-btn"        id="btn-debug-show">表示</button>
+        </div>
+    </div>
+    <div class="settings-row">
+        <div>
+            <div class="settings-label">明るさ</div>
+            <div class="settings-sub">シーン全体のライティング強度</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <input type="range" id="slider-brightness" class="brightness-slider"
+                   min="0.3" max="2.0" step="0.05" value="1.0">
+            <span class="brightness-val" id="val-brightness">1.0×</span>
         </div>
     </div>
     <button class="btn-close-modal" id="btn-close-settings">✕ 閉じる</button>
@@ -2105,7 +2131,7 @@ class GameEngine{
         this._spaceOnlyObjects=[];
         this.settingsOpen=false;
         this.inventoryOpen=false;
-        this.settings={pitchInvert:true,showDebug:false};
+        this.settings={pitchInvert:true,showDebug:false,brightness:1.0};
         this.credits=0;
         this.refined={};
         for(const k of Object.values(VT)) this.refined[k]=0;
@@ -2700,6 +2726,10 @@ class GameEngine{
         });
         document.getElementById('btn-debug-show').addEventListener('click',()=>{
             this.settings.showDebug=true; this._applySettings(); this._saveSettings();
+        });
+        document.getElementById('slider-brightness').addEventListener('input',(e)=>{
+            this.settings.brightness=parseFloat(e.target.value);
+            this._applySettings(); this._saveSettings();
         });
     }
 
@@ -4244,6 +4274,16 @@ class GameEngine{
         }
         document.getElementById('sys-stats').style.display=
             this.settings.showDebug?'block':'none';
+        const bri=this.settings.brightness??1.0;
+        if(this.renderer) this.renderer.toneMappingExposure=1.2*bri;
+        const sl=document.getElementById('slider-brightness');
+        const vl=document.getElementById('val-brightness');
+        if(sl){
+            sl.value=bri;
+            const pct=((bri-0.3)/(2.0-0.3)*100).toFixed(1);
+            sl.style.setProperty('--pct',pct+'%');
+        }
+        if(vl) vl.textContent=bri.toFixed(2)+'×';
     }
     _toggleSettings(force){
         const modal=document.getElementById('settings-modal');
