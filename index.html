@@ -1457,7 +1457,8 @@ class Asteroid{
     }
 
     mine(worldPt,hitR,onMined){
-        const lp=MP.v1.copy(worldPt).sub(this.group.position);
+        this.group.updateMatrixWorld();
+        const lp=this.group.worldToLocal(MP.v1.copy(worldPt));
         const pos=this.mesh.geometry.attributes.position;
         const searchR2=hitR*hitR;
         let changed=false;
@@ -1573,7 +1574,8 @@ class PlanetRock{
         return out;
     }
     mine(worldPt,hitR,onMined){
-        const lp=MP.v1.copy(worldPt).sub(this.group.position);
+        this.group.updateMatrixWorld();
+        const lp=this.group.worldToLocal(MP.v1.copy(worldPt));
         const pos=this.mesh.geometry.attributes.position;
         const searchR2=hitR*hitR;let changed=false;
         const lpLen=Math.sqrt(lp.x*lp.x+lp.y*lp.y+lp.z*lp.z)||1;
