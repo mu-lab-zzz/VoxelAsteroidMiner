@@ -1324,20 +1324,65 @@ class Asteroid{
         const g=base.toNonIndexed();
         base.dispose();
 
+        const seed=this.seed;
+        // Deterministic [0,1] random from seed + offset
+        const rng=n=>0.5+0.5*SN.n3(n,seed*0.009,seed*0.004);
+
+        // 5 morphology types, chosen by seed
+        const mt=Math.floor(rng(7.3)*5);
+        let sx=1,sy=1,sz=1;
+        let dLo=this.radius*0.13,dMid=this.radius*0.04,dFine=this.radius*0.012;
+        let twoLobe=false;
+
+        if(mt===1){           // Elongated along one axis
+            const ax=Math.floor(rng(2.2)*3);
+            const el=1.5+rng(3.1)*0.8;
+            if(ax===0){sx=el;sy=0.55+rng(4.1)*0.25;sz=0.60+rng(5.1)*0.20;}
+            else if(ax===1){sy=el;sx=0.60+rng(4.1)*0.20;sz=0.65+rng(5.1)*0.20;}
+            else{sz=el;sx=0.60+rng(4.1)*0.20;sy=0.55+rng(5.1)*0.25;}
+        } else if(mt===2){    // Flat / disc-like
+            sy=0.35+rng(6.2)*0.25;
+            sx=1.15+rng(7.2)*0.40;
+            sz=1.05+rng(8.2)*0.35;
+        } else if(mt===3){    // Rubble — high-amplitude irregular
+            dLo=this.radius*(0.20+rng(9.2)*0.14);
+            dMid=this.radius*0.07;
+            dFine=this.radius*0.022;
+        } else if(mt===4){    // Contact binary (peanut)
+            twoLobe=true;
+            sy=1.40+rng(10.2)*0.45;
+            dLo=this.radius*0.09;
+        }
+
+        // Bake random orientation so each asteroid faces a unique direction
+        this.group.rotation.set(
+            rng(20.1)*Math.PI*2,
+            rng(21.1)*Math.PI*2,
+            rng(22.1)*Math.PI*2);
+
         const pos=g.attributes.position;
         const count=pos.count;
         const cols=new Float32Array(count*3);
-        const seed=this.seed;
 
         for(let i=0;i<count;i++){
-            const x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+            // Apply axis scaling to create base ellipsoid shape
+            let x=pos.getX(i)*sx;
+            let y=pos.getY(i)*sy;
+            let z=pos.getZ(i)*sz;
             const len=Math.sqrt(x*x+y*y+z*z)||1;
             const nx=x/len,ny=y/len,nz=z/len;
 
             const n1=SN.n3((x+seed)*0.022,(y+seed)*0.022,(z+seed)*0.022);
             const n2=SN.n3((x+seed)*0.077,(y+seed)*0.077,(z+seed)*0.077);
             const n3=SN.n3((x+seed)*0.20,(y+seed)*0.20,(z+seed)*0.20);
-            const disp=this.radius*(n1*0.13+n2*0.04+n3*0.012);
+            let disp=n1*dLo+n2*dMid+n3*dFine;
+
+            // Contact binary: pinch the equator to form two lobes
+            if(twoLobe){
+                const sinPhi=Math.sqrt(x*x+z*z)/len;
+                disp-=this.radius*0.34*Math.pow(sinPhi,2.5);
+            }
+
             pos.setXYZ(i,x+nx*disp,y+ny*disp,z+nz*disp);
 
             const nOre=SN.n3((x-seed)*0.058,(y-seed)*0.058,(z-seed)*0.058);
