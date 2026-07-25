@@ -463,6 +463,25 @@
         #system-map-canvas{
             border-radius:8px;border:1px solid rgba(0,240,255,0.18);
             max-width:min(520px,96vw);max-height:min(520px,72vh);
+            cursor:grab;display:block;
+        }
+        #system-map-canvas:active{cursor:grabbing;}
+        #smap-wrap{position:relative;display:inline-block;}
+        #smap-zoom-btns{
+            position:absolute;top:8px;right:8px;
+            display:flex;flex-direction:column;gap:3px;pointer-events:auto;
+        }
+        #smap-zoom-btns button{
+            padding:4px 9px;border-radius:4px;
+            background:rgba(0,10,20,0.72);border:1px solid rgba(0,240,255,0.30);
+            color:#00f0ff;font-size:11px;font-family:monospace;cursor:pointer;
+            min-width:46px;text-align:center;letter-spacing:1px;
+        }
+        #smap-zoom-btns button:hover{background:rgba(0,240,255,0.18);}
+        #smap-zoom-label{
+            position:absolute;top:8px;left:8px;
+            color:rgba(0,240,255,0.55);font-size:10px;font-family:monospace;
+            pointer-events:none;text-shadow:0 0 6px rgba(0,240,255,0.4);
         }
         #system-map-close{
             margin-top:12px;padding:8px 28px;border-radius:20px;
@@ -623,8 +642,17 @@
 <!-- System Map Overlay -->
 <div id="system-map">
     <div id="system-map-title">🌌 SOLAR SYSTEM MAP</div>
-    <canvas id="system-map-canvas" width="520" height="520"></canvas>
-    <div id="system-map-info">M キーで開閉 ／ 白点 = 現在地</div>
+    <div id="smap-wrap">
+        <canvas id="system-map-canvas" width="520" height="520"></canvas>
+        <div id="smap-zoom-label"></div>
+        <div id="smap-zoom-btns">
+            <button id="smz-in">＋</button>
+            <button id="smz-out">－</button>
+            <button id="smz-reset">全体</button>
+            <button id="smz-inner">内惑星</button>
+        </div>
+    </div>
+    <div id="system-map-info">ドラッグ：移動　ピンチ／ホイール：ズーム　ダブルタップ：リセット</div>
     <button id="system-map-close">✕ 閉じる</button>
 </div>
 
@@ -2084,6 +2112,7 @@ class GameEngine{
         this.relayKits=0;
         this.warpActive=false;
         this.systemMapOpen=false;
+        this._mapZoom=1;this._mapPanX=0;this._mapPanY=0;
         this.planetMeshes=[];
         this.activePlanet=null;
         this._currentLayer=-1;
@@ -2551,8 +2580,9 @@ class GameEngine{
         document.getElementById('tab-workshop').addEventListener('click',()=>this._renderStationTab('workshop'));
         document.getElementById('btn-close-station').addEventListener('click',()=>this._closeStation());
 
-        // System map close
+        // System map close + interactive controls
         document.getElementById('system-map-close').addEventListener('click',()=>this._toggleSystemMap(false));
+        this._initSystemMapControls();
 
         // Tap minimap to open system map
         document.getElementById('minimap-wrap').addEventListener('click',()=>{
@@ -3205,6 +3235,99 @@ class GameEngine{
     }
 
     // ── System Map ───────────────────────────────────────────────
+    _initSystemMapControls(){
+        const canvas=document.getElementById('system-map-canvas');
+        const W=canvas.width,H=canvas.height;
+        const cx=W*0.5,cy=H*0.5;
+        const SCALE_BASE=6000;
+        const clamp=z=>Math.max(1,Math.min(400,z));
+        const toC=(cX,cY)=>{const r=canvas.getBoundingClientRect();return{x:(cX-r.left)*(W/r.width),y:(cY-r.top)*(H/r.height)};};
+        const zoomAt=(mx,my,z)=>{
+            z=clamp(z);
+            const SC=SCALE_BASE/this._mapZoom;
+            const wx=(mx-cx-this._mapPanX)*SC,wz=(my-cy-this._mapPanY)*SC;
+            this._mapZoom=z;
+            const nSC=SCALE_BASE/z;
+            this._mapPanX=mx-cx-wx/nSC;
+            this._mapPanY=my-cy-wz/nSC;
+            this._renderSystemMap();
+        };
+        // Wheel zoom
+        canvas.addEventListener('wheel',e=>{
+            e.preventDefault();
+            const{x,y}=toC(e.clientX,e.clientY);
+            zoomAt(x,y,this._mapZoom*(e.deltaY<0?1.25:0.8));
+        },{passive:false});
+        // Mouse drag
+        let md=null;
+        canvas.addEventListener('mousedown',e=>{
+            md={x:e.clientX,y:e.clientY,px:this._mapPanX,py:this._mapPanY};
+            e.preventDefault();
+        });
+        canvas.addEventListener('mousemove',e=>{
+            if(!md)return;
+            const r=canvas.getBoundingClientRect();
+            const sc=W/r.width;
+            this._mapPanX=md.px+(e.clientX-md.x)*sc;
+            this._mapPanY=md.py+(e.clientY-md.y)*sc;
+            this._renderSystemMap();
+        });
+        canvas.addEventListener('mouseup',()=>{md=null;});
+        canvas.addEventListener('mouseleave',()=>{md=null;});
+        // Double-click / double-tap reset
+        canvas.addEventListener('dblclick',()=>{
+            this._mapZoom=1;this._mapPanX=0;this._mapPanY=0;
+            this._renderSystemMap();
+        });
+        // Touch pinch + pan
+        let tc=null;
+        canvas.addEventListener('touchstart',e=>{
+            e.preventDefault();
+            const ts=[...e.touches].map(t=>toC(t.clientX,t.clientY));
+            tc={ts,zoom:this._mapZoom,px:this._mapPanX,py:this._mapPanY};
+        },{passive:false});
+        canvas.addEventListener('touchmove',e=>{
+            e.preventDefault();
+            if(!tc)return;
+            const cur=[...e.touches].map(t=>toC(t.clientX,t.clientY));
+            if(cur.length===1&&tc.ts.length===1){
+                this._mapPanX=tc.px+(cur[0].x-tc.ts[0].x);
+                this._mapPanY=tc.py+(cur[0].y-tc.ts[0].y);
+            }else if(cur.length>=2&&tc.ts.length>=2){
+                const od=Math.hypot(tc.ts[1].x-tc.ts[0].x,tc.ts[1].y-tc.ts[0].y);
+                const nd=Math.hypot(cur[1].x-cur[0].x,cur[1].y-cur[0].y);
+                if(od>1){
+                    const newZ=clamp(tc.zoom*(nd/od));
+                    const mx=(tc.ts[0].x+tc.ts[1].x)*0.5,my=(tc.ts[0].y+tc.ts[1].y)*0.5;
+                    const SC=SCALE_BASE/tc.zoom;
+                    const wx=(mx-cx-tc.px)*SC,wz=(my-cy-tc.py)*SC;
+                    this._mapZoom=newZ;
+                    const nSC=SCALE_BASE/newZ;
+                    this._mapPanX=mx-cx-wx/nSC+((cur[0].x+cur[1].x)*0.5-(tc.ts[0].x+tc.ts[1].x)*0.5);
+                    this._mapPanY=my-cy-wz/nSC+((cur[0].y+cur[1].y)*0.5-(tc.ts[0].y+tc.ts[1].y)*0.5);
+                }
+            }
+            this._renderSystemMap();
+        },{passive:false});
+        const endT=()=>{tc=null;};
+        canvas.addEventListener('touchend',endT);
+        canvas.addEventListener('touchcancel',endT);
+        // Buttons
+        document.getElementById('smz-in').addEventListener('click',()=>zoomAt(cx,cy,this._mapZoom*2));
+        document.getElementById('smz-out').addEventListener('click',()=>zoomAt(cx,cy,this._mapZoom*0.5));
+        document.getElementById('smz-reset').addEventListener('click',()=>{
+            this._mapZoom=1;this._mapPanX=0;this._mapPanY=0;this._renderSystemMap();
+        });
+        document.getElementById('smz-inner').addEventListener('click',()=>{
+            // Center on sun, zoom to show inner 4 planets (Mercury to Mars)
+            this._mapZoom=12;
+            const SC=SCALE_BASE/12; // 500 units/px
+            this._mapPanX=0;
+            this._mapPanY=78000/SC; // bring sun (wz:-78000) to canvas center
+            this._renderSystemMap();
+        });
+    }
+
     _toggleSystemMap(force){
         this.systemMapOpen=force!==undefined?force:!this.systemMapOpen;
         const el=document.getElementById('system-map');
@@ -3219,11 +3342,15 @@ class GameEngine{
         const ctx=canvas.getContext('2d');
         ctx.fillStyle='#00000c';ctx.fillRect(0,0,W,H);
 
-        // Scale: center map on sun, 1px = 6000 world units
-        // Sun world pos: (0, -78000 in Z)
-        const SCALE=6000;
-        const cx=W*0.5,cy=H*0.5; // canvas center = station world (0,0)
-        const toMap=(wx,wz)=>({x:cx+wx/SCALE,y:cy+wz/SCALE});
+        const SCALE_BASE=6000;
+        const zoom=this._mapZoom||1;
+        const panX=this._mapPanX||0,panY=this._mapPanY||0;
+        const SC=SCALE_BASE/zoom;
+        const cx=W*0.5,cy=H*0.5;
+        const toMap=(wx,wz)=>({x:cx+panX+wx/SC,y:cy+panY+wz/SC});
+        // Zoom level label
+        const zl=document.getElementById('smap-zoom-label');
+        if(zl)zl.textContent=`×${zoom<10?zoom.toFixed(1):Math.round(zoom)}`;
 
         // Subtle grid
         ctx.strokeStyle='rgba(0,240,255,0.04)';ctx.lineWidth=0.5;
@@ -3314,12 +3441,16 @@ class GameEngine{
         ctx.fillStyle='#ffffff';
         ctx.beginPath();ctx.arc(scx,scy,2.5,0,Math.PI*2);ctx.fill();
 
-        // Scale bar
-        const barLen=Math.round(10000/SCALE); // 10000 units in pixels
+        // Scale bar (adaptive to zoom)
+        const candidates=[500,1000,5000,10000,50000,100000,500000,1000000,5000000];
+        const barWorld=candidates.find(c=>c/SC>=40&&c/SC<=110)||candidates[candidates.length-1];
+        const barPx=Math.round(barWorld/SC);
+        const barAU=barWorld/44150;
+        const barLabel=barAU>=0.1?`${barAU.toFixed(2)} AU`:`${Math.round(barAU*149597871).toLocaleString()} km`;
         ctx.fillStyle='rgba(255,255,255,0.25)';
-        ctx.fillRect(10,H-18,barLen,2);
+        ctx.fillRect(10,H-18,barPx,2);
         ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='8px monospace';
-        ctx.fillText('10,000m',10+barLen+3,H-14);
+        ctx.fillText(barLabel,10+barPx+3,H-14);
         ctx.fillStyle='rgba(100,130,160,0.7)';
         ctx.fillText(`Z キー:WARP / N:中継展開 / M:マップ閉`,10,H-4);
     }
