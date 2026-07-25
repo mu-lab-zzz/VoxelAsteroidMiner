@@ -4369,6 +4369,10 @@ class GameEngine{
 
     _updateHUD(){
         const s=this.ship.stats;
+        // Always recompute cargo from inventory to prevent desync
+        s.cargo=Math.min(
+            Object.values(this.ship.inventory).reduce((a,n)=>a+(n||0),0),
+            s.maxCargo);
         document.getElementById('hp-fill').style.width=`${(s.hp/s.maxHp)*100}%`;
         document.getElementById('energy-fill').style.width=`${(s.energy/s.maxEnergy)*100}%`;
         document.getElementById('cargo-fill').style.width=`${(s.cargo/s.maxCargo)*100}%`;
@@ -4499,6 +4503,11 @@ class GameEngine{
                         if(/^hull_\d+$/.test(k)) this.hullCraftCounts[k]=v;
                 }
                 this._computeShipStats();
+                // Recompute cargo from actual inventory to fix any save desync
+                const s=this.ship.stats;
+                s.cargo=Math.min(
+                    Object.values(this.ship.inventory).reduce((a,n)=>a+(n||0),0),
+                    s.maxCargo);
                 if(d.relayPositions){
                     for(const p of d.relayPositions){
                         const v=new THREE.Vector3(p.x,p.y,p.z);
