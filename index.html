@@ -50,8 +50,8 @@
         .bar-fill{height:100%;width:100%;transition:width 0.15s linear;}
         #hp-fill{background:linear-gradient(90deg,#cc2244,#ff3355);}
         #energy-fill{background:linear-gradient(90deg,#0088cc,#00f0ff);}
-        #energy-fill.depleted{background:linear-gradient(90deg,#553300,#aa4400);animation:depletedPulse 1s ease-in-out infinite;}
-        @keyframes depletedPulse{0%,100%{opacity:0.6;}50%{opacity:1.0;}}
+        #energy-fill.depleted{background:linear-gradient(90deg,#770000,#dd0000);animation:depletedPulse 0.7s ease-in-out infinite;}
+        @keyframes depletedPulse{0%,100%{opacity:0.5;}50%{opacity:1.0;}}
         #cargo-fill{background:linear-gradient(90deg,#cc7700,#ffaa00);}
         .hs-div{width:1px;height:24px;background:rgba(255,255,255,0.10);flex-shrink:0;}
 
@@ -2091,7 +2091,7 @@ class MiningShip{
     }
 
     update(dt,inp){
-        const boostMult=inp.boost?this.stats.boost:1;
+        const boostMult=(inp.boost&&!this._energyDepleted)?this.stats.boost:1;
         const thrust=this.stats.thrust*boostMult;
         // Lateral thrust: mainly from thruster parts, engine contributes 10%
         const latThrust=(this.stats.thrusterPow+this.stats.thrust*0.1)*boostMult;
@@ -2126,21 +2126,25 @@ class MiningShip{
         MP.q1.setFromAxisAngle(MP.v1, this.pitch);
         this.quat.multiply(MP.q1);
 
-        // boost energy drain
-        if(inp.boost&&this.stats.energy>0&&!this._energyDepleted)
+        // boost energy drain (blocked when depleted)
+        if(inp.boost&&!this._energyDepleted)
             this.stats.energy=Math.max(0,this.stats.energy-CFG.BOOST_ENERGY*dt);
 
-        // energy regen
-        if(this.stats.energy<this.stats.maxEnergy)
-            this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+this.stats.energyRegen*dt);
-
-        // depletion flag: lock at 0, unlock only at full recovery
+        // depletion check — must run BEFORE regen so 0 is caught immediately
         if(!this._energyDepleted&&this.stats.energy<=0){
             this._energyDepleted=true;
-            Notify.warn('⚡ エネルギー切れ！完全回復まで使用不可');
-        }else if(this._energyDepleted&&this.stats.energy>=this.stats.maxEnergy){
+            Notify.warn('⚡ エネルギー切れ！緊急チャージ中…');
+        }
+
+        // regen: 3× speed during emergency charge
+        const regenRate=this._energyDepleted?this.stats.energyRegen*3:this.stats.energyRegen;
+        if(this.stats.energy<this.stats.maxEnergy)
+            this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+regenRate*dt);
+
+        // recovery complete
+        if(this._energyDepleted&&this.stats.energy>=this.stats.maxEnergy){
             this._energyDepleted=false;
-            Notify.info('⚡ エネルギー回復完了');
+            Notify.info('⚡ 緊急チャージ完了');
         }
 
         // sound
