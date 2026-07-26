@@ -50,6 +50,8 @@
         .bar-fill{height:100%;width:100%;transition:width 0.15s linear;}
         #hp-fill{background:linear-gradient(90deg,#cc2244,#ff3355);}
         #energy-fill{background:linear-gradient(90deg,#0088cc,#00f0ff);}
+        #energy-fill.depleted{background:linear-gradient(90deg,#553300,#aa4400);animation:depletedPulse 1s ease-in-out infinite;}
+        @keyframes depletedPulse{0%,100%{opacity:0.6;}50%{opacity:1.0;}}
         #cargo-fill{background:linear-gradient(90deg,#cc7700,#ffaa00);}
         .hs-div{width:1px;height:24px;background:rgba(255,255,255,0.10);flex-shrink:0;}
 
@@ -835,6 +837,7 @@ const CFG = {
     WORLD_R:     2400,
     WARP_SPEED:  [2500, 5000],   // m/s per warp level
     WARP_ENERGY: 50,              // energy drain per second while warping
+    BOOST_ENERGY:25,              // energy drain per second while boosting
     RELAY_DIST:  35,              // auto-refuel radius around relay station
 };
 
@@ -999,6 +1002,12 @@ const SHIP_BLOCKS={
     reactor_s:   {name:'リアクターS',    tier:1,icon:'🔋',shape:'reactor',
                   stats:{maxEnergy:50},
                   craft:{[VT.COPPER]:3,[VT.IRON]:2}},
+    solar_s:     {name:'ソーラーパネルS', tier:1,icon:'☀',shape:'panel',
+                  stats:{energyRegen:8},
+                  craft:{[VT.COPPER]:3,[VT.IRON]:2}},
+    thruster_s:  {name:'スラスターS',    tier:1,icon:'↔',shape:'thruster',
+                  stats:{thrusterPow:6},
+                  craft:{[VT.IRON]:2,[VT.COPPER]:2}},
     // ── Tier 2 ──────────────────────────────────────────────────────────────
     engine_2:    {name:'エンジンMk2',    tier:2,icon:'🔥',shape:'engine',
                   stats:{thrust:14,boost:0.3},
@@ -1012,6 +1021,9 @@ const SHIP_BLOCKS={
     reactor_m:   {name:'リアクターM',    tier:2,icon:'🔋',shape:'reactor',
                   stats:{maxEnergy:80},
                   craft:{[VT.NICKEL]:3,[VT.URANIUM]:1}},
+    thruster_m:  {name:'スラスターM',    tier:2,icon:'↔',shape:'thruster',
+                  stats:{thrusterPow:12},
+                  craft:{[VT.NICKEL]:3,[VT.TITANIUM]:2}},
     // ── Tier 3 ──────────────────────────────────────────────────────────────
     engine_3:    {name:'エンジンMk3',    tier:3,icon:'🔥',shape:'engine',
                   stats:{thrust:22,boost:0.5},
@@ -1025,6 +1037,12 @@ const SHIP_BLOCKS={
     laser_rifle: {name:'レーザーライフル',tier:3,icon:'🔫',shape:'rifle',
                   stats:{laserDmg:20},
                   craft:{[VT.NICKEL]:3,[VT.TITANIUM]:2,[VT.CRYSTAL]:2}},
+    solar_m:     {name:'ソーラーパネルM', tier:3,icon:'☀',shape:'panel',
+                  stats:{energyRegen:20},
+                  craft:{[VT.TITANIUM]:4,[VT.CRYSTAL]:2}},
+    thruster_l:  {name:'スラスターL',    tier:3,icon:'↔',shape:'thruster',
+                  stats:{thrusterPow:22},
+                  craft:{[VT.TITANIUM]:4,[VT.PLATINUM]:2}},
     // ── Tier 4 ──────────────────────────────────────────────────────────────
     warp_core:   {name:'ワープコア',     tier:4,icon:'🌀',shape:'warp',
                   stats:{warpSpeed:2500},
@@ -1745,9 +1763,12 @@ class MiningShip{
             energy:100,maxEnergy:100,
             cargo:0,maxCargo:50,
             thrust:30,boost:1.5,
+            thrusterPow:6,
             miningPow:0.5,laserCost:14,
             warpLv:0,
+            energyRegen:2,
         };
+        this._energyDepleted=false;
         this.inventory={};
         for(const k of Object.values(VT)) this.inventory[k]=0;
 
@@ -1997,6 +2018,50 @@ class MiningShip{
                 const hp=new THREE.Mesh(hpG,mR);hp.position.set(x,y,z-BS*0.84); grp.add(hp);
                 break;
             }
+            case 'panel':{
+                const isLarge=blk.stats.energyRegen>=16;
+                const mF=new THREE.MeshStandardMaterial({color:0x0a1a40,metalness:0.5,roughness:0.4});
+                const mC=new THREE.MeshStandardMaterial({color:isLarge?0x2266cc:0x1155aa,metalness:0.2,roughness:0.3,emissive:isLarge?0x112244:0x0a1a33,emissiveIntensity:0.4});
+                const mG=new THREE.MeshStandardMaterial({color:0x334455,metalness:0.7,roughness:0.4});
+                // Mounting bracket
+                const mnt=new THREE.Mesh(new THREE.BoxGeometry(BS*0.3,BS*0.18,BS*0.3),mG);
+                mnt.position.set(x,y,z); grp.add(mnt);
+                // Panel face (slightly tilted upward)
+                const panel=new THREE.Mesh(new THREE.BoxGeometry(BS*0.96,BS*0.06,BS*0.9),mC);
+                panel.position.set(x,y+BS*0.24,z); panel.rotation.x=0.18; grp.add(panel);
+                // Grid lines on panel
+                for(const dz of[-0.25,0,0.25]){
+                    const gl=new THREE.Mesh(new THREE.BoxGeometry(BS*0.97,BS*0.02,BS*0.02),mF);
+                    gl.position.set(x,y+BS*0.27,z+dz*BS); gl.rotation.x=0.18; grp.add(gl);
+                }
+                for(const dx of[-0.3,0,0.3]){
+                    const gl=new THREE.Mesh(new THREE.BoxGeometry(BS*0.02,BS*0.02,BS*0.9),mF);
+                    gl.position.set(x+dx*BS,y+BS*0.27,z); gl.rotation.x=0.18; grp.add(gl);
+                }
+                break;
+            }
+            case 'thruster':{
+                const col=blk.tier>=3?0x14101e:blk.tier>=2?0x0c1520:0x1c1608;
+                const accCol=blk.tier>=3?0x44aaff:blk.tier>=2?0x00ccdd:0xff8800;
+                const fCol=blk.tier>=3?0x3388ff:blk.tier>=2?0x00ddee:0xff9933;
+                const mD=new THREE.MeshStandardMaterial({color:col,metalness:0.7,roughness:0.45});
+                const mA=new THREE.MeshStandardMaterial({color:accCol,metalness:0.4,roughness:0.35});
+                const fMat=new THREE.MeshBasicMaterial({color:fCol,transparent:true,opacity:0.65,blending:THREE.AdditiveBlending,depthWrite:false});
+                // Main body
+                const body=new THREE.Mesh(new THREE.BoxGeometry(BS*0.88,BS*0.4,BS*0.55),mD);
+                body.position.set(x,y,z); grp.add(body);
+                // Accent stripe along top
+                const stripe=new THREE.Mesh(new THREE.BoxGeometry(BS*0.88,BS*0.05,BS*0.12),mA);
+                stripe.position.set(x,y+BS*0.22,z); grp.add(stripe);
+                // Side nozzles (×2, pointing ±X)
+                for(const sx of[-1,1]){
+                    const nG=new THREE.CylinderGeometry(BS*0.13,BS*0.17,BS*0.28,8);nG.rotateZ(Math.PI/2);
+                    const noz=new THREE.Mesh(nG,mD);noz.position.set(x+sx*BS*0.58,y,z); grp.add(noz);
+                    const fG=new THREE.CylinderGeometry(BS*0.08,BS*0.08,BS*0.07,8);fG.rotateZ(Math.PI/2);
+                    const flame=new THREE.Mesh(fG,fMat);flame.position.set(x+sx*BS*0.75,y,z); grp.add(flame);
+                }
+                break;
+            }
         }
     }
 
@@ -2026,14 +2091,17 @@ class MiningShip{
     }
 
     update(dt,inp){
-        const thrust=this.stats.thrust*(inp.boost?this.stats.boost:1);
+        const boostMult=inp.boost?this.stats.boost:1;
+        const thrust=this.stats.thrust*boostMult;
+        // Lateral thrust: mainly from thruster parts, engine contributes 10%
+        const latThrust=(this.stats.thrusterPow+this.stats.thrust*0.1)*boostMult;
         MP.v1.set(0,0,0);
         if(inp.forward)  MP.v1.z-=thrust;
         if(inp.backward) MP.v1.z+=thrust;
-        if(inp.left)     MP.v1.x-=thrust*0.7;
-        if(inp.right)    MP.v1.x+=thrust*0.7;
-        if(inp.up)       MP.v1.y+=thrust*0.7;
-        if(inp.down)     MP.v1.y-=thrust*0.7;
+        if(inp.left)     MP.v1.x-=latThrust;
+        if(inp.right)    MP.v1.x+=latThrust;
+        if(inp.up)       MP.v1.y+=latThrust;
+        if(inp.down)     MP.v1.y-=latThrust;
         MP.v1.applyQuaternion(this.quat);
         this.vel.addScaledVector(MP.v1,dt);
         this.vel.multiplyScalar(Math.pow(0.84,dt*60));
@@ -2058,9 +2126,22 @@ class MiningShip{
         MP.q1.setFromAxisAngle(MP.v1, this.pitch);
         this.quat.multiply(MP.q1);
 
+        // boost energy drain
+        if(inp.boost&&this.stats.energy>0&&!this._energyDepleted)
+            this.stats.energy=Math.max(0,this.stats.energy-CFG.BOOST_ENERGY*dt);
+
         // energy regen
         if(this.stats.energy<this.stats.maxEnergy)
-            this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+9*dt);
+            this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+this.stats.energyRegen*dt);
+
+        // depletion flag: lock at 0, unlock only at full recovery
+        if(!this._energyDepleted&&this.stats.energy<=0){
+            this._energyDepleted=true;
+            Notify.warn('⚡ エネルギー切れ！完全回復まで使用不可');
+        }else if(this._energyDepleted&&this.stats.energy>=this.stats.maxEnergy){
+            this._energyDepleted=false;
+            Notify.info('⚡ エネルギー回復完了');
+        }
 
         // sound
         const spd=this.vel.length();
@@ -2068,7 +2149,7 @@ class MiningShip{
     }
 
     fireLaser(asteroids,sparks,dt,camera){
-        if(this.stats.energy<2){this.hideLaser();Sound.stopLaser();return;}
+        if(this._energyDepleted||this.stats.energy<2){this.hideLaser();Sound.stopLaser();return;}
         this.stats.energy=Math.max(0,this.stats.energy-this.stats.laserCost*dt);
         Sound.startLaser();
 
@@ -3387,17 +3468,19 @@ class GameEngine{
     _computeShipStats(){
         const s=this.ship.stats;
         s.thrust=14; s.boost=1.0; s.miningPow=0.0;
-        s.maxCargo=20; s.maxEnergy=40;
+        s.maxCargo=20; s.maxEnergy=40; s.energyRegen=2; s.thrusterPow=6;
         this._warpSpeed=0;
         for(let l=0;l<3;l++) for(let r=0;r<5;r++) for(let c=0;c<5;c++){
             const bid=this.shipLayout[l]?.[r]?.[c]; if(!bid) continue;
             const b=SHIP_BLOCKS[bid]; if(!b) continue;
-            if(b.stats.thrust)    s.thrust    +=b.stats.thrust;
-            if(b.stats.boost)     s.boost     +=b.stats.boost;
-            if(b.stats.miningPow) s.miningPow +=b.stats.miningPow;
-            if(b.stats.maxCargo)  s.maxCargo  +=b.stats.maxCargo;
-            if(b.stats.maxEnergy) s.maxEnergy +=b.stats.maxEnergy;
-            if(b.stats.warpSpeed) this._warpSpeed=Math.max(this._warpSpeed,b.stats.warpSpeed);
+            if(b.stats.thrust)       s.thrust       +=b.stats.thrust;
+            if(b.stats.boost)        s.boost        +=b.stats.boost;
+            if(b.stats.miningPow)    s.miningPow    +=b.stats.miningPow;
+            if(b.stats.maxCargo)     s.maxCargo     +=b.stats.maxCargo;
+            if(b.stats.maxEnergy)    s.maxEnergy    +=b.stats.maxEnergy;
+            if(b.stats.energyRegen)  s.energyRegen  +=b.stats.energyRegen;
+            if(b.stats.thrusterPow)  s.thrusterPow  +=b.stats.thrusterPow;
+            if(b.stats.warpSpeed)    this._warpSpeed=Math.max(this._warpSpeed,b.stats.warpSpeed);
         }
         s.warpLv=this._warpSpeed>0?1:0;
         s.cargo=Math.min(s.cargo,s.maxCargo);
@@ -3473,7 +3556,7 @@ class GameEngine{
         const statsBar=document.createElement('div');
         statsBar.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:rgba(15,30,20,0.55);border-radius:5px;padding:7px 8px;margin-bottom:10px;font-size:10px;color:#8dc;';
         const s=this.ship.stats;
-        const statItems=[['推力',s.thrust.toFixed(0)],['採掘',s.miningPow.toFixed(2)],['荷物',s.maxCargo],['エネルギー',s.maxEnergy],['ワープ',s.warpLv?'✓':'✗'],['ブロック',this._countBlocks()]];
+        const statItems=[['推力',s.thrust.toFixed(0)],['スラスター',s.thrusterPow.toFixed(0)],['採掘',s.miningPow.toFixed(2)],['荷物',s.maxCargo],['エネルギー',s.maxEnergy],['発電',s.energyRegen.toFixed(0)],['ワープ',s.warpLv?'✓':'✗'],['ブロック',this._countBlocks()]];
         for(const[k,v] of statItems){
             const d=document.createElement('div');
             d.innerHTML=`<span style="color:#445">${k} </span>${v}`;
@@ -3507,7 +3590,7 @@ class GameEngine{
                 return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
             }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
             const statStr=Object.entries(blk.stats).map(([k,v])=>{
-                const labels={thrust:'推力',boost:'加速',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',warpSpeed:'ワープ',laserDmg:'攻撃'};
+                const labels={thrust:'推力',boost:'加速',thrusterPow:'スラスター',miningPow:'採掘',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃'};
                 return `${labels[k]||k}+${v}`;
             }).join(' / ')||'構造';
             const row=document.createElement('div');row.className='st-row';
@@ -3794,7 +3877,7 @@ class GameEngine{
             if(this.warpActive){this.warpActive=false;}
             return;
         }
-        if(!this.debugMode&&this.ship.stats.energy<5){this.warpActive=false;return;}
+        if(!this.debugMode&&(this.ship._energyDepleted||this.ship.stats.energy<5)){this.warpActive=false;return;}
         this.warpActive=true;
         if(!this.debugMode)
             this.ship.stats.energy=Math.max(0,this.ship.stats.energy-CFG.WARP_ENERGY*dt);
@@ -4817,7 +4900,9 @@ class GameEngine{
             Object.values(this.ship.inventory).reduce((a,n)=>a+(n||0),0),
             s.maxCargo);
         document.getElementById('hp-fill').style.width=`${(s.hp/s.maxHp)*100}%`;
-        document.getElementById('energy-fill').style.width=`${(s.energy/s.maxEnergy)*100}%`;
+        const ef=document.getElementById('energy-fill');
+        ef.style.width=`${(s.energy/s.maxEnergy)*100}%`;
+        ef.classList.toggle('depleted',!!this.ship._energyDepleted);
         document.getElementById('cargo-fill').style.width=`${(s.cargo/s.maxCargo)*100}%`;
 
         const p=this.ship.pos;
@@ -4928,7 +5013,7 @@ class GameEngine{
             if(raw){
                 const d=JSON.parse(raw);
                 // Merge only known stats keys (ignore old upgrade level fields)
-                const knownStats=['hp','maxHp','energy','maxEnergy','cargo','maxCargo','thrust','boost','miningPow','laserCost','warpLv'];
+                const knownStats=['hp','maxHp','energy','maxEnergy','cargo','maxCargo','thrust','boost','thrusterPow','miningPow','laserCost','warpLv','energyRegen'];
                 if(d.stats) for(const k of knownStats) if(d.stats[k]!=null) this.ship.stats[k]=d.stats[k];
                 Object.assign(this.ship.inventory,d.inventory||{});
                 if(d.credits!=null) this.credits=d.credits;
