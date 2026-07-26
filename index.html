@@ -47,7 +47,8 @@
         .hs-icon{font-size:14px;flex-shrink:0;}
         .bar-bg{flex:1;height:5px;background:rgba(255,255,255,0.10);
             border-radius:3px;overflow:hidden;}
-        .bar-fill{height:100%;width:100%;transition:width 0.15s linear;}
+        .bar-fill{height:100%;width:100%;}
+        #energy-fill{transition:none;}
         #hp-fill{background:linear-gradient(90deg,#cc2244,#ff3355);}
         #energy-fill{background:linear-gradient(90deg,#0088cc,#00f0ff);}
         #energy-fill.depleted{background:linear-gradient(90deg,#770000,#dd0000);animation:depletedPulse 0.7s ease-in-out infinite;}
@@ -4920,6 +4921,14 @@ class GameEngine{
         ctx.beginPath();ctx.arc(R,R,3,0,Math.PI*2);ctx.fill();
     }
 
+    _updateEnergyBar(){
+        const s=this.ship.stats;
+        const ef=document.getElementById('energy-fill');
+        if(!ef) return;
+        ef.style.width=`${(s.energy/s.maxEnergy)*100}%`;
+        ef.classList.toggle('depleted',!!this.ship._energyDepleted);
+    }
+
     _updateHUD(){
         const s=this.ship.stats;
         // Always recompute cargo from inventory to prevent desync
@@ -4927,9 +4936,6 @@ class GameEngine{
             Object.values(this.ship.inventory).reduce((a,n)=>a+(n||0),0),
             s.maxCargo);
         document.getElementById('hp-fill').style.width=`${(s.hp/s.maxHp)*100}%`;
-        const ef=document.getElementById('energy-fill');
-        ef.style.width=`${(s.energy/s.maxEnergy)*100}%`;
-        ef.classList.toggle('depleted',!!this.ship._energyDepleted);
         document.getElementById('cargo-fill').style.width=`${(s.cargo/s.maxCargo)*100}%`;
 
         const p=this.ship.pos;
@@ -5246,6 +5252,8 @@ class GameEngine{
             if(this.autoSaveTick>=CFG.AUTO_SAVE){
                 this.autoSaveTick=0;this._saveSave();
             }
+
+            this._updateEnergyBar();
 
             this.fpsFrames++;this.fpsTick+=dt;
             if(this.fpsTick>=1){
