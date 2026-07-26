@@ -2313,35 +2313,35 @@ class ExhaustEmitter{
         // Wide heat wash — boost only
         this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,1.4);
         this.timer=0;
+        // Misfire sputter: alternates between burst window and silence
+        this._misfirePhase=0; // counts up; burst when <BURST, silent when <CYCLE
+        this._misfireBurst=false;
     }
     update(dt,inp){
         const thrusting=inp.forward||inp.backward||inp.left||inp.right||inp.up||inp.down;
-        const boost=!!(inp.boost&&thrusting);
+        const depleted=!!this.ship._energyDepleted;
+        const boost=!!(inp.boost&&thrusting&&!depleted);
+        const misfire=!!(inp.boost&&thrusting&&depleted);
 
         const offsets=this.ship._nozzleOffsets;
+        const src=offsets&&offsets.length?offsets:[new THREE.Vector3(0,0,2.1)];
 
-        // ── Particle emission ─────────────────────────────────
+        // ── Normal / boost emission ─────────────────────────────────
         this.timer+=dt;
         const interval=boost?0.014:0.016;
-        if(thrusting&&this.timer>interval){
+        if(thrusting&&!misfire&&this.timer>interval){
             this.timer=0;
             const spd=boost?38:20;
             const spread=boost?5:2;
             const life=boost?0.20:0.15;
-            const src=offsets&&offsets.length?offsets:[new THREE.Vector3(0,0,2.1)];
             for(const off of src){
-                // transform local nozzle pos → world
                 MP.v1.copy(off).applyQuaternion(this.ship.quat).add(this.ship.pos);
-                // base exhaust direction (rearward in world space)
                 MP.v2.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd);
                 MP.v2.x+=(Math.random()-.5)*spread;
                 MP.v2.y+=(Math.random()-.5)*spread;
-                // Core: white-cyan tinted
                 const wb=0.45+Math.random()*0.25;
                 this.core.spawn(MP.v1,MP.v2,life,wb,wb,1.0);
-
                 if(boost){
-                    // Heat wash: wider, orange-red
                     MP.v3.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd*0.55);
                     MP.v3.x+=(Math.random()-.5)*6;
                     MP.v3.y+=(Math.random()-.5)*6;
@@ -2351,6 +2351,29 @@ class ExhaustEmitter{
                 }
             }
         }
+
+        // ── Misfire sputter (boost pressed but energy depleted) ──────
+        if(misfire){
+            // Phase cycles: 0-0.06s = sputter burst, 0.06-0.28s = dead silence
+            const BURST=0.06, CYCLE=0.28;
+            this._misfirePhase+=dt;
+            if(this._misfirePhase>CYCLE) this._misfirePhase-=CYCLE;
+            if(this._misfirePhase<BURST&&Math.random()<0.55){
+                for(const off of src){
+                    MP.v1.copy(off).applyQuaternion(this.ship.quat).add(this.ship.pos);
+                    // slow, ragged, dark orange-grey puff
+                    const spd=4+Math.random()*6;
+                    MP.v2.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd);
+                    MP.v2.x+=(Math.random()-.5)*9;
+                    MP.v2.y+=(Math.random()-.5)*9;
+                    const dim=0.15+Math.random()*0.15;
+                    this.heat.spawn(MP.v1,MP.v2,0.12,dim*2.0,dim*0.6,0);
+                }
+            }
+        } else {
+            this._misfirePhase=0;
+        }
+
         this.core.update(dt);
         this.heat.update(dt);
     }
