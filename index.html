@@ -1539,7 +1539,7 @@ class Asteroid{
 
             pos.setXYZ(i,x+nx*disp,y+ny*disp,z+nz*disp);
 
-            const nOre=SN.n3((x-seed)*0.058,(y-seed)*0.058,(z-seed)*0.058);
+            const nOre=SN.n3((x-seed)*0.029,(y-seed)*0.029,(z-seed)*0.029);
             let vt=VT.STONE;
             const oreNonIce=this.oreTypes.filter(t=>t!==VT.ICE);
             if(nOre>0.42&&oreNonIce.length>0){
@@ -1642,13 +1642,13 @@ class Asteroid{
             this.mesh.geometry.computeBoundingSphere();
 
             const seed=this.seed;
-            const nOre=SN.n3((lp.x-seed)*0.058,(lp.y-seed)*0.058,(lp.z-seed)*0.058);
+            const nOre=SN.n3((lp.x-seed)*0.029,(lp.y-seed)*0.029,(lp.z-seed)*0.029);
             let vt=VT.STONE;
             const oreNonIce=this.oreTypes.filter(t=>t!==VT.ICE);
             if(nOre>0.42&&oreNonIce.length>0){
                 const r=Math.abs(SN.n3(lp.x*0.1,lp.y*0.1,lp.z*0.1));
                 vt=oreNonIce[Math.floor(r*oreNonIce.length)%oreNonIce.length];
-            }else if(this.oreTypes.includes(VT.ICE)&&SN.n3(lp.x*0.03,lp.y*0.03,lp.z*0.03)<-0.38){
+            }else if(this.oreTypes.includes(VT.ICE)&&SN.n3(lp.x*0.015,lp.y*0.015,lp.z*0.015)<-0.38){
                 vt=VT.ICE;
             }
             onMined(vt);
