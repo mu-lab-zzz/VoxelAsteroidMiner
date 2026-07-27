@@ -1450,13 +1450,23 @@ class Asteroid{
         this.group.position.set(x,y,z);
         scene.add(this.group);
 
-        if(sizeType==='small')       this.radius=20+Math.floor(Math.random()*12);
+        if(sizeType==='pebble')      this.radius=4+Math.random()*3;
+        else if(sizeType==='small')  this.radius=20+Math.floor(Math.random()*12);
         else if(sizeType==='medium') this.radius=38+Math.floor(Math.random()*18);
         else                         this.radius=58+Math.floor(Math.random()*22);
 
         const pool=orePool||getZonePool(Math.sqrt(x*x+y*y+z*z));
         const nPick=Math.random()<0.5?1:2;
         this.oreTypes=[...pool].sort(()=>Math.random()-0.5).slice(0,nPick);
+
+        // Pebble: drops 1-2 ore on first hit then vanishes
+        this._pebble=(sizeType==='pebble');
+        this._destroyed=false;
+        if(this._pebble){
+            const cnt=1+Math.floor(Math.random()*2);
+            const shuffled=[...pool].sort(()=>Math.random()-0.5);
+            this._pebbleOre=Array.from({length:cnt},(_,i)=>shuffled[i%shuffled.length]);
+        }
 
         this._buildMesh();
     }
@@ -1588,10 +1598,19 @@ class Asteroid{
     }
 
     updateLOD(playerPos){
+        if(this._destroyed)return;
         this.group.visible=this.group.position.distanceTo(playerPos)<CFG.LOD_IMPOSTOR;
     }
 
     mine(worldPt,hitR,onMined){
+        // Pebble: one-shot destroy on first hit
+        if(this._pebble){
+            if(this._destroyed)return;
+            this._destroyed=true;
+            for(const vt of this._pebbleOre) onMined(vt);
+            if(this.group.parent) this.group.parent.remove(this.group);
+            return;
+        }
         this.group.updateMatrixWorld();
         const lp=this.group.worldToLocal(MP.v1.copy(worldPt));
         const pos=this.mesh.geometry.attributes.position;
@@ -3011,6 +3030,19 @@ class GameEngine{
             this._spaceOnlyObjects.push(ast.group);
             placed++;
         }
+        // 30 small pebbles in a ring around the station (radius 170-230)
+        const pebblePool=[VT.IRON,VT.COPPER];
+        for(let i=0;i<30;i++){
+            const theta=(i/30)*Math.PI*2+(Math.random()-0.5)*0.4;
+            const r=170+Math.random()*60;
+            const px=stx+r*Math.cos(theta);
+            const pz=stz+r*Math.sin(theta);
+            const py=(Math.random()-0.5)*40;
+            const peb=new Asteroid(this.asteroids.length,this.scene,px,py,pz,'pebble',Math.random()*99999,pebblePool);
+            this.asteroids.push(peb);
+            this._spaceOnlyObjects.push(peb.group);
+        }
+
         // Add laser beams to space-only set (they're in main scene)
         for(const beam of this.ship.laserBeams) this._spaceOnlyObjects.push(beam);
     }
@@ -5178,6 +5210,9 @@ class GameEngine{
             if(this.inp.fire){
                 this.ship.fireLaser(targets,this.sparks,dt,this.camera);
                 document.getElementById('crosshair').classList.add('firing');
+                // Remove any pebbles destroyed this frame
+                if(this.asteroids.some(a=>a._destroyed))
+                    this.asteroids=this.asteroids.filter(a=>!a._destroyed);
             }else{
                 this.ship.hideLaser();
                 Sound.stopLaser();
