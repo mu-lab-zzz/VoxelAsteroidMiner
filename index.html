@@ -3035,11 +3035,11 @@ class GameEngine{
             this._spaceOnlyObjects.push(ast.group);
             placed++;
         }
-        // 30 small pebbles in a ring around the station (radius 170-230)
+        // 30 small pebbles in a ring around the station (radius 80-120, y ±20)
         const pebblePool=[VT.IRON,VT.COPPER];
         for(let i=0;i<30;i++){
             const theta=(i/30)*Math.PI*2+(Math.random()-0.5)*0.4;
-            const r=170+Math.random()*60;
+            const r=80+Math.random()*40;
             const px=stx+r*Math.cos(theta);
             const pz=stz+r*Math.sin(theta);
             const py=(Math.random()-0.5)*40;
