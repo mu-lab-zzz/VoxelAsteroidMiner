@@ -2196,26 +2196,22 @@ class MiningShip{
         this.stats.energy=Math.max(0,this.stats.energy-this.stats.laserCost*dt);
         Sound.startLaser();
 
-        // Aim along camera center ray so laser matches the crosshair.
-        // camera.getWorldDirection gives the screen-center ray; we pick a
-        // distant aim point on that ray, then redirect from ship.pos toward it.
+        // Cast ray from camera along its view direction — this is exactly the crosshair ray.
         camera.getWorldDirection(MP.v1);
-        MP.v4.copy(camera.position).addScaledVector(MP.v1,200);
-        MP.v1.copy(MP.v4).sub(this.pos).normalize();
-        MP.ray.set(this.pos,MP.v1);
-        MP.ray.far=85;
+        MP.ray.set(camera.position,MP.v1);
+        MP.ray.far=100;
 
         let hitPt=null,hitAst=null;
         for(const ast of asteroids){
             if(!ast.group.visible)continue;
-            if(ast.group.position.distanceTo(this.pos)-ast.radius>85)continue;
+            if(ast.group.position.distanceTo(this.pos)-ast.radius>100)continue;
             ast.group.updateMatrixWorld();
             const hits=MP.ray.intersectObject(ast.mesh,false);
             if(hits.length>0){hitPt=hits[0].point;hitAst=ast;break;}
         }
 
         // draw twin beams from wing cannons (±2.0 in local X, slightly forward)
-        const endPt=hitPt||MP.v2.copy(this.pos).addScaledVector(MP.v1,85);
+        const endPt=hitPt||MP.v2.copy(camera.position).addScaledVector(MP.v1,100);
         for(let i=0;i<2;i++){
             this._cvW.set(i===0?-2.0:2.0, 0, -0.3).applyQuaternion(this.quat).add(this.pos);
             const bLen=this._cvW.distanceTo(endPt);
