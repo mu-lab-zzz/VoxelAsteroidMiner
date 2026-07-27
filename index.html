@@ -839,6 +839,7 @@ const CFG = {
     WARP_SPEED:  [2500, 5000],   // m/s per warp level
     WARP_ENERGY: 50,              // energy drain per second while warping
     BOOST_ENERGY:8.3,             // energy drain per second while boosting
+    LASER_DPS:   20,              // base DPS factor (actual DPS = miningPow × LASER_DPS)
     RELAY_DIST:  35,              // auto-refuel radius around relay station
 };
 
@@ -1462,6 +1463,9 @@ class Asteroid{
         // Pebble: drops 1-2 ore on first hit then vanishes
         this._pebble=(sizeType==='pebble');
         this._destroyed=false;
+        const _hpBySize={pebble:30,small:180,medium:540,large:1620};
+        this._maxHp=_hpBySize[sizeType]||1620;
+        this._hp=this._maxHp;
         if(this._pebble){
             const cnt=1+Math.floor(Math.random()*2);
             const shuffled=[...pool].sort(()=>Math.random()-0.5);
@@ -1608,13 +1612,9 @@ class Asteroid{
     }
 
     mine(worldPt,hitR,onMined){
-        // Pebble: one-shot destroy on first hit
         if(this._pebble){
             if(this._destroyed)return;
-            this._destroyed=true;
-            for(const vt of this._pebbleOre) onMined(vt);
-            if(this.group.parent) this.group.parent.remove(this.group);
-            return;
+            return; // HP damage handled in fireLaser via _takeDamage
         }
         this.group.updateMatrixWorld();
         const lp=this.group.worldToLocal(MP.v1.copy(worldPt));
@@ -1658,6 +1658,17 @@ class Asteroid{
             }
             onMined(vt);
         }
+    }
+
+    _takeDamage(dmg){
+        if(this._destroyed)return false;
+        this._hp=Math.max(0,this._hp-dmg);
+        if(this._hp<=0){
+            this._destroyed=true;
+            if(this.group.parent)this.group.parent.remove(this.group);
+            return true;
+        }
+        return false;
     }
 }
 
@@ -2220,13 +2231,27 @@ class MiningShip{
                 const cw=document.getElementById('cargo-warn');
                 if(cw) cw.style.display='none';
                 const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
+                const dmg=this.stats.miningPow*CFG.LASER_DPS*dt;
                 let didMine=false;
-                hitAst.mine(hitPt,mineR,(vt)=>{
-                    this.addResource(vt,1);
-                    sparks.spawnMine(hitPt,vt);
-                    floatText.spawn(hitPt,vt);
+                if(hitAst._pebble){
+                    const destroyed=hitAst._takeDamage(dmg);
+                    if(destroyed){
+                        for(const vt of hitAst._pebbleOre){
+                            this.addResource(vt,1);
+                            sparks.spawnMine(hitPt,vt);
+                            floatText.spawn(hitPt,vt);
+                        }
+                    }
                     didMine=true;
-                });
+                }else{
+                    hitAst.mine(hitPt,mineR,(vt)=>{
+                        this.addResource(vt,1);
+                        sparks.spawnMine(hitPt,vt);
+                        floatText.spawn(hitPt,vt);
+                        didMine=true;
+                    });
+                    hitAst._takeDamage(dmg);
+                }
                 if(didMine) Sound.playHit();
             }
         }
@@ -3042,7 +3067,7 @@ class GameEngine{
             const r=80+Math.random()*40;
             const px=stx+r*Math.cos(theta);
             const pz=stz+r*Math.sin(theta);
-            const py=(Math.random()-0.5)*40;
+            const py=(Math.random()-0.5)*80;
             const peb=new Asteroid(this.asteroids.length,this.scene,px,py,pz,'pebble',Math.random()*99999,pebblePool);
             this.asteroids.push(peb);
             this._spaceOnlyObjects.push(peb.group);
