@@ -989,9 +989,18 @@ const REFINE=Object.fromEntries(
 // craft values are quantities of REFINED items (this.refined[vt])
 const SHIP_BLOCKS={
     // ── Tier 1 ──────────────────────────────────────────────────────────────
-    cockpit_1:   {name:'コクピット',     tier:1,icon:'🪟',shape:'cockpit',
-                  stats:{miningPow:0.3},
+    cockpit_1:   {name:'コクピットMk1',  tier:1,icon:'🪟',shape:'cockpit',
+                  stats:{scanRange:0,scanLevel:0},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
+    cockpit_2:   {name:'コクピットMk2',  tier:2,icon:'🪟',shape:'cockpit',
+                  stats:{scanRange:600,scanLevel:1},
+                  craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
+    cockpit_3:   {name:'コクピットMk3',  tier:3,icon:'🪟',shape:'cockpit',
+                  stats:{scanRange:1500,scanLevel:2},
+                  craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
+    laser_0:     {name:'採掘レーザー',   tier:1,icon:'⚡',shape:'laser',
+                  stats:{miningPow:0.3},
+                  craft:{[VT.COPPER]:2,[VT.IRON]:2}},
     hull_1:      {name:'船体ブロック',   tier:1,icon:'🔩',shape:'hull',
                   stats:{maxCargo:8},
                   craft:{[VT.IRON]:2}},
@@ -1372,6 +1381,56 @@ class FloatText{
     }
 }
 const floatText=new FloatText();
+
+// ════════════════════════════════════════════════════════════════
+//  SCAN OVERLAY  (cockpit scanner HUD)
+// ════════════════════════════════════════════════════════════════
+class ScanOverlay{
+    constructor(){
+        const cvs=document.createElement('canvas');
+        cvs.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:49;';
+        document.body.appendChild(cvs);
+        this.cvs=cvs;this.ctx=cvs.getContext('2d');
+        const resize=()=>{cvs.width=window.innerWidth;cvs.height=window.innerHeight;};
+        resize();window.addEventListener('resize',resize);
+        this.visible=true;
+    }
+    toggle(){this.visible=!this.visible;}
+    update(camera,asteroids,shipPos,scanRange,scanLevel){
+        const W=this.cvs.width,H=this.cvs.height;
+        const ctx=this.ctx;
+        ctx.clearRect(0,0,W,H);
+        if(!this.visible||scanLevel===0||scanRange===0)return;
+        const ndc=new THREE.Vector3();
+        for(const ast of asteroids){
+            if(ast._destroyed)continue;
+            const dist=ast.group.position.distanceTo(shipPos);
+            if(dist>scanRange)continue;
+            ndc.copy(ast.group.position).project(camera);
+            if(ndc.z>=1)continue;
+            const sx=(ndc.x*0.5+0.5)*W;
+            const sy=(1-(ndc.y*0.5+0.5))*H;
+            if(sx<-50||sx>W+50||sy<-50||sy>H+50)continue;
+            const oreNames=ast.oreTypes.map(t=>VPROPS[t].name).join(' / ');
+            const sizeStr=scanLevel>=2
+                ?(ast._pebble?' [小]':ast.radius<35?' [中]':ast.radius<55?' [大]':' [超大]')
+                :'';
+            const label=oreNames+sizeStr;
+            const alpha=0.45+0.55*(1-Math.min(dist/scanRange,1));
+            ctx.save();
+            ctx.globalAlpha=alpha;
+            ctx.font='bold 11px "Hiragino Kaku Gothic Pro",sans-serif';
+            ctx.textAlign='center';
+            ctx.strokeStyle='rgba(0,0,0,0.75)';
+            ctx.lineWidth=2.5;
+            ctx.strokeText(label,sx,sy-10);
+            ctx.fillStyle='#7ffff0';
+            ctx.fillText(label,sx,sy-10);
+            ctx.restore();
+        }
+    }
+}
+const scanOverlay=new ScanOverlay();
 
 // ════════════════════════════════════════════════════════════════
 //  BASE STATION
@@ -2699,7 +2758,7 @@ class GameEngine{
         // Default starting layout: cockpit front-center, 2 hull blocks, 2 engines rear
         this.shipLayout=[
             Array.from({length:5},()=>Array(5).fill(null)),
-            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'hull_1',null,null],[null,'engine_1','hull_1','engine_1',null],[null,null,null,null,null]],
+            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'laser_0',null,null],[null,'engine_1','hull_1','engine_1',null],[null,null,null,null,null]],
             Array.from({length:5},()=>Array(5).fill(null)),
         ];
         this.blockInventory={};   // {blockId: count} — crafted blocks not yet placed
@@ -3149,6 +3208,7 @@ class GameEngine{
                 case'KeyM':
                     if(!this.stationOpen&&!this.planetBaseOpen)
                         this._toggleSystemMap();break;
+                case'Tab':e.preventDefault();scanOverlay.toggle();break;
                 case'Escape':
                     if(this.systemMapOpen) this._toggleSystemMap(false);
                     else if(this.stationOpen) this._closeStation();
@@ -3571,6 +3631,7 @@ class GameEngine{
         const s=this.ship.stats;
         s.thrust=14; s.boost=1.0; s.miningPow=0.0; s.boostCost=0;
         s.maxCargo=20; s.maxEnergy=40; s.energyRegen=2; s.thrusterPow=6;
+        s.scanRange=0; s.scanLevel=0;
         this._warpSpeed=0;
         for(let l=0;l<3;l++) for(let r=0;r<5;r++) for(let c=0;c<5;c++){
             const bid=this.shipLayout[l]?.[r]?.[c]; if(!bid) continue;
@@ -3584,6 +3645,8 @@ class GameEngine{
             if(b.stats.energyRegen)  s.energyRegen  +=b.stats.energyRegen;
             if(b.stats.thrusterPow)  s.thrusterPow  +=b.stats.thrusterPow;
             if(b.stats.warpSpeed)    this._warpSpeed=Math.max(this._warpSpeed,b.stats.warpSpeed);
+            if(b.stats.scanRange)    s.scanRange    =Math.max(s.scanRange,b.stats.scanRange);
+            if(b.stats.scanLevel)    s.scanLevel    =Math.max(s.scanLevel,b.stats.scanLevel);
         }
         s.warpLv=this._warpSpeed>0?1:0;
         s.cargo=Math.min(s.cargo,s.maxCargo);
@@ -3659,7 +3722,7 @@ class GameEngine{
         const statsBar=document.createElement('div');
         statsBar.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:3px;background:rgba(15,30,20,0.55);border-radius:5px;padding:7px 8px;margin-bottom:10px;font-size:10px;color:#8dc;';
         const s=this.ship.stats;
-        const statItems=[['推力',s.thrust.toFixed(0)],['スラスター',s.thrusterPow.toFixed(0)],['採掘',s.miningPow.toFixed(2)],['荷物',s.maxCargo],['エネルギー',s.maxEnergy],['発電',s.energyRegen.toFixed(0)],['ワープ',s.warpLv?'✓':'✗'],['ブロック',this._countBlocks()]];
+        const statItems=[['推力',s.thrust.toFixed(0)],['スラスター',s.thrusterPow.toFixed(0)],['採掘',s.miningPow.toFixed(2)],['索敵',s.scanLevel>0?`Lv${s.scanLevel} / ${s.scanRange}m`:'---'],['荷物',s.maxCargo],['エネルギー',s.maxEnergy],['発電',s.energyRegen.toFixed(0)],['ワープ',s.warpLv?'✓':'✗'],['ブロック',this._countBlocks()]];
         for(const[k,v] of statItems){
             const d=document.createElement('div');
             d.innerHTML=`<span style="color:#445">${k} </span>${v}`;
@@ -3693,7 +3756,7 @@ class GameEngine{
                 return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
             }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
             const statStr=Object.entries(blk.stats).map(([k,v])=>{
-                const labels={thrust:'推力',boost:'加速',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃'};
+                const labels={thrust:'推力',boost:'加速',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv'};
                 return `${labels[k]||k}+${v}`;
             }).join(' / ')||'構造';
             const row=document.createElement('div');row.className='st-row';
@@ -3794,6 +3857,12 @@ class GameEngine{
     _removeBlock(layer,row,col){
         const bid=this.shipLayout[layer][row][col];
         if(!bid)return;
+        if(SHIP_BLOCKS[bid]?.shape==='cockpit'){
+            let cnt=0;
+            for(let l=0;l<3;l++)for(let r=0;r<5;r++)for(let c=0;c<5;c++)
+                if(SHIP_BLOCKS[this.shipLayout[l]?.[r]?.[c]]?.shape==='cockpit')cnt++;
+            if(cnt<=1){Notify.warn('コクピットは必ず1つ必要です');return;}
+        }
         this.shipLayout[layer][row][col]=null;
         this.blockInventory[bid]=(this.blockInventory[bid]||0)+1;
         this._computeShipStats();
@@ -5266,6 +5335,8 @@ class GameEngine{
             this.exhaust.update(dt,this.inp);
             this.spaceDust.update(this.ship.pos,this.ship.vel);
             floatText.update(dt,this.camera);
+            if(inSpace) scanOverlay.update(this.camera,this.asteroids,this.ship.pos,this.ship.stats.scanRange,this.ship.stats.scanLevel);
+            else scanOverlay.update(this.camera,[],this.ship.pos,0,0);
 
             if(inSpace){
                 for(const ast of this.asteroids) ast.updateLOD(this.ship.pos);
