@@ -1450,7 +1450,7 @@ class Asteroid{
         this.group.position.set(x,y,z);
         scene.add(this.group);
 
-        if(sizeType==='pebble')      this.radius=8+Math.random()*4;
+        if(sizeType==='pebble')      this.radius=4+Math.random()*3;
         else if(sizeType==='small')  this.radius=20+Math.floor(Math.random()*12);
         else if(sizeType==='medium') this.radius=38+Math.floor(Math.random()*18);
         else                         this.radius=58+Math.floor(Math.random()*22);
@@ -1472,8 +1472,10 @@ class Asteroid{
     }
 
     _buildMesh(){
-        const ws=this.radius<35?96:this.radius<55?128:160;
-        const hs=ws>>1;
+        const isPebble=this._pebble;
+        // Pebbles use very low poly count so flat-shading creates angular, rocky facets
+        const ws=isPebble?8:(this.radius<35?96:this.radius<55?128:160);
+        const hs=isPebble?6:(ws>>1);
         const base=new THREE.SphereGeometry(this.radius,ws,hs);
         const g=base.toNonIndexed();
         base.dispose();
@@ -1485,7 +1487,10 @@ class Asteroid{
         // 5 morphology types, chosen by seed
         const mt=Math.floor(rng(7.3)*5);
         let sx=1,sy=1,sz=1;
-        let dLo=this.radius*0.13,dMid=this.radius*0.04,dFine=this.radius*0.012;
+        // Pebbles: high relative displacement → jagged, chipped-rock appearance
+        let dLo=isPebble?this.radius*0.38:this.radius*0.13;
+        let dMid=isPebble?this.radius*0.18:this.radius*0.04;
+        let dFine=isPebble?this.radius*0.07:this.radius*0.012;
         let twoLobe=false;
 
         if(mt===1){           // Elongated along one axis
