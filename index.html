@@ -3047,6 +3047,7 @@ class GameEngine{
             const cfg=PLANET_CFGS[p.name];
             if(cfg) this.planetMeshes.push({mesh,cfg,r:p.r});
         }
+        this._buildMoons();
         this._buildBeltSprites();
     }
 
@@ -3112,6 +3113,138 @@ class GameEngine{
         ringMesh.position.set(wx,wy,wz);
         this.scene.add(ringMesh);
         this._spaceOnlyObjects.push(ringMesh);
+    }
+
+    _buildMoons(){
+        // Moon definitions: size and orbital distance scaled proportionally from real values
+        // (moon_r / planet_real_r) × planet_game_r  and  (orbit_km / planet_real_r) × planet_game_r
+        // Minimum moon radius = 3 units for visibility.
+        const pPos={
+            Earth:   {wx:32000,    wy:1000,   wz:-48000},
+            Mars:    {wx:-32890,   wy:3590,   wz:-19800},
+            Jupiter: {wx:116190,   wy:470,    wz:120110},
+            Saturn:  {wx:-319410,  wy:9450,   wz:196020},
+            Uranus:  {wx:806300,   wy:-11330, wz:-338210},
+            Neptune: {wx:-969760,  wy:22750,  wz:-984220},
+        };
+        // a = azimuthal angle (radians), ay = fractional Y offset relative to dist
+        const moons=[
+            // Earth: Moon (r_real=1737km, orbit=384400km vs Earth_real=6371km, game_r=200)
+            {p:'Earth',   r:55,  dist:12060, a:0.40, ay:0.04,  t:'grey'},
+            // Mars: Phobos(r=11km,9376km), Deimos(r=6km,23459km) vs Mars_real=3390km, game_r=110
+            {p:'Mars',    r:Math.max(3,4),  dist:304,  a:1.00, ay:0.18,  t:'dark_grey'},
+            {p:'Mars',    r:Math.max(3,2),  dist:761,  a:2.80, ay:-0.12, t:'dark_grey'},
+            // Jupiter Galilean: Io(1822km,421700km), Europa(1561km,671100km),
+            //   Ganymede(2634km,1070400km), Callisto(2411km,1882700km) vs Jupiter_real=71492km, game_r=2190
+            {p:'Jupiter', r:56,  dist:12921, a:0.30, ay:0.02,  t:'io'},
+            {p:'Jupiter', r:48,  dist:20564, a:1.90, ay:-0.03, t:'europa'},
+            {p:'Jupiter', r:81,  dist:32784, a:0.80, ay:0.01,  t:'ganymede'},
+            {p:'Jupiter', r:74,  dist:57659, a:2.20, ay:-0.02, t:'dark_grey'},
+            // Saturn: Mimas(208km,185520km), Enceladus(252km,238020km), Tethys(533km,294619km),
+            //   Dione(562km,377396km), Rhea(765km,527068km), Titan(2576km,1221870km)
+            //   vs Saturn_real=60268km, game_r=1830
+            {p:'Saturn',  r:6,   dist:5637,  a:5.80, ay:0.05,  t:'icy'},
+            {p:'Saturn',  r:8,   dist:7228,  a:4.20, ay:0.00,  t:'white_icy'},
+            {p:'Saturn',  r:16,  dist:8949,  a:2.60, ay:-0.04, t:'icy'},
+            {p:'Saturn',  r:17,  dist:11456, a:0.60, ay:0.03,  t:'icy'},
+            {p:'Saturn',  r:23,  dist:15994, a:3.80, ay:-0.02, t:'grey_crater'},
+            {p:'Saturn',  r:78,  dist:37095, a:1.10, ay:0.01,  t:'titan'},
+            // Uranus: Miranda(236km,129900km), Ariel(579km,191020km), Umbriel(585km,266000km),
+            //   Titania(789km,435910km), Oberon(761km,583520km) vs Uranus_real=25559km, game_r=800
+            {p:'Uranus',  r:7,   dist:4066,  a:1.20, ay:0.80,  t:'grey_crater'},
+            {p:'Uranus',  r:18,  dist:5981,  a:3.50, ay:-0.70, t:'icy'},
+            {p:'Uranus',  r:18,  dist:8330,  a:5.10, ay:0.60,  t:'dark_grey'},
+            {p:'Uranus',  r:25,  dist:13648, a:0.50, ay:-0.55, t:'grey_crater'},
+            {p:'Uranus',  r:24,  dist:18253, a:2.80, ay:0.50,  t:'grey_crater'},
+            // Neptune: Triton(1354km,354759km) vs Neptune_real=24622km, game_r=770
+            {p:'Neptune', r:42,  dist:11099, a:1.30, ay:0.45,  t:'triton'},
+        ];
+        for(const m of moons){
+            const pp=pPos[m.p]; if(!pp) continue;
+            const mx=pp.wx+m.dist*Math.cos(m.a);
+            const mz=pp.wz+m.dist*Math.sin(m.a);
+            const my=pp.wy+m.dist*m.ay;
+            const tex=this._makeMoonTex(m.t);
+            const seg=m.r>=20?48:(m.r>=8?32:16);
+            const mesh=new THREE.Mesh(
+                new THREE.SphereGeometry(m.r,seg,Math.ceil(seg/2)),
+                new THREE.MeshStandardMaterial({map:tex,roughness:0.90,metalness:0.02}));
+            mesh.position.set(mx,my,mz);
+            this.scene.add(mesh);
+            this._spaceOnlyObjects.push(mesh);
+        }
+    }
+
+    _makeMoonTex(type){
+        const W=128,H=64,cv=document.createElement('canvas');
+        cv.width=W;cv.height=H;
+        const ctx=cv.getContext('2d'),id=ctx.createImageData(W,H),d=id.data;
+        for(let y=0;y<H;y++){
+            const theta=(y/H)*Math.PI,sinT=Math.sin(theta),cosT=Math.cos(theta);
+            for(let x=0;x<W;x++){
+                const phi=(x/W)*Math.PI*2;
+                const nx=sinT*Math.cos(phi),ny=cosT,nz=sinT*Math.sin(phi);
+                let r,g,b;
+                switch(type){
+                case'grey':{
+                    const n=SN.n3(nx*4,ny*4,nz*4),n2=SN.n3(nx*13,ny*13,nz*13+1),n3=SN.n3(nx*28,ny*28,nz*28+2);
+                    const lum=0.52+n*0.18+n2*0.09+n3*0.04;
+                    r=lum*0.94;g=lum*0.91;b=lum*0.87;break;}
+                case'grey_crater':{
+                    const n=SN.n3(nx*5,ny*5,nz*5),n2=SN.n3(nx*16,ny*16,nz*16+1),n3=SN.n3(nx*32,ny*32,nz*32+3);
+                    const lum=0.40+n*0.22+n2*0.10+n3*0.05;
+                    r=lum*0.92;g=lum*0.90;b=lum*0.88;break;}
+                case'dark_grey':{
+                    const n=SN.n3(nx*6,ny*6,nz*6),n2=SN.n3(nx*18,ny*18,nz*18+1),n3=SN.n3(nx*36,ny*36,nz*36);
+                    const lum=0.16+n*0.14+n2*0.07+n3*0.03;
+                    r=lum*0.90;g=lum*0.88;b=lum*0.86;break;}
+                case'io':{
+                    const n=SN.n3(nx*3,ny*3,nz*3),n2=SN.n3(nx*8+2,ny*8,nz*8),n3=SN.n3(nx*18,ny*18+1,nz*18);
+                    if(n<-0.32){r=0.16+n2*0.06;g=0.08+n2*0.04;b=0.04;}
+                    else if(n<-0.05){r=0.70+n*0.20;g=0.50+n*0.15;b=0.06+n3*0.04;}
+                    else{r=0.90+n2*0.06;g=0.76+n2*0.10;b=0.12+n3*0.08;}
+                    r=Math.min(1,r);g=Math.min(1,g);b=Math.min(1,b);break;}
+                case'europa':{
+                    const n=SN.n3(nx*2,ny*2,nz*2),n2=SN.n3(nx*9+3,ny*13,nz*9),n3=SN.n3(nx*22,ny*22,nz*22+4);
+                    const base=0.80+n*0.08+n3*0.04;
+                    r=base*0.90;g=base*0.93;b=Math.min(1,base+0.02);
+                    if(n2>0.30){const cf=Math.min(1,(n2-0.30)*6);r-=cf*0.38;g-=cf*0.30;b-=cf*0.18;}
+                    r=Math.max(0,r);g=Math.max(0,g);b=Math.max(0,b);break;}
+                case'ganymede':{
+                    const n=SN.n3(nx*4,ny*4,nz*4),n2=SN.n3(nx*10,ny*10,nz*10+2),n3=SN.n3(nx*22,ny*22,nz*22);
+                    const lum=0.32+n*0.24+n2*0.10;
+                    if(n>0.12){r=Math.min(1,lum*1.05);g=lum*0.88;b=lum*0.76;}
+                    else{r=lum*0.74;g=lum*0.72;b=lum*0.70;}
+                    break;}
+                case'titan':{
+                    const n=SN.n3(nx*1.8,ny*5,nz*1.8),n2=SN.n3(nx*5,ny*9,nz*5);
+                    const lum=0.50+n*0.18+n2*0.10;
+                    r=Math.min(1,lum*0.98+0.12);g=Math.min(1,lum*0.60+0.04);b=lum*0.12;break;}
+                case'icy':{
+                    const n=SN.n3(nx*3,ny*3,nz*3),n2=SN.n3(nx*9,ny*9,nz*9);
+                    const lum=0.68+n*0.14+n2*0.06;
+                    r=lum*0.92;g=lum*0.94;b=Math.min(1,lum*0.98);break;}
+                case'white_icy':{
+                    const n=SN.n3(nx*2,ny*2,nz*2),n2=SN.n3(nx*7,ny*7,nz*7);
+                    const lum=0.86+n*0.08+n2*0.04;
+                    r=Math.min(1,lum*0.94);g=Math.min(1,lum*0.97);b=Math.min(1,lum);break;}
+                case'triton':{
+                    const n=SN.n3(nx*2,ny*5,nz*2),n2=SN.n3(nx*8,ny*8,nz*8);
+                    const pv=Math.abs(ny);
+                    if(pv>0.68){const pf=Math.min(1,(pv-0.68)*5);r=0.88+pf*0.06;g=0.82+pf*0.08;b=0.78+pf*0.14;}
+                    else{const lum=0.40+n*0.16+n2*0.08;r=lum*0.82;g=lum*0.74;b=lum*0.76;}
+                    break;}
+                default:{r=0.5;g=0.5;b=0.5;break;}
+                }
+                const i=(y*W+x)*4;
+                d[i]=Math.floor(Math.max(0,Math.min(1,r))*255);
+                d[i+1]=Math.floor(Math.max(0,Math.min(1,g))*255);
+                d[i+2]=Math.floor(Math.max(0,Math.min(1,b))*255);
+                d[i+3]=255;
+            }
+        }
+        ctx.putImageData(id,0,0);
+        return new THREE.CanvasTexture(cv);
     }
 
     _initEntities(){
