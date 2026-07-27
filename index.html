@@ -139,7 +139,7 @@
 
         /* ── Notifications ──────────────────────────────────────── */
         #notifications{
-            position:absolute;top:16px;left:50%;transform:translateX(-50%);
+            position:absolute;top:70px;left:50%;transform:translateX(-50%);
             z-index:50;display:flex;flex-direction:column;gap:6px;
             align-items:center;pointer-events:none;width:280px;
         }
@@ -2269,7 +2269,7 @@ class MiningShip{
         }
 
         // regen: 3× speed during emergency charge
-        const regenRate=this._energyDepleted?this.stats.energyRegen*3:this.stats.energyRegen;
+        const regenRate=this.stats.energyRegen;
         if(this.stats.energy<this.stats.maxEnergy)
             this.stats.energy=Math.min(this.stats.maxEnergy,this.stats.energy+regenRate*dt);
 
