@@ -1463,8 +1463,7 @@ class Asteroid{
         // Pebble: drops 1-2 ore on first hit then vanishes
         this._pebble=(sizeType==='pebble');
         this._destroyed=false;
-        const _hpBySize={pebble:30,small:180,medium:540,large:1620};
-        this._maxHp=_hpBySize[sizeType]||1620;
+        this._maxHp=30; // charge per mining hit (same as pebble destroy time)
         this._hp=this._maxHp;
         if(this._pebble){
             const cnt=1+Math.floor(Math.random()*2);
@@ -1664,9 +1663,13 @@ class Asteroid{
         if(this._destroyed)return false;
         this._hp=Math.max(0,this._hp-dmg);
         if(this._hp<=0){
-            this._destroyed=true;
-            if(this.group.parent)this.group.parent.remove(this.group);
-            return true;
+            if(this._pebble){
+                this._destroyed=true;
+                if(this.group.parent)this.group.parent.remove(this.group);
+            }else{
+                this._hp=this._maxHp; // reset charge for next dent
+            }
+            return true; // charge complete
         }
         return false;
     }
@@ -2233,25 +2236,25 @@ class MiningShip{
                 const mineR=Math.max(1.8,hitAst.radius*0.18)*this.stats.miningPow;
                 const dmg=this.stats.miningPow*CFG.LASER_DPS*dt;
                 let didMine=false;
+                const chargeDone=hitAst._takeDamage(dmg);
                 if(hitAst._pebble){
-                    const destroyed=hitAst._takeDamage(dmg);
-                    if(destroyed){
+                    if(hitAst._destroyed){
                         for(const vt of hitAst._pebbleOre){
                             this.addResource(vt,1);
                             sparks.spawnMine(hitPt,vt);
                             floatText.spawn(hitPt,vt);
                         }
                     }
-                    didMine=true;
-                }else{
+                }else if(chargeDone){
+                    // One dent fires only when charge completes
                     hitAst.mine(hitPt,mineR,(vt)=>{
                         this.addResource(vt,1);
                         sparks.spawnMine(hitPt,vt);
                         floatText.spawn(hitPt,vt);
                         didMine=true;
                     });
-                    hitAst._takeDamage(dmg);
                 }
+                didMine=didMine||!!hitPt; // laser hitting = sound plays even while charging
                 if(didMine) Sound.playHit();
             }
         }
