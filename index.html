@@ -2004,7 +2004,12 @@ class MiningShip{
     }
 
     rebuildFromLayout(layout){
+        // Remove old laser beams from scene before rebuilding
+        if(this.laserBeams){
+            for(const b of this.laserBeams) if(b.parent) b.parent.remove(b);
+        }
         this._buildMeshFromLayout(layout);
+        this._buildLaser();
     }
 
     _buildMeshFromLayout(layout){
@@ -2013,6 +2018,7 @@ class MiningShip{
         this._shipGroup=grp;
         this.root.add(grp);
         this._nozzleOffsets=[];
+        this._laserOffsets=[];
         const BS=0.78, LH=0.60;
         let hasAny=false;
         const NL=layout?layout.length:0;
@@ -2021,6 +2027,7 @@ class MiningShip{
             const mH=new THREE.MeshStandardMaterial({color:0x2a3848,metalness:0.7,roughness:0.3});
             grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,0.55,3.0),mH));
             this._nozzleOffsets.push(new THREE.Vector3(0,0,1.6));
+            this._laserOffsets.push(new THREE.Vector3(0,0,-1.2));
             return;
         }
         const midL=Math.floor(NL/2);
@@ -2030,6 +2037,7 @@ class MiningShip{
             const x=(c-2)*BS, y=(midL-l)*LH, z=(r-2)*BS;
             this._addBlockMesh(grp,bid,blk,x,y,z,BS);
             if(blk.shape==='engine') this._nozzleOffsets.push(new THREE.Vector3(x,y,z+BS*0.56));
+            if(blk.shape==='laser')  this._laserOffsets.push(new THREE.Vector3(x,y,z-BS*0.8));
         }
     }
 
@@ -2196,7 +2204,8 @@ class MiningShip{
             color:0x0088ff,transparent:true,opacity:0.20,
             blending:THREE.AdditiveBlending,depthWrite:false});
         this.laserBeams=[];
-        for(let i=0;i<2;i++){
+        const count=Math.max(1, this._laserOffsets ? this._laserOffsets.length : 0);
+        for(let i=0;i<count;i++){
             const grp=new THREE.Group();
             const gc=new THREE.CylinderGeometry(0.04,0.04,1,6);gc.rotateX(Math.PI/2);
             grp.add(new THREE.Mesh(gc,mCore));
@@ -2294,10 +2303,11 @@ class MiningShip{
             if(hits.length>0){hitPt=hits[0].point;hitAst=ast;break;}
         }
 
-        // draw twin beams from wing cannons (±2.0 in local X, slightly forward)
+        // draw beams from each laser block's world position toward the crosshair endpoint
         const endPt=hitPt||MP.v2.copy(camera.position).addScaledVector(MP.v1,100);
-        for(let i=0;i<2;i++){
-            this._cvW.set(i===0?-2.0:2.0, 0, -0.3).applyQuaternion(this.quat).add(this.pos);
+        for(let i=0;i<this.laserBeams.length;i++){
+            const off=this._laserOffsets[i]||this._laserOffsets[0]||new THREE.Vector3(0,0,-0.5);
+            this._cvW.copy(off).applyQuaternion(this.quat).add(this.pos);
             const bLen=this._cvW.distanceTo(endPt);
             MP.v3.copy(this._cvW).add(endPt).multiplyScalar(0.5);
             this.laserBeams[i].position.copy(MP.v3);
@@ -2768,9 +2778,9 @@ class GameEngine{
         this.activePlanet=null;
         this._currentLayer=-1;
         this._builtPlanetName=null;
-        // Default starting layout: 1 layer (第1層), cockpit front-center, laser, 2 engines rear
+        // Default starting layout: 1 layer (第1層), cockpit front-center, laser, 1 engine rear
         this.shipLayout=[
-            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'laser_0',null,null],[null,'engine_1','hull_1','engine_1',null],[null,null,null,null,null]],
+            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'laser_0',null,null],[null,null,'engine_1',null,null],[null,null,null,null,null]],
         ];
         this.blockInventory={};   // {blockId: count} — crafted blocks not yet placed
         this._builderLayer=0;     // active layer in builder UI
@@ -3662,7 +3672,13 @@ class GameEngine{
         s.warpLv=this._warpSpeed>0?1:0;
         s.cargo=Math.min(s.cargo,s.maxCargo);
         s.energy=Math.min(s.energy,s.maxEnergy);
+        const _oldBeams=this.ship.laserBeams?[...this.ship.laserBeams]:[];
         this.ship.rebuildFromLayout(this.shipLayout);
+        // Re-register new laser beams with space-only visibility set
+        if(this._spaceOnlyObjects){
+            this._spaceOnlyObjects=this._spaceOnlyObjects.filter(o=>!_oldBeams.includes(o));
+            for(const b of this.ship.laserBeams) this._spaceOnlyObjects.push(b);
+        }
     }
 
     _renderWorkshopTab(el){
