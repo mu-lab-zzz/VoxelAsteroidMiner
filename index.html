@@ -3650,7 +3650,7 @@ class GameEngine{
 
     _computeShipStats(){
         const s=this.ship.stats;
-        s.thrust=14; s.boost=1.0; s.miningPow=0.0; s.boostCost=0;
+        s.thrust=14; s.boost=2.0; s.miningPow=0.0; s.boostCost=0;
         s.maxCargo=20; s.maxEnergy=40; s.energyRegen=2; s.thrusterPow=6;
         s.scanRange=0; s.scanLevel=0;
         this._warpSpeed=0;
@@ -3658,7 +3658,6 @@ class GameEngine{
             const bid=this.shipLayout[l]?.[r]?.[c]; if(!bid) continue;
             const b=SHIP_BLOCKS[bid]; if(!b) continue;
             if(b.stats.thrust)       s.thrust       +=b.stats.thrust;
-            if(b.stats.boost)        s.boost        +=b.stats.boost;
             if(b.stats.miningPow)    s.miningPow    +=b.stats.miningPow;
             if(b.stats.boostCost)    s.boostCost    +=b.stats.boostCost;
             if(b.stats.maxCargo)     s.maxCargo     +=b.stats.maxCargo;
