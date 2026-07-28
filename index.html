@@ -2047,10 +2047,6 @@ class DriftContainer{
         blink.position.set(0,1.8,0);
         this.group.add(blink);
         this._blinkMesh=blink;
-        const pt=new THREE.PointLight(0xff6600,1.5,30);
-        pt.position.set(0,2,0);
-        this.group.add(pt);
-        this._ptLight=pt;
         this._blinkT=Math.random()*Math.PI*2;
     }
     _rollLoot(){
@@ -2065,7 +2061,6 @@ class DriftContainer{
         this._blinkT+=dt*3;
         const bv=0.6+0.4*Math.sin(this._blinkT);
         this._blinkMesh.material.emissiveIntensity=bv*1.5;
-        this._ptLight.intensity=bv*1.5;
         this.group.position.addScaledVector(this.vel,dt);
         this.group.rotation.x+=this._rotSpin.x*dt;
         this.group.rotation.y+=this._rotSpin.y*dt;
@@ -2156,8 +2151,8 @@ class MobileStation{
         this.group=new THREE.Group();
         this.pos=this.group.position;
         this._orbitAngle=Math.random()*Math.PI*2;
-        this._orbitRadius=10000;
-        this._orbitSpeed=0.006;
+        this._orbitRadius=1400;
+        this._orbitSpeed=0.018;
         this._setPos();
         scene.add(this.group);
         this._build();
@@ -2170,36 +2165,64 @@ class MobileStation{
         );
     }
     _build(){
-        const hub=new THREE.Mesh(
-            new THREE.CylinderGeometry(8,8,16,16),
-            new THREE.MeshStandardMaterial({color:0x2255aa,metalness:0.7,roughness:0.3})
-        );
+        const metal=new THREE.MeshStandardMaterial({color:0x3a4a5e,metalness:0.78,roughness:0.28});
+        const panel=new THREE.MeshStandardMaterial({color:0x0a1828,metalness:0.35,roughness:0.55});
+        const accent=new THREE.MeshStandardMaterial({color:0x2244aa,metalness:0.5,roughness:0.4});
+        // Hub cylinder
+        const hub=new THREE.Mesh(new THREE.CylinderGeometry(8,8,18,16),metal);
         this.group.add(hub);
-        const ring=new THREE.Mesh(
-            new THREE.TorusGeometry(22,2.5,8,32),
-            new THREE.MeshStandardMaterial({color:0x334466,metalness:0.6,roughness:0.4})
+        // Glass dome
+        const dome=new THREE.Mesh(
+            new THREE.SphereGeometry(8,10,6,0,Math.PI*2,0,Math.PI/2),
+            new THREE.MeshStandardMaterial({color:0x5588cc,transparent:true,opacity:0.75,roughness:0.05})
         );
-        ring.rotation.x=Math.PI/2;
-        this.group.add(ring);
-        const panelGeo=new THREE.BoxGeometry(30,0.4,7);
-        const panelMat=new THREE.MeshStandardMaterial({color:0x1133aa,metalness:0.2,roughness:0.8,
-            emissive:0x001133,emissiveIntensity:0.3});
-        const p1=new THREE.Mesh(panelGeo,panelMat);p1.position.y=10;this.group.add(p1);
-        const p2=new THREE.Mesh(panelGeo,panelMat);
-        p2.position.y=-10;p2.rotation.y=Math.PI/3;this.group.add(p2);
-        const lColors=[0x00ff88,0xff4400,0x0088ff];
-        const lOff=[{x:22,y:0,z:0},{x:-22,y:0,z:0},{x:0,y:8,z:22}];
-        for(let i=0;i<3;i++){
-            const l=new THREE.PointLight(lColors[i],1.5,40);
-            Object.assign(l.position,lOff[i]);
-            this.group.add(l);
+        dome.position.y=9;this.group.add(dome);
+        // Equatorial ring
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(22,3,10,32),metal);
+        ring.rotation.x=Math.PI/2;this.group.add(ring);
+        // 4 spokes
+        for(let i=0;i<4;i++){
+            const a=i*Math.PI/2;
+            const sg=new THREE.CylinderGeometry(0.8,0.8,14,5);sg.rotateZ(Math.PI/2);
+            const sp=new THREE.Mesh(sg,metal);
+            sp.position.set(Math.cos(a)*15,0,Math.sin(a)*15);
+            sp.rotation.y=a;this.group.add(sp);
         }
-        this.group.add(new THREE.PointLight(0x44aaff,3,120));
+        // Solar boom
+        const boom=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.6,80,5),metal);
+        boom.rotation.z=Math.PI/2;boom.position.y=8;this.group.add(boom);
+        // Solar panels
+        for(const sx of[-1,1]){
+            const pg=new THREE.BoxGeometry(22,0.35,8);
+            const pm=new THREE.Mesh(pg,panel);
+            pm.position.set(sx*32,8,0);this.group.add(pm);
+        }
+        // Accent band
+        const band=new THREE.Mesh(new THREE.TorusGeometry(8.2,1,6,20),accent);
+        band.rotation.x=Math.PI/2;this.group.add(band);
+        // Antenna
+        const ant=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,12,4),metal);
+        ant.position.y=15;this.group.add(ant);
+        // Antenna tip light (blinker — no PointLight to keep scene light count low)
+        this._antTip=new THREE.Mesh(
+            new THREE.SphereGeometry(0.9,5,5),
+            new THREE.MeshBasicMaterial({color:0x00ffaa})
+        );
+        this._antTip.position.y=22;this.group.add(this._antTip);
+        this._blinkT=Math.random()*Math.PI*2;
+        // Single soft docking light (small range, same style as base station)
+        const dkL=new THREE.PointLight(0x00ffaa,1.2,70);
+        dkL.position.y=-9;this.group.add(dkL);
+        this._dockLight=dkL;
     }
     update(dt){
         this._orbitAngle+=this._orbitSpeed*dt;
         this._setPos();
-        this.group.rotation.y+=dt*0.15;
+        this.group.rotation.y+=dt*0.12;
+        if(this._antTip){
+            this._blinkT+=dt;
+            this._antTip.visible=Math.sin(this._blinkT*2.4)>0.4;
+        }
     }
 }
 
@@ -5440,7 +5463,7 @@ class GameEngine{
 
     _enterPlanetSurface(){
         for(const obj of this._spaceOnlyObjects) obj.visible=false;
-        for(const c of this.driftContainers) if(!c.collected){c.group.visible=false;c._ptLight.visible=false;}
+        for(const c of this.driftContainers) if(!c.collected) c.group.visible=false;
         for(const n of this.npcShips) n.group.visible=false;
         this.ship.hideLaser();Sound.stopLaser();
         this.ship.pos.set(0,50,0);
@@ -5469,7 +5492,7 @@ class GameEngine{
     _exitPlanetSurface(){
         this._planetGroup.visible=false;
         for(const obj of this._spaceOnlyObjects) obj.visible=true;
-        for(const c of this.driftContainers) if(!c.collected){c.group.visible=true;c._ptLight.visible=true;}
+        for(const c of this.driftContainers) if(!c.collected) c.group.visible=true;
         for(const n of this.npcShips) n.group.visible=true;
         document.getElementById('gas-layer-hud')?.style&&
             (document.getElementById('gas-layer-hud').style.display='none');
