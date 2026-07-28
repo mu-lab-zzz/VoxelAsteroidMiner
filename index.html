@@ -2238,6 +2238,8 @@ class MiningShip{
         this.vel=new THREE.Vector3();
         this.angVel=new THREE.Vector3();
         this.quat=this.root.quaternion;
+        this.yaw=0;
+        this.pitch=0;
         this._cvW=new THREE.Vector3(); // scratch: cannon world-pos
 
         this.stats={
@@ -2608,34 +2610,14 @@ class MiningShip{
         if(inp.yaw!==0)   this.angVel.y=-inp.yaw*tr;   else this.angVel.y*=0.88;
         if(inp.pitch!==0) this.angVel.x= inp.pitch*tr;  else this.angVel.x*=0.88;
 
-        // Yaw: rotate around ship's local Y (body frame — eliminates gimbal lock)
-        if(Math.abs(this.angVel.y)>0.0001){
-            MP.q1.setFromAxisAngle(MP.v1.set(0,1,0),this.angVel.y*dt);
-            this.quat.multiply(MP.q1);
-        }
-        // Pitch: rotate around ship's local right axis
-        if(Math.abs(this.angVel.x)>0.0001){
-            MP.v1.set(1,0,0).applyQuaternion(this.quat);
-            MP.q1.setFromAxisAngle(MP.v1,this.angVel.x*dt);
-            this.quat.premultiply(MP.q1);
-        }
-        // Roll correction: gently restore upright (local Y → world Y projected onto nose-perp plane)
-        MP.v2.set(0,0,-1).applyQuaternion(this.quat);     // nose direction
-        const nd=MP.v2.y;                                   // dot(nose, worldY)
-        const hl=Math.sqrt(Math.max(0,1-nd*nd));            // horizontal component length
-        if(hl>0.05){                                        // skip when nearly vertical
-            MP.v3.set(-MP.v2.x*nd/hl,hl,-MP.v2.z*nd/hl); // desired up (normalized)
-            MP.v1.set(0,1,0).applyQuaternion(this.quat);   // current local up
-            MP.v4.crossVectors(MP.v1,MP.v3);
-            const sa=MP.v4.length(),ca=MP.v1.dot(MP.v3);
-            if(sa>0.0001){
-                const ang=Math.atan2(sa,ca);
-                MP.v4.normalize();
-                MP.q1.setFromAxisAngle(MP.v4,Math.sign(ang)*Math.min(Math.abs(ang),1.5*dt));
-                this.quat.premultiply(MP.q1);
-            }
-        }
-        this.quat.normalize();
+        // Euler accumulation: yaw (world Y) + pitch (local X), no clamp → 360° pitch possible
+        this.yaw   += this.angVel.y*dt;
+        this.pitch += this.angVel.x*dt;
+        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp, this.yaw);
+        this.quat.copy(MP.q1);
+        MP.v1.set(1,0,0);
+        MP.q1.setFromAxisAngle(MP.v1, this.pitch);
+        this.quat.multiply(MP.q1);
 
         // boost energy drain (blocked when depleted)
         if(inp.boost&&!this._energyDepleted)
