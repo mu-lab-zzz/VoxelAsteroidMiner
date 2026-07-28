@@ -4322,7 +4322,7 @@ class GameEngine{
         const sHead=document.createElement('div');
         sHead.className='st-section-head';sHead.textContent=L('ui.sectionStation');
         el.appendChild(sHead);
-        for(const key of['machines','refineSpeed','capacity']){
+        for(const key of['machines','refineSpeed','capacity','dockExpansion']){
             const def=STATION_UPGRADES[key];
             const lv=this.stationLv[key]??0;
             const maxed=lv>=def.costs.length;
