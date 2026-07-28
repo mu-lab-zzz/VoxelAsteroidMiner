@@ -3460,18 +3460,20 @@ class GameEngine{
         // 27 artifact positions: 8 planets + 19 moons (placed just above each body's surface)
         const artifacts=[
             // ── Planets ──────────────────────────────────────────────
-            {id:'planet_Mercury',   x:16670,    y:-2715,   z:-74430},
-            {id:'planet_Venus',     x:-29130,   y:-2175,   z:-65050},
-            {id:'planet_Earth',     x:32000,    y:1215,    z:-48000},
-            {id:'planet_Mars',      x:-32890,   y:3715,    z:-19800},
-            {id:'planet_Jupiter',   x:118395,   y:470,     z:120110},
-            {id:'planet_Saturn',    x:-317565,  y:9450,    z:196020},
-            {id:'planet_Uranus',    x:807115,   y:-11330,  z:-338210},
-            {id:'planet_Neptune',   x:-968975,  y:22750,   z:-984220},
+            // Each placed at planet_center + r*5 upward, outside atmo entry (r*3.5+30)
+            {id:'planet_Mercury',   x:16670,    y:-2410,   z:-74430},  // r=80, offset=400
+            {id:'planet_Venus',     x:-29130,   y:-1430,   z:-65050},  // r=190, offset=950
+            {id:'planet_Earth',     x:32000,    y:2000,    z:-48000},  // r=200, offset=1000
+            {id:'planet_Mars',      x:-32890,   y:4140,    z:-19800},  // r=110, offset=550
+            {id:'planet_Jupiter',   x:116190,   y:11420,   z:120110},  // r=2190, offset=10950
+            {id:'planet_Saturn',    x:-319410,  y:18600,   z:196020},  // r=1830, offset=9150
+            {id:'planet_Uranus',    x:806300,   y:-7330,   z:-338210}, // r=800, offset=4000
+            {id:'planet_Neptune',   x:-969760,  y:26600,   z:-984220}, // r=770, offset=3850
             // ── Earth system ─────────────────────────────────────────
             {id:'moon_Earth_Luna',  x:43110,    y:1547,    z:-43303},
             // ── Mars system ──────────────────────────────────────────
-            {id:'moon_Mars_Phobos', x:-32726,   y:3658,    z:-19544},
+            // Phobos orbit(304) < Mars entry(415): moved 500 above Mars center
+            {id:'moon_Mars_Phobos', x:-32890,   y:4090,    z:-19800},
             {id:'moon_Mars_Deimos', x:-33607,   y:3512,    z:-19545},
             // ── Jupiter system ───────────────────────────────────────
             {id:'moon_Jup_Io',      x:128535,   y:794,     z:123928},
@@ -3479,7 +3481,8 @@ class GameEngine{
             {id:'moon_Jup_Ganymede',x:139028,   y:889,     z:143630},
             {id:'moon_Jup_Callisto',x:82255,    y:-599,    z:166728},
             // ── Saturn system ────────────────────────────────────────
-            {id:'moon_Sat_Mimas',   x:-314419,  y:9748,    z:193401},
+            // Mimas orbit(5637) < Saturn entry(6435): scaled to 7000 from Saturn center
+            {id:'moon_Sat_Mimas',   x:-313218,  y:9820,    z:192772},
             {id:'moon_Sat_Enceladus',x:-322953, y:9468,    z:189721},
             {id:'moon_Sat_Tethys',  x:-327078,  y:9118,    z:200633},
             {id:'moon_Sat_Dione',   x:-309956,  y:9821,    z:202487},
@@ -5887,10 +5890,10 @@ class GameEngine{
                 if(inSpace){
                     this.camera.getWorldDirection(MP.v1);
                     MP.ray.set(this.camera.position,MP.v1);
-                    MP.ray.far=100;
+                    MP.ray.far=200;
                     for(const art of this.alienArtifacts){
                         if(art.collected||!art.mesh.parent)continue;
-                        if(art.mesh.position.distanceTo(this.ship.pos)>110)continue;
+                        if(art.mesh.position.distanceTo(this.ship.pos)>200)continue;
                         art.mesh.updateMatrixWorld();
                         const hits=MP.ray.intersectObject(art.mesh,false);
                         if(hits.length>0){
