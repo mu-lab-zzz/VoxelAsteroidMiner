@@ -2716,7 +2716,7 @@ class AlienArtifact{
         this._t=0;
 
         const matBox=new THREE.MeshStandardMaterial({
-            color:0x002244,emissive:0x00ffaa,emissiveIntensity:0.6,
+            color:0x002244,emissive:0x00ffaa,emissiveIntensity:0.8,
             metalness:0.9,roughness:0.08});
         this.mesh=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.4,1.4),matBox);
         this.mesh.position.set(x,y,z);
@@ -2728,11 +2728,6 @@ class AlienArtifact{
         this.glowMesh=new THREE.Mesh(new THREE.OctahedronGeometry(1.8,0),matGlow);
         this.glowMesh.position.set(x,y,z);
         scene.add(this.glowMesh);
-
-        const pt=new THREE.PointLight(0x00ffaa,1.5,40);
-        pt.position.set(x,y,z);
-        scene.add(pt);
-        this._light=pt;
     }
     takeDamage(dmg){
         if(this.collected)return false;
@@ -2744,7 +2739,6 @@ class AlienArtifact{
         this.collected=true;
         this._scene.remove(this.mesh);
         this._scene.remove(this.glowMesh);
-        this._scene.remove(this._light);
     }
     update(dt){
         if(this.collected)return;
@@ -2753,7 +2747,8 @@ class AlienArtifact{
         this.mesh.rotation.x=this._t*0.3;
         this.glowMesh.rotation.y=-this._t*0.6;
         this.glowMesh.material.opacity=0.15+0.12*Math.sin(this._t*2.4);
-        this._light.intensity=1.2+0.5*Math.sin(this._t*3.1);
+        // Pulse emissive intensity instead of a point light
+        this.mesh.material.emissiveIntensity=0.6+0.4*Math.sin(this._t*3.1);
     }
 }
 
@@ -3502,7 +3497,6 @@ class GameEngine{
             this.alienArtifacts.push(art);
             this._spaceOnlyObjects.push(art.mesh);
             this._spaceOnlyObjects.push(art.glowMesh);
-            this._spaceOnlyObjects.push(art._light);
         }
     }
 
