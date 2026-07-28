@@ -2117,7 +2117,7 @@ class MiningShip{
             const blk=SHIP_BLOCKS[bid]; if(!blk) continue;
             const x=(c-2)*BS, y=(midL-l)*LH, z=(r-2)*BS;
             this._addBlockMesh(grp,bid,blk,x,y,z,BS);
-            if(blk.shape==='engine') this._nozzleOffsets.push(new THREE.Vector3(x,y,z+BS*0.56));
+            if(blk.shape==='engine') this._nozzleOffsets.push(new THREE.Vector3(x,y,z+BS*1.1));
             if(blk.shape==='laser')  this._laserOffsets.push(new THREE.Vector3(x,y,z-BS*0.8));
         }
     }
@@ -2156,10 +2156,14 @@ class MiningShip{
                 body.position.set(x,y,z-BS*0.04); grp.add(body);
                 const nG=new THREE.CylinderGeometry(BS*0.2,BS*0.27,BS*0.38,8);nG.rotateX(Math.PI/2);
                 const noz=new THREE.Mesh(nG,mD);noz.position.set(x,y,z+BS*0.47);grp.add(noz);
-                const fCol=blk.tier>=4?0x4488ff:0x2255ff;
-                const fMat=new THREE.MeshBasicMaterial({color:fCol,transparent:true,opacity:0.65,blending:THREE.AdditiveBlending,depthWrite:false});
-                const fG=new THREE.CylinderGeometry(BS*0.12,BS*0.12,BS*0.1,8);fG.rotateX(Math.PI/2);
-                const flame=new THREE.Mesh(fG,fMat);flame.position.set(x,y,z+BS*0.56);grp.add(flame);
+                // Flame glow: visible inner cone + outer halo
+                const fCol=blk.tier>=5?0xff8800:blk.tier>=4?0x44aaff:0x2266ff;
+                const fMat=new THREE.MeshBasicMaterial({color:fCol,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending,depthWrite:false});
+                const fG=new THREE.CylinderGeometry(BS*0.08,BS*0.22,BS*0.55,8);fG.rotateX(Math.PI/2);
+                const flame=new THREE.Mesh(fG,fMat);flame.position.set(x,y,z+BS*0.78);grp.add(flame);
+                const hMat=new THREE.MeshBasicMaterial({color:fCol,transparent:true,opacity:0.30,blending:THREE.AdditiveBlending,depthWrite:false});
+                const hG=new THREE.CylinderGeometry(0.02,BS*0.42,BS*0.7,8);hG.rotateX(Math.PI/2);
+                const halo=new THREE.Mesh(hG,hMat);halo.position.set(x,y,z+BS*0.95);grp.add(halo);
                 for(const sx of[-0.42,0.42]){
                     const a=new THREE.Mesh(new THREE.BoxGeometry(BS*0.06,BS*0.06,BS*0.68),mA);
                     a.position.set(x+sx*BS,y+BS*0.26,z-BS*0.04); grp.add(a);
@@ -2534,9 +2538,9 @@ class ExhaustEmitter{
     constructor(scene,ship){
         this.ship=ship;
         // Tight bright core stream
-        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.75),null,1.1);
-        // Wide heat wash — boost only
-        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,1.4);
+        this.core=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.75),null,2.2);
+        // Wide heat wash
+        this.heat=new ParticleEngine(scene,Math.floor(CFG.EXHAUST_MAX*0.25),null,3.2);
         this.timer=0;
         // Misfire sputter: alternates between burst window and silence
         this._misfirePhase=0; // counts up; burst when <BURST, silent when <CYCLE
@@ -2553,27 +2557,26 @@ class ExhaustEmitter{
 
         // ── Normal / boost emission ─────────────────────────────────
         this.timer+=dt;
-        const interval=boost?0.014:0.016;
+        const interval=boost?0.008:0.010;
         if(thrusting&&!misfire&&this.timer>interval){
             this.timer=0;
-            const spd=boost?38:20;
-            const spread=boost?5:2;
-            const life=boost?0.20:0.15;
+            const spd=boost?42:22;
+            const spread=boost?6:3;
+            const life=boost?0.28:0.22;
             for(const off of src){
                 MP.v1.copy(off).applyQuaternion(this.ship.quat).add(this.ship.pos);
                 MP.v2.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd);
                 MP.v2.x+=(Math.random()-.5)*spread;
                 MP.v2.y+=(Math.random()-.5)*spread;
-                const wb=0.45+Math.random()*0.25;
+                const wb=0.55+Math.random()*0.35;
                 this.core.spawn(MP.v1,MP.v2,life,wb,wb,1.0);
-                if(boost){
-                    MP.v3.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd*0.55);
-                    MP.v3.x+=(Math.random()-.5)*6;
-                    MP.v3.y+=(Math.random()-.5)*6;
-                    const rr=0.6+Math.random()*0.15;
-                    const gg=0.1+Math.random()*0.2;
-                    this.heat.spawn(MP.v1,MP.v3,0.16,rr,gg,0);
-                }
+                // Always emit a dim heat haze even without boost
+                MP.v3.set(0,0,1).applyQuaternion(this.ship.quat).multiplyScalar(spd*0.45);
+                MP.v3.x+=(Math.random()-.5)*(boost?8:4);
+                MP.v3.y+=(Math.random()-.5)*(boost?8:4);
+                const rr=boost?0.65+Math.random()*0.15:0.4+Math.random()*0.1;
+                const gg=boost?0.15+Math.random()*0.2:0.3+Math.random()*0.15;
+                this.heat.spawn(MP.v1,MP.v3,life*0.7,rr,gg,boost?0:0.6);
             }
         }
 
