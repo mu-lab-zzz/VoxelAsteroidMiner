@@ -1846,10 +1846,17 @@ class PlanetRock{
         this.radius=radius;
         this.oreTypes=orePool;
         this.seed=Math.random()*99999;
+        this._maxHp=30;
+        this._hp=this._maxHp;
         this.group=new THREE.Group();
         this.group.position.set(x,y,z);
         parent.add(this.group);
         this._buildMesh();
+    }
+    _takeDamage(dmg){
+        this._hp=Math.max(0,this._hp-dmg);
+        if(this._hp<=0){this._hp=this._maxHp;return true;}
+        return false;
     }
     _buildMesh(){
         const r=this.radius,seed=this.seed;
