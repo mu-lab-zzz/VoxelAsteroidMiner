@@ -2608,10 +2608,10 @@ class MiningShip{
         if(inp.yaw!==0)   this.angVel.y=-inp.yaw*tr;   else this.angVel.y*=0.88;
         if(inp.pitch!==0) this.angVel.x= inp.pitch*tr;  else this.angVel.x*=0.88;
 
-        // Yaw: rotate around world Y
+        // Yaw: rotate around ship's local Y (body frame — eliminates gimbal lock)
         if(Math.abs(this.angVel.y)>0.0001){
-            MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.angVel.y*dt);
-            this.quat.premultiply(MP.q1);
+            MP.q1.setFromAxisAngle(MP.v1.set(0,1,0),this.angVel.y*dt);
+            this.quat.multiply(MP.q1);
         }
         // Pitch: rotate around ship's local right axis
         if(Math.abs(this.angVel.x)>0.0001){
