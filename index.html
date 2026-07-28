@@ -4281,6 +4281,7 @@ class GameEngine{
         const tierLabels=['','Tier1 基本','Tier2 中級','Tier3 高性能','Tier4 特殊','Tier5 伝説'];
         let curTier=0;
         for(const[bid,blk] of Object.entries(SHIP_BLOCKS)){
+            if(Object.keys(blk.craft).length===0) continue;
             if(blk.tier!==curTier){
                 curTier=blk.tier;
                 const th=document.createElement('div');
