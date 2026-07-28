@@ -281,6 +281,59 @@
             box-shadow:0 0 28px rgba(255,140,0,0.18);
         }
 
+        /* ── Alien Dock Prompt ──────────────────────────────────── */
+        #alien-dock-prompt{
+            position:absolute;bottom:220px;left:50%;transform:translateX(-50%);
+            background:rgba(0,8,20,0.96);border:1.5px solid rgba(0,255,170,0.7);
+            border-radius:14px;padding:16px 28px;display:none;flex-direction:column;
+            gap:12px;z-index:20;pointer-events:auto;text-align:center;
+            box-shadow:0 0 48px rgba(0,255,170,0.22),0 0 16px rgba(170,68,255,0.18);
+            min-width:240px;
+        }
+        #alien-dock-prompt .alien-dock-title{
+            font-size:13px;font-weight:700;color:#00ffaa;font-family:monospace;letter-spacing:1px;
+        }
+        #alien-dock-prompt .alien-dock-sub{
+            font-size:11px;color:#669980;font-family:monospace;
+        }
+        #btn-alien-dock{
+            border-radius:8px;font:700 13px monospace;padding:10px 24px;cursor:pointer;
+            background:rgba(0,255,170,0.16);border:1.5px solid rgba(0,255,170,0.75);
+            color:#00ffaa;transition:background .15s;
+            box-shadow:0 0 16px rgba(0,255,170,0.16);
+        }
+        #btn-alien-dock:hover{background:rgba(0,255,170,0.34);}
+        /* ── Artifact HUD counter ───────────────────────────────── */
+        #artifact-hud{
+            display:none;align-items:center;gap:5px;
+            background:rgba(0,255,170,0.10);border:1px solid rgba(0,255,170,0.35);
+            border-radius:8px;padding:4px 10px;
+            font-size:11px;font-weight:700;color:#00ffaa;
+            font-family:monospace;white-space:nowrap;flex-shrink:0;
+        }
+        /* ── Ultimate Ship Modal ────────────────────────────────── */
+        #ultimate-ship-modal{
+            position:absolute;inset:0;z-index:300;
+            display:none;align-items:center;justify-content:center;
+            background:rgba(0,4,12,0.92);
+        }
+        #ultimate-ship-inner{
+            background:rgba(0,12,24,0.98);border:2px solid rgba(0,255,170,0.7);
+            border-radius:20px;padding:40px 48px;text-align:center;
+            box-shadow:0 0 80px rgba(0,255,170,0.28),0 0 30px rgba(170,68,255,0.22);
+            max-width:480px;
+        }
+        #ultimate-ship-inner h2{
+            font-size:22px;font-weight:900;color:#00ffaa;letter-spacing:3px;
+            text-shadow:0 0 30px #00ffaa;margin-bottom:12px;
+        }
+        #ultimate-ship-inner p{font-size:13px;color:#99ccbb;margin-bottom:24px;line-height:1.6;}
+        #btn-ultimate-close{
+            border-radius:10px;font:700 14px monospace;padding:12px 36px;cursor:pointer;
+            background:rgba(0,255,170,0.18);border:2px solid rgba(0,255,170,0.8);
+            color:#00ffaa;box-shadow:0 0 20px rgba(0,255,170,0.2);
+        }
+        #btn-ultimate-close:hover{background:rgba(0,255,170,0.36);}
         /* ── Atmosphere Overlay ─────────────────────────────────── */
         #atmo-overlay{
             position:absolute;inset:0;z-index:80;pointer-events:none;
@@ -640,6 +693,7 @@
     <span style="flex-shrink:0;font-size:11px;font-family:monospace;color:#ffcc44;white-space:nowrap">💳<span id="hud-credits">0</span></span>
     <button id="btn-dock-hud">🏭</button>
     <button id="btn-inv-badge">📦&nbsp;<span id="inv-total-badge">0</span></button>
+    <div id="artifact-hud">👽&nbsp;<span id="artifact-count">0/27</span></div>
     <button id="btn-settings-gear">⚙</button>
 </div>
 
@@ -720,6 +774,20 @@
 <!-- Dock Prompt -->
 <div id="dock-prompt">
     <button id="btn-dock-yes">🏭 ドッキング</button>
+</div>
+<!-- Alien Factory Dock Prompt -->
+<div id="alien-dock-prompt">
+    <div class="alien-dock-title">👽 エイリアン工場ステーション</div>
+    <div class="alien-dock-sub" id="alien-dock-sub">アーティファクトを集めて究極の採鉱船を入手</div>
+    <button id="btn-alien-dock">✨ ドッキング</button>
+</div>
+<!-- Ultimate Ship Unlock Modal -->
+<div id="ultimate-ship-modal">
+    <div id="ultimate-ship-inner">
+        <h2>👽 究極の採鉱船 解放！</h2>
+        <p>全27個のエイリアンアーティファクトを収集し、<br>ポイント・ネモのエイリアン工場ステーションへ到達した。<br><br>究極の採鉱船の設計図が解析された。<br>5層構造のエイリアン製採鉱船が起動する。</p>
+        <button id="btn-ultimate-close">起動する</button>
+    </div>
 </div>
 <div id="cargo-warn">⚠ 貨物スペースが不足</div>
 
@@ -1070,6 +1138,19 @@ const SHIP_BLOCKS={
     hydro_engine:{name:'水素核エンジン', tier:5,icon:'🔥',shape:'engine',
                   stats:{thrust:40,boost:1.0,boostCost:30},
                   craft:{[VT.METALLIC_HYDRO]:3,[VT.TITANIUM]:6}},
+    // ── Tier 6 (ALIEN) — Quest rewards only, uncraftable ────────────────────
+    alien_core:    {name:'エイリアンコア',      tier:6,icon:'👽',shape:'cockpit',
+                    stats:{scanRange:3000,scanLevel:3},craft:{}},
+    alien_laser:   {name:'エイリアンレーザー', tier:6,icon:'⚡',shape:'laser',
+                    stats:{miningPow:3.0},craft:{}},
+    alien_engine:  {name:'エイリアンエンジン', tier:6,icon:'🔥',shape:'engine',
+                    stats:{thrust:60,boost:2.0,boostCost:50},craft:{}},
+    alien_cargo:   {name:'エイリアン貨物庫',   tier:6,icon:'📦',shape:'cargo',
+                    stats:{maxCargo:500},craft:{}},
+    alien_reactor: {name:'エイリアンリアクター',tier:6,icon:'🔋',shape:'reactor',
+                    stats:{maxEnergy:300},craft:{}},
+    alien_solar:   {name:'エイリアンソーラー', tier:6,icon:'☀',shape:'panel',
+                    stats:{energyRegen:60},craft:{}},
 };
 
 // Station upgrade tables (costs use refined goods + credits)
@@ -2624,6 +2705,126 @@ class RelayStation{
 }
 
 // ════════════════════════════════════════════════════════════════
+//  ALIEN ARTIFACT  — crystalline relic sitting on each planet/moon
+// ════════════════════════════════════════════════════════════════
+class AlienArtifact{
+    constructor(id,scene,x,y,z){
+        this.id=id;
+        this.collected=false;
+        this.hp=40; this.maxHp=40;
+        this._scene=scene;
+        this._t=0;
+
+        const matBox=new THREE.MeshStandardMaterial({
+            color:0x002244,emissive:0x00ffaa,emissiveIntensity:0.6,
+            metalness:0.9,roughness:0.08});
+        this.mesh=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.4,1.4),matBox);
+        this.mesh.position.set(x,y,z);
+        scene.add(this.mesh);
+
+        const matGlow=new THREE.MeshBasicMaterial({
+            color:0x00ffaa,transparent:true,opacity:0.22,
+            blending:THREE.AdditiveBlending,depthWrite:false});
+        this.glowMesh=new THREE.Mesh(new THREE.OctahedronGeometry(1.8,0),matGlow);
+        this.glowMesh.position.set(x,y,z);
+        scene.add(this.glowMesh);
+
+        const pt=new THREE.PointLight(0x00ffaa,1.5,40);
+        pt.position.set(x,y,z);
+        scene.add(pt);
+        this._light=pt;
+    }
+    takeDamage(dmg){
+        if(this.collected)return false;
+        this.hp-=dmg;
+        if(this.hp<=0){this._collect();return true;}
+        return false;
+    }
+    _collect(){
+        this.collected=true;
+        this._scene.remove(this.mesh);
+        this._scene.remove(this.glowMesh);
+        this._scene.remove(this._light);
+    }
+    update(dt){
+        if(this.collected)return;
+        this._t+=dt;
+        this.mesh.rotation.y=this._t*0.9;
+        this.mesh.rotation.x=this._t*0.3;
+        this.glowMesh.rotation.y=-this._t*0.6;
+        this.glowMesh.material.opacity=0.15+0.12*Math.sin(this._t*2.4);
+        this._light.intensity=1.2+0.5*Math.sin(this._t*3.1);
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ALIEN FACTORY STATION  — the Point Nemo reward hub
+// ════════════════════════════════════════════════════════════════
+class AlienFactoryStation{
+    constructor(scene){
+        this.group=new THREE.Group();
+        this._t=0;
+        this._rings=[];
+
+        // Central core — icosahedron
+        const coreMat=new THREE.MeshStandardMaterial({
+            color:0x001a22,emissive:0x00ffaa,emissiveIntensity:0.4,
+            metalness:0.95,roughness:0.05});
+        this.core=new THREE.Mesh(new THREE.IcosahedronGeometry(20,1),coreMat);
+        this.group.add(this.core);
+
+        // Three rotating rings at different tilts
+        const ringMat=new THREE.MeshBasicMaterial({
+            color:0x00ffaa,transparent:true,opacity:0.7,
+            blending:THREE.AdditiveBlending,depthWrite:false});
+        const ringAngles=[[0,0,0],[Math.PI*0.5,0,0],[0,0,Math.PI*0.33]];
+        for(let i=0;i<3;i++){
+            const r=new THREE.Mesh(
+                new THREE.TorusGeometry(28+i*7,0.7,8,48),
+                ringMat.clone());
+            r.rotation.set(...ringAngles[i]);
+            this.group.add(r);
+            this._rings.push(r);
+        }
+
+        // Four arm spokes with tip orbs
+        const armMat=new THREE.MeshStandardMaterial({
+            color:0x003322,emissive:0x00ffaa,emissiveIntensity:0.25,
+            metalness:0.9,roughness:0.1});
+        const orbMat=new THREE.MeshBasicMaterial({color:0x00ffaa,transparent:true,opacity:0.95});
+        for(let i=0;i<4;i++){
+            const a=(i/4)*Math.PI*2;
+            const cx=Math.cos(a), cz=Math.sin(a);
+            const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.4,1.8,24,6),armMat);
+            arm.position.set(cx*32,0,cz*32);
+            arm.rotation.z=Math.PI/2; arm.rotation.y=a;
+            this.group.add(arm);
+            const orb=new THREE.Mesh(new THREE.SphereGeometry(2.8,8,8),orbMat);
+            orb.position.set(cx*46,0,cz*46);
+            this.group.add(orb);
+        }
+
+        // Central glow light
+        const pt=new THREE.PointLight(0x00ffaa,4,350);
+        this.group.add(pt);
+        // Secondary purple accent
+        const pt2=new THREE.PointLight(0xaa44ff,2,200);
+        pt2.position.set(0,30,0);
+        this.group.add(pt2);
+
+        scene.add(this.group);
+    }
+    update(dt){
+        this._t+=dt;
+        this.core.rotation.y=this._t*0.25;
+        this.core.rotation.x=this._t*0.08;
+        if(this._rings[0]) this._rings[0].rotation.z=this._t*0.50;
+        if(this._rings[1]) this._rings[1].rotation.x=Math.PI*0.5+this._t*0.38;
+        if(this._rings[2]) this._rings[2].rotation.y=this._t*0.60;
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
 //  PLANET CONFIGS — per-planet visual + gameplay data
 // ════════════════════════════════════════════════════════════════
 const PLANET_CFGS={
@@ -2786,6 +2987,14 @@ class GameEngine{
         this._builderLayer=0;     // active layer in builder UI
         this._warpSpeed=0;        // computed from placed blocks
 
+        // Alien quest system
+        this.alienArtifacts=[];
+        this.collectedArtifacts=new Set();
+        this.ultimateShipUnlocked=false;
+        this.alienStationPos=new THREE.Vector3(97600,0,-1154600);
+        this.alienFactoryStation=null;
+        this.alienStationOpen=false;
+
         this.inp={
             forward:false,backward:false,left:false,right:false,
             up:false,down:false,roll:0,yaw:0,pitch:0,boost:false,fire:false,warp:false,
@@ -2807,6 +3016,8 @@ class GameEngine{
         try{this._computeShipStats();}catch(e){}  // sync mesh and stats for fresh game too
         try{this._applyStationStats();}catch(e){}
         try{this._loadSettings();}catch(e){}
+        try{this._syncAlienArtifacts();}catch(e){}
+        try{this._updateArtifactHUD();}catch(e){}
 
         window.addEventListener('resize',()=>this._onResize());
         this._animate();  // must always run — starts game loop
@@ -3247,6 +3458,69 @@ class GameEngine{
         return new THREE.CanvasTexture(cv);
     }
 
+    _buildAlienArtifacts(){
+        // 27 artifact positions: 8 planets + 19 moons (placed just above each body's surface)
+        const artifacts=[
+            // ── Planets ──────────────────────────────────────────────
+            {id:'planet_Mercury',   x:16670,    y:-2715,   z:-74430},
+            {id:'planet_Venus',     x:-29130,   y:-2175,   z:-65050},
+            {id:'planet_Earth',     x:32000,    y:1215,    z:-48000},
+            {id:'planet_Mars',      x:-32890,   y:3715,    z:-19800},
+            {id:'planet_Jupiter',   x:118395,   y:470,     z:120110},
+            {id:'planet_Saturn',    x:-317565,  y:9450,    z:196020},
+            {id:'planet_Uranus',    x:807115,   y:-11330,  z:-338210},
+            {id:'planet_Neptune',   x:-968975,  y:22750,   z:-984220},
+            // ── Earth system ─────────────────────────────────────────
+            {id:'moon_Earth_Luna',  x:43110,    y:1547,    z:-43303},
+            // ── Mars system ──────────────────────────────────────────
+            {id:'moon_Mars_Phobos', x:-32726,   y:3658,    z:-19544},
+            {id:'moon_Mars_Deimos', x:-33607,   y:3512,    z:-19545},
+            // ── Jupiter system ───────────────────────────────────────
+            {id:'moon_Jup_Io',      x:128535,   y:794,     z:123928},
+            {id:'moon_Jup_Europa',  x:109542,   y:-89,     z:139572},
+            {id:'moon_Jup_Ganymede',x:139028,   y:889,     z:143630},
+            {id:'moon_Jup_Callisto',x:82255,    y:-599,    z:166728},
+            // ── Saturn system ────────────────────────────────────────
+            {id:'moon_Sat_Mimas',   x:-314419,  y:9748,    z:193401},
+            {id:'moon_Sat_Enceladus',x:-322953, y:9468,    z:189721},
+            {id:'moon_Sat_Tethys',  x:-327078,  y:9118,    z:200633},
+            {id:'moon_Sat_Dione',   x:-309956,  y:9821,    z:202487},
+            {id:'moon_Sat_Rhea',    x:-332061,  y:9163,    z:186231},
+            {id:'moon_Sat_Titan',   x:-302581,  y:9909,    z:229082},
+            // ── Uranus system ────────────────────────────────────────
+            {id:'moon_Ura_Miranda', x:807773,   y:-8060,   z:-334420},
+            {id:'moon_Ura_Ariel',   x:800700,   y:-15489,  z:-340308},
+            {id:'moon_Ura_Umbriel', x:809449,   y:-6304,   z:-345922},
+            {id:'moon_Ura_Titania', x:818277,   y:-18801,  z:-331665},
+            {id:'moon_Ura_Oberon',  x:789100,   y:-2169,   z:-332095},
+            // ── Neptune system ───────────────────────────────────────
+            {id:'moon_Nep_Triton',  x:-966791,  y:27797,   z:-973525},
+        ];
+
+        for(const a of artifacts){
+            const art=new AlienArtifact(a.id,this.scene,a.x,a.y,a.z);
+            this.alienArtifacts.push(art);
+            this._spaceOnlyObjects.push(art.mesh);
+            this._spaceOnlyObjects.push(art.glowMesh);
+            this._spaceOnlyObjects.push(art._light);
+        }
+    }
+
+    _syncAlienArtifacts(){
+        // Called after _loadSave() to hide already-collected artifacts
+        for(const art of this.alienArtifacts){
+            if(this.collectedArtifacts.has(art.id) && !art.collected){
+                art._collect();
+            }
+        }
+    }
+
+    _buildAlienStation(){
+        this.alienFactoryStation=new AlienFactoryStation(this.scene);
+        this.alienFactoryStation.group.position.copy(this.alienStationPos);
+        this._spaceOnlyObjects.push(this.alienFactoryStation.group);
+    }
+
     _initEntities(){
         this.sparks=new ParticleEngine(this.scene,CFG.SPARKS_MAX,null,0.7);
         this.spaceDust=new SpaceDust(this.scene);
@@ -3300,6 +3574,10 @@ class GameEngine{
 
         // Add laser beams to space-only set (they're in main scene)
         for(const beam of this.ship.laserBeams) this._spaceOnlyObjects.push(beam);
+
+        // Alien quest objects
+        this._buildAlienArtifacts();
+        this._buildAlienStation();
     }
 
     _initInputs(){
@@ -3514,6 +3792,16 @@ class GameEngine{
             document.getElementById('dock-prompt').style.display='none';
             this._openStation();
         });
+        // Alien factory dock
+        document.getElementById('btn-alien-dock').addEventListener('click',()=>{
+            document.getElementById('alien-dock-prompt').style.display='none';
+            this._openAlienStation();
+        });
+        // Ultimate ship modal close
+        document.getElementById('btn-ultimate-close').addEventListener('click',()=>{
+            document.getElementById('ultimate-ship-modal').style.display='none';
+            Notify.show('👽 エイリアン採鉱船が起動した！','info',4000);
+        });
         // Planet base prompt/modal
         document.getElementById('btn-planet-base-yes').addEventListener('click',()=>{
             document.getElementById('planet-base-prompt').style.display='none';
@@ -3611,6 +3899,103 @@ class GameEngine{
         if(d<70) this.ship.pos.copy(stPos).addScaledVector(dir,70);
         this.ship.vel.copy(dir).multiplyScalar(8);
         Notify.show(L('ui.depart'),'info',1500);
+    }
+
+    _updateArtifactHUD(){
+        const el=document.getElementById('artifact-count');
+        if(el) el.textContent=`${this.collectedArtifacts.size}/27`;
+        const wrap=document.getElementById('artifact-hud');
+        if(wrap) wrap.style.display=this.collectedArtifacts.size>0?'flex':'none';
+    }
+
+    _checkAlienStationDocking(){
+        if(!this.alienFactoryStation||this.alienStationOpen)return;
+        const dist=this.ship.pos.distanceTo(this.alienStationPos);
+        const prompt=document.getElementById('alien-dock-prompt');
+        if(dist<120){
+            if(prompt) prompt.style.display='flex';
+            const cnt=this.collectedArtifacts.size;
+            const sub=document.getElementById('alien-dock-sub');
+            if(sub) sub.textContent=cnt>=27
+                ?'✅ 全アーティファクト収集完了！究極の採鉱船を解放する'
+                :`アーティファクト: ${cnt}/27 (残り${27-cnt}個)`;
+        }else{
+            if(prompt) prompt.style.display='none';
+        }
+    }
+
+    _openAlienStation(){
+        const cnt=this.collectedArtifacts.size;
+        if(cnt<27){
+            Notify.show(`👽 アーティファクトが不足しています (${cnt}/27)`,'warn',3000);
+            return;
+        }
+        if(this.ultimateShipUnlocked){
+            Notify.show('👽 究極の採鉱船はすでに入手済みです！','info',3000);
+            return;
+        }
+        this._unlockUltimateShip();
+    }
+
+    _unlockUltimateShip(){
+        this.ultimateShipUnlocked=true;
+
+        // Grant the 5-layer ultimate ship layout with alien blocks
+        while(this.stationLv.dockExpansion<4) this.stationLv.dockExpansion++;
+        this._applyStationStats(); // ensure 5 layers
+
+        const L=[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]];
+        const mk=id=>JSON.parse(JSON.stringify(L));
+
+        // Layer 0 — Core scanner & lasers
+        this.shipLayout[0]=mk(L);
+        this.shipLayout[0][0][2]='alien_laser';
+        this.shipLayout[0][1][2]='alien_core';
+        this.shipLayout[0][2][0]='alien_laser';
+        this.shipLayout[0][2][4]='alien_laser';
+        this.shipLayout[0][3][2]='alien_reactor';
+        this.shipLayout[0][4][2]='alien_engine';
+
+        // Layer 1 — More lasers + solar
+        this.shipLayout[1]=mk(L);
+        this.shipLayout[1][1][1]='alien_solar';
+        this.shipLayout[1][1][3]='alien_solar';
+        this.shipLayout[1][2][2]='alien_laser';
+        this.shipLayout[1][3][1]='alien_reactor';
+        this.shipLayout[1][3][3]='alien_reactor';
+        this.shipLayout[1][4][2]='alien_engine';
+
+        // Layer 2 — Cargo hull
+        this.shipLayout[2]=mk(L);
+        this.shipLayout[2][1][2]='alien_cargo';
+        this.shipLayout[2][2][1]='alien_cargo';
+        this.shipLayout[2][2][3]='alien_cargo';
+        this.shipLayout[2][3][2]='alien_cargo';
+        this.shipLayout[2][4][2]='alien_engine';
+
+        // Layer 3 — Cargo + solar
+        this.shipLayout[3]=mk(L);
+        this.shipLayout[3][0][2]='alien_solar';
+        this.shipLayout[3][1][2]='alien_cargo';
+        this.shipLayout[3][2][1]='alien_solar';
+        this.shipLayout[3][2][3]='alien_solar';
+        this.shipLayout[3][3][2]='alien_cargo';
+        this.shipLayout[3][4][2]='alien_engine';
+
+        // Layer 4 — Engine core
+        this.shipLayout[4]=mk(L);
+        this.shipLayout[4][2][1]='alien_engine';
+        this.shipLayout[4][2][2]='alien_engine';
+        this.shipLayout[4][2][3]='alien_engine';
+        this.shipLayout[4][1][2]='alien_reactor';
+        this.shipLayout[4][3][2]='alien_reactor';
+
+        this._computeShipStats();
+        this._saveSave();
+
+        // Show reward UI
+        const modal=document.getElementById('ultimate-ship-modal');
+        if(modal) modal.style.display='flex';
     }
 
     _checkDocking(){
@@ -5347,6 +5732,8 @@ class GameEngine{
             relayPositions:this.relayStations.map(rs=>({
                 x:rs.group.position.x,y:rs.group.position.y,z:rs.group.position.z})),
             mapMarker:this.mapMarker,
+            collectedArtifacts:[...this.collectedArtifacts],
+            ultimateShipUnlocked:this.ultimateShipUnlocked,
         }));
     }
     _loadSave(){
@@ -5391,6 +5778,8 @@ class GameEngine{
                     }
                 }
                 if(d.mapMarker) this.mapMarker=d.mapMarker;
+                if(d.collectedArtifacts) this.collectedArtifacts=new Set(d.collectedArtifacts);
+                if(d.ultimateShipUnlocked) this.ultimateShipUnlocked=d.ultimateShipUnlocked;
             }
         }catch(e){}
     }
@@ -5440,6 +5829,9 @@ class GameEngine{
                 this.station.update(dt);
                 this._updateRefinery(dt);
                 this._checkDocking();
+                this._checkAlienStationDocking();
+                if(this.alienFactoryStation) this.alienFactoryStation.update(dt);
+                for(const art of this.alienArtifacts) art.update(dt);
             }
             if(inPlanet){
                 this._checkPlanetBaseDock();
@@ -5493,6 +5885,31 @@ class GameEngine{
                 // Remove any pebbles destroyed this frame
                 if(this.asteroids.some(a=>a._destroyed))
                     this.asteroids=this.asteroids.filter(a=>!a._destroyed);
+                // Alien artifact hit detection (reuse the camera ray from fireLaser)
+                if(inSpace){
+                    this.camera.getWorldDirection(MP.v1);
+                    MP.ray.set(this.camera.position,MP.v1);
+                    MP.ray.far=100;
+                    for(const art of this.alienArtifacts){
+                        if(art.collected||!art.mesh.parent)continue;
+                        if(art.mesh.position.distanceTo(this.ship.pos)>110)continue;
+                        art.mesh.updateMatrixWorld();
+                        const hits=MP.ray.intersectObject(art.mesh,false);
+                        if(hits.length>0){
+                            const dmg=this.ship.stats.miningPow*CFG.LASER_DPS*dt;
+                            const destroyed=art.takeDamage(dmg);
+                            floatText.spawnDmg(hits[0].point,dmg);
+                            if(destroyed){
+                                this.collectedArtifacts.add(art.id);
+                                const cnt=this.collectedArtifacts.size;
+                                Notify.show(`👽 エイリアンアーティファクト入手！(${cnt}/27)`,'info',4000);
+                                this._updateArtifactHUD();
+                                this._saveSave();
+                            }
+                            break;
+                        }
+                    }
+                }
             }else{
                 this.ship.hideLaser();
                 Sound.stopLaser();
