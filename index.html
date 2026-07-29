@@ -644,14 +644,15 @@
         /* ── Horizon Reset Button ───────────────────────────────── */
         #horizon-reset-wrap{
             display:none;position:absolute;
-            bottom:20px;right:20px;z-index:20;
+            top:80px;right:10px;z-index:20;
         }
         #horizon-reset-wrap button{
             background:rgba(100,220,100,0.12);
             border:1px solid rgba(100,220,100,0.5);
-            border-radius:14px;padding:10px 22px;
-            color:#64dc64;font:700 13px monospace;
+            border-radius:20px;padding:6px 12px;
+            color:#64dc64;font:700 11px monospace;
             cursor:pointer;letter-spacing:.5px;
+            white-space:nowrap;
         }
         #horizon-reset-wrap button:hover{background:rgba(100,220,100,0.28);}
         /* ── Mobile Station HUD Indicator ───────────────────────── */
@@ -845,7 +846,7 @@
 </div>
 <!-- Horizon Reset Button (6DOF mode only) -->
 <div id="horizon-reset-wrap">
-    <button id="btn-horizon-reset">⬛ 水平リセット [H]</button>
+    <button id="btn-horizon-reset">↕ 水平リセット</button>
 </div>
 <!-- Mobile Station HUD Indicator -->
 <div id="mobile-station-indicator">
