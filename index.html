@@ -641,6 +641,19 @@
             cursor:pointer;letter-spacing:.5px;
         }
         #mobile-dock-prompt button:hover{background:rgba(0,200,255,0.28);}
+        /* ── Horizon Reset Button ───────────────────────────────── */
+        #horizon-reset-wrap{
+            display:none;position:absolute;
+            bottom:20px;right:20px;z-index:20;
+        }
+        #horizon-reset-wrap button{
+            background:rgba(100,220,100,0.12);
+            border:1px solid rgba(100,220,100,0.5);
+            border-radius:14px;padding:10px 22px;
+            color:#64dc64;font:700 13px monospace;
+            cursor:pointer;letter-spacing:.5px;
+        }
+        #horizon-reset-wrap button:hover{background:rgba(100,220,100,0.28);}
         /* ── Mobile Station HUD Indicator ───────────────────────── */
         #mobile-station-indicator{
             position:absolute;transform:translate(-50%,-50%);
@@ -829,6 +842,10 @@
 <!-- Mobile Station Dock Prompt -->
 <div id="mobile-dock-prompt">
     <button id="btn-mobile-dock">🚀 移動ステーション [B]</button>
+</div>
+<!-- Horizon Reset Button (6DOF mode only) -->
+<div id="horizon-reset-wrap">
+    <button id="btn-horizon-reset">⬛ 水平リセット [H]</button>
 </div>
 <!-- Mobile Station HUD Indicator -->
 <div id="mobile-station-indicator">
@@ -3949,6 +3966,7 @@ class GameEngine{
                 case'Space':e.preventDefault();this.inp.fire=true;break;
                 case'KeyB':this._toggleStation();break;
                 case'KeyG':this._toggleSettings();break;
+                case'KeyH':this._resetRoll();break;
                 case'KeyZ':this.inp.warp=true;break;
                 case'KeyN':
                     if(!this.stationOpen&&!this.planetBaseOpen&&this.sceneMode==='space')
@@ -4168,6 +4186,7 @@ class GameEngine{
         document.getElementById('btn-pitch-invert').addEventListener('click',()=>{
             this.settings.pitchInvert=true; this._applySettings(); this._saveSettings();
         });
+        document.getElementById('btn-horizon-reset').addEventListener('click',()=>this._resetRoll());
         document.getElementById('btn-mode-normal').addEventListener('click',()=>{
             this.settings.flightMode='normal'; this._applySettings(); this._saveSettings();
         });
@@ -6241,6 +6260,8 @@ class GameEngine{
             }
             this.ship.flightMode=this.settings.flightMode??'normal';
         }
+        const hrw=document.getElementById('horizon-reset-wrap');
+        if(hrw) hrw.style.display=this.settings.flightMode==='6dof'?'block':'none';
         const dh=document.getElementById('btn-debug-hide');
         const ds=document.getElementById('btn-debug-show');
         if(dh&&ds){
@@ -6262,6 +6283,21 @@ class GameEngine{
             sl.style.setProperty('--pct',pct+'%');
         }
         if(vl) vl.textContent=bri.toFixed(2)+'×';
+    }
+    _resetRoll(){
+        if(!this.ship) return;
+        MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat); // nose
+        const nd=MP.v1.y, hl=Math.sqrt(Math.max(0,1-nd*nd));
+        if(hl<0.02) return; // 真上・真下付近は基準が定まらないのでスキップ
+        MP.v2.set(-MP.v1.x*nd/hl, hl, -MP.v1.z*nd/hl); // 望ましい上方向
+        MP.v3.set(0,1,0).applyQuaternion(this.ship.quat); // 現在の機体上方向
+        MP.q1.setFromUnitVectors(MP.v3, MP.v2);           // 補正回転
+        this.ship.quat.premultiply(MP.q1);
+        this.ship.quat.normalize();
+        // Euler 角を同期
+        MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat);
+        this.ship.yaw=Math.atan2(-MP.v1.x,-MP.v1.z);
+        this.ship.pitch=Math.asin(Math.max(-1,Math.min(1,MP.v1.y)));
     }
     _toggleSettings(force){
         const modal=document.getElementById('settings-modal');
