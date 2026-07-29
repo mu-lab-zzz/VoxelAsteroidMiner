@@ -915,12 +915,13 @@
     </div>
     <div class="settings-row">
         <div>
-            <div class="settings-label">カメラモード</div>
-            <div class="settings-sub">ピッチ時のカメラ挙動</div>
+            <div class="settings-label">操縦モード</div>
+            <div class="settings-sub">カメラと機体の回転制御</div>
         </div>
         <div class="toggle-group">
-            <button class="toggle-btn active" id="btn-cam-follow">追従</button>
-            <button class="toggle-btn"        id="btn-cam-stable">安定</button>
+            <button class="toggle-btn active" id="btn-mode-normal">追従</button>
+            <button class="toggle-btn"        id="btn-mode-stable">安定</button>
+            <button class="toggle-btn"        id="btn-mode-6dof">6DOF</button>
         </div>
     </div>
     <div class="settings-row">
@@ -2250,6 +2251,7 @@ class MiningShip{
         this.quat=this.root.quaternion;
         this.yaw=0;
         this.pitch=0;
+        this.flightMode='normal';
         this._cvW=new THREE.Vector3(); // scratch: cannon world-pos
 
         this.stats={
@@ -2620,14 +2622,26 @@ class MiningShip{
         if(inp.yaw!==0)   this.angVel.y=-inp.yaw*tr;   else this.angVel.y*=0.88;
         if(inp.pitch!==0) this.angVel.x= inp.pitch*tr;  else this.angVel.x*=0.88;
 
-        // Euler accumulation: yaw (world Y) + pitch (local X), no clamp → 360° pitch possible
-        this.yaw   += this.angVel.y*dt;
-        this.pitch += this.angVel.x*dt;
-        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp, this.yaw);
-        this.quat.copy(MP.q1);
-        MP.v1.set(1,0,0);
-        MP.q1.setFromAxisAngle(MP.v1, this.pitch);
-        this.quat.multiply(MP.q1);
+        if(this.flightMode==='6dof'){
+            // 6DOF: body-frame accumulation — roll follows input freely, no gimbal lock
+            MP.q1.setFromAxisAngle(MP.v1.set(0,1,0),this.angVel.y*dt);
+            this.quat.multiply(MP.q1);
+            MP.q1.setFromAxisAngle(MP.v1.set(1,0,0),this.angVel.x*dt);
+            this.quat.multiply(MP.q1);
+            this.quat.normalize();
+            // Sync yaw scalar from quat for minimap heading arrow
+            MP.v1.set(0,0,-1).applyQuaternion(this.quat);
+            this.yaw=Math.atan2(-MP.v1.x,-MP.v1.z);
+        }else{
+            // Euler: yaw (world Y) + pitch (local X), no roll, no clamp
+            this.yaw   += this.angVel.y*dt;
+            this.pitch += this.angVel.x*dt;
+            MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.yaw);
+            this.quat.copy(MP.q1);
+            MP.v1.set(1,0,0);
+            MP.q1.setFromAxisAngle(MP.v1,this.pitch);
+            this.quat.multiply(MP.q1);
+        }
 
         // boost energy drain (blocked when depleted)
         if(inp.boost&&!this._energyDepleted)
@@ -3239,7 +3253,7 @@ class GameEngine{
         this._spaceOnlyObjects=[];
         this.settingsOpen=false;
         this.inventoryOpen=false;
-        this.settings={pitchInvert:true,showDebug:false,brightness:1.0,cameraMode:'follow'};
+        this.settings={pitchInvert:true,showDebug:false,brightness:1.0,flightMode:'normal'};
         this.debugMode=false;
         this._settingsTapCount=0;
         this._settingsTapTimer=null;
@@ -4154,11 +4168,14 @@ class GameEngine{
         document.getElementById('btn-pitch-invert').addEventListener('click',()=>{
             this.settings.pitchInvert=true; this._applySettings(); this._saveSettings();
         });
-        document.getElementById('btn-cam-follow').addEventListener('click',()=>{
-            this.settings.cameraMode='follow'; this._applySettings(); this._saveSettings();
+        document.getElementById('btn-mode-normal').addEventListener('click',()=>{
+            this.settings.flightMode='normal'; this._applySettings(); this._saveSettings();
         });
-        document.getElementById('btn-cam-stable').addEventListener('click',()=>{
-            this.settings.cameraMode='stable'; this._applySettings(); this._saveSettings();
+        document.getElementById('btn-mode-stable').addEventListener('click',()=>{
+            this.settings.flightMode='stable'; this._applySettings(); this._saveSettings();
+        });
+        document.getElementById('btn-mode-6dof').addEventListener('click',()=>{
+            this.settings.flightMode='6dof'; this._applySettings(); this._saveSettings();
         });
         document.getElementById('btn-debug-hide').addEventListener('click',()=>{
             this.settings.showDebug=false; this._applySettings(); this._saveSettings();
@@ -6021,13 +6038,13 @@ class GameEngine{
     }
 
     _updateCamera(){
-        const stable=this.settings.cameraMode==='stable';
-        if(stable){
-            // Stable: yaw-only offset — camera never swings under the ship
+        const mode=this.settings.flightMode??'normal';
+        if(mode==='stable'){
+            // Stable: yaw-only offset — camera stays horizontally behind ship
             MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.ship.yaw);
             MP.v1.set(0,3.2,this.camDist).applyQuaternion(MP.q1);
         }else{
-            // Follow: full quaternion — camera rolls with the ship
+            // Normal / 6DOF: full quaternion camera offset
             MP.v1.set(0,3.2,this.camDist).applyQuaternion(this.ship.quat);
         }
         const tgt=MP.v2.copy(this.ship.pos).add(MP.v1);
@@ -6035,7 +6052,12 @@ class GameEngine{
 
         const ahead=MP.v3.copy(this.ship.pos).add(
             MP.v4.set(0,0,-8).applyQuaternion(this.ship.quat));
-        if(stable) this.camera.up.set(0,1,0);
+        if(mode==='6dof'){
+            // Camera up follows ship's local up so roll shows in view
+            this.camera.up.set(0,1,0).applyQuaternion(this.ship.quat);
+        }else{
+            this.camera.up.set(0,1,0);
+        }
         this.camera.lookAt(ahead);
     }
 
@@ -6202,14 +6224,22 @@ class GameEngine{
         }else{
             n.classList.add('active'); v.classList.remove('active');
         }
-        const cf=document.getElementById('btn-cam-follow');
-        const cs=document.getElementById('btn-cam-stable');
-        if(cf&&cs){
-            if(this.settings.cameraMode==='stable'){
-                cf.classList.remove('active'); cs.classList.add('active');
-            }else{
-                cf.classList.add('active'); cs.classList.remove('active');
+        const mn=document.getElementById('btn-mode-normal');
+        const ms=document.getElementById('btn-mode-stable');
+        const m6=document.getElementById('btn-mode-6dof');
+        if(mn&&ms&&m6){
+            mn.classList.toggle('active',this.settings.flightMode==='normal');
+            ms.classList.toggle('active',this.settings.flightMode==='stable');
+            m6.classList.toggle('active',this.settings.flightMode==='6dof');
+        }
+        if(this.ship){
+            if(this.settings.flightMode!=='6dof'){
+                // Sync Euler angles from quat when switching away from 6DOF
+                MP.v1.set(0,0,-1).applyQuaternion(this.ship.quat);
+                this.ship.yaw=Math.atan2(-MP.v1.x,-MP.v1.z);
+                this.ship.pitch=Math.asin(Math.max(-1,Math.min(1,MP.v1.y)));
             }
+            this.ship.flightMode=this.settings.flightMode??'normal';
         }
         const dh=document.getElementById('btn-debug-hide');
         const ds=document.getElementById('btn-debug-show');
