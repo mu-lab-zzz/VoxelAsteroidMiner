@@ -915,6 +915,16 @@
     </div>
     <div class="settings-row">
         <div>
+            <div class="settings-label">カメラモード</div>
+            <div class="settings-sub">ピッチ時のカメラ挙動</div>
+        </div>
+        <div class="toggle-group">
+            <button class="toggle-btn active" id="btn-cam-follow">追従</button>
+            <button class="toggle-btn"        id="btn-cam-stable">安定</button>
+        </div>
+    </div>
+    <div class="settings-row">
+        <div>
             <div class="settings-label">デバッグ情報</div>
             <div class="settings-sub">FPS / CHUNKS / VOXELS / 座標</div>
         </div>
@@ -3229,7 +3239,7 @@ class GameEngine{
         this._spaceOnlyObjects=[];
         this.settingsOpen=false;
         this.inventoryOpen=false;
-        this.settings={pitchInvert:true,showDebug:false,brightness:1.0};
+        this.settings={pitchInvert:true,showDebug:false,brightness:1.0,cameraMode:'follow'};
         this.debugMode=false;
         this._settingsTapCount=0;
         this._settingsTapTimer=null;
@@ -4143,6 +4153,12 @@ class GameEngine{
         });
         document.getElementById('btn-pitch-invert').addEventListener('click',()=>{
             this.settings.pitchInvert=true; this._applySettings(); this._saveSettings();
+        });
+        document.getElementById('btn-cam-follow').addEventListener('click',()=>{
+            this.settings.cameraMode='follow'; this._applySettings(); this._saveSettings();
+        });
+        document.getElementById('btn-cam-stable').addEventListener('click',()=>{
+            this.settings.cameraMode='stable'; this._applySettings(); this._saveSettings();
         });
         document.getElementById('btn-debug-hide').addEventListener('click',()=>{
             this.settings.showDebug=false; this._applySettings(); this._saveSettings();
@@ -6005,17 +6021,21 @@ class GameEngine{
     }
 
     _updateCamera(){
-        // Camera position follows yaw only — prevents camera from swinging
-        // underneath the ship when pitching past 90°
-        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.ship.yaw);
-        MP.v1.set(0,3.2,this.camDist).applyQuaternion(MP.q1);
+        const stable=this.settings.cameraMode==='stable';
+        if(stable){
+            // Stable: yaw-only offset — camera never swings under the ship
+            MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.ship.yaw);
+            MP.v1.set(0,3.2,this.camDist).applyQuaternion(MP.q1);
+        }else{
+            // Follow: full quaternion — camera rolls with the ship
+            MP.v1.set(0,3.2,this.camDist).applyQuaternion(this.ship.quat);
+        }
         const tgt=MP.v2.copy(this.ship.pos).add(MP.v1);
         this.camera.position.lerp(tgt,CFG.CAM_LERP);
 
-        // Look ahead using full quaternion so camera tracks nose direction
         const ahead=MP.v3.copy(this.ship.pos).add(
             MP.v4.set(0,0,-8).applyQuaternion(this.ship.quat));
-        this.camera.up.set(0,1,0);
+        if(stable) this.camera.up.set(0,1,0);
         this.camera.lookAt(ahead);
     }
 
@@ -6181,6 +6201,15 @@ class GameEngine{
             n.classList.remove('active'); v.classList.add('active');
         }else{
             n.classList.add('active'); v.classList.remove('active');
+        }
+        const cf=document.getElementById('btn-cam-follow');
+        const cs=document.getElementById('btn-cam-stable');
+        if(cf&&cs){
+            if(this.settings.cameraMode==='stable'){
+                cf.classList.remove('active'); cs.classList.add('active');
+            }else{
+                cf.classList.add('active'); cs.classList.remove('active');
+            }
         }
         const dh=document.getElementById('btn-debug-hide');
         const ds=document.getElementById('btn-debug-show');
