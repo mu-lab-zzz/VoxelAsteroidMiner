@@ -6005,14 +6005,17 @@ class GameEngine{
     }
 
     _updateCamera(){
-        // Smooth follow camera (third-person only)
-        MP.v1.set(0,3.2,this.camDist).applyQuaternion(this.ship.quat);
+        // Camera position follows yaw only — prevents camera from swinging
+        // underneath the ship when pitching past 90°
+        MP.q1.setFromAxisAngle(THREE.Object3D.DefaultUp,this.ship.yaw);
+        MP.v1.set(0,3.2,this.camDist).applyQuaternion(MP.q1);
         const tgt=MP.v2.copy(this.ship.pos).add(MP.v1);
         this.camera.position.lerp(tgt,CFG.CAM_LERP);
 
-        // Look ahead
+        // Look ahead using full quaternion so camera tracks nose direction
         const ahead=MP.v3.copy(this.ship.pos).add(
             MP.v4.set(0,0,-8).applyQuaternion(this.ship.quat));
+        this.camera.up.set(0,1,0);
         this.camera.lookAt(ahead);
     }
 
