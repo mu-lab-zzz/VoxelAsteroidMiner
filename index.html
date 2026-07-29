@@ -1176,6 +1176,15 @@ const SHIP_BLOCKS={
     engine_2:    {name:'エンジンMk2',    tier:2,icon:'🔥',shape:'engine',
                   stats:{thrust:14,boost:0.3,boostCost:13},
                   craft:{[VT.TITANIUM]:2,[VT.NICKEL]:2}},
+    spicyx_engine:{name:'SX-7 [Spicy X]',    tier:2,icon:'🔥',shape:'engine',
+                  stats:{thrust:14,boost:0.6,boostCost:20},
+                  craft:{[VT.TITANIUM]:2,[VT.NICKEL]:3}},
+    blueorange_engine:{name:'Horizon [Blue Orange]',tier:2,icon:'🔥',shape:'engine',
+                  stats:{thrust:14,boost:0.3,boostCost:13},
+                  craft:{[VT.TITANIUM]:3,[VT.NICKEL]:2}},
+    rocketlove_engine:{name:'Nimble [Rocket Love]', tier:2,icon:'🔥',shape:'engine',
+                  stats:{thrust:8,boost:0.1,boostCost:8,turnBonus:1.0},
+                  craft:{[VT.NICKEL]:3,[VT.COPPER]:2}},
     laser_1:     {name:'採掘レーザーMk1',tier:2,icon:'⚡',shape:'laser',
                   stats:{miningPow:0.4},
                   craft:{[VT.COPPER]:4,[VT.NICKEL]:2}},
@@ -2636,7 +2645,7 @@ class MiningShip{
         this.vel.multiplyScalar(Math.pow(0.84,dt*60));
         this.pos.addScaledVector(this.vel,dt);
 
-        const tr=2.0;
+        const tr=2.0+(this.stats.turnBonus||0);
         if(inp.yaw!==0)   this.angVel.y=-inp.yaw*tr;   else this.angVel.y*=0.88;
         if(inp.pitch!==0) this.angVel.x= inp.pitch*tr;  else this.angVel.x*=0.88;
 
@@ -4520,7 +4529,7 @@ class GameEngine{
 
     _computeShipStats(){
         const s=this.ship.stats;
-        s.thrust=14; s.boost=2.0; s.miningPow=0.0; s.boostCost=0;
+        s.thrust=14; s.boost=2.0; s.miningPow=0.0; s.boostCost=0; s.turnBonus=0;
         s.maxCargo=20; s.maxEnergy=40; s.energyRegen=2; s.thrusterPow=6;
         s.scanRange=0; s.scanLevel=0;
         this._warpSpeed=0;
@@ -4528,12 +4537,14 @@ class GameEngine{
             const bid=this.shipLayout[l]?.[r]?.[c]; if(!bid) continue;
             const b=SHIP_BLOCKS[bid]; if(!b) continue;
             if(b.stats.thrust)       s.thrust       +=b.stats.thrust;
+            if(b.stats.boost)        s.boost        +=b.stats.boost;
             if(b.stats.miningPow)    s.miningPow    +=b.stats.miningPow;
             if(b.stats.boostCost)    s.boostCost    +=b.stats.boostCost;
             if(b.stats.maxCargo)     s.maxCargo     +=b.stats.maxCargo;
             if(b.stats.maxEnergy)    s.maxEnergy    +=b.stats.maxEnergy;
             if(b.stats.energyRegen)  s.energyRegen  +=b.stats.energyRegen;
             if(b.stats.thrusterPow)  s.thrusterPow  +=b.stats.thrusterPow;
+            if(b.stats.turnBonus)    s.turnBonus    +=b.stats.turnBonus;
             if(b.stats.warpSpeed)    this._warpSpeed=Math.max(this._warpSpeed,b.stats.warpSpeed);
             if(b.stats.scanRange)    s.scanRange    =Math.max(s.scanRange,b.stats.scanRange);
             if(b.stats.scanLevel)    s.scanLevel    =Math.max(s.scanLevel,b.stats.scanLevel);
@@ -4654,7 +4665,7 @@ class GameEngine{
                 return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
             }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
             const statStr=Object.entries(blk.stats).map(([k,v])=>{
-                const labels={thrust:'推力',boost:'加速',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv'};
+                const labels={thrust:'推力',boost:'加速倍率',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv',turnBonus:'旋回補助'};
                 return `${labels[k]||k}+${v}`;
             }).join(' / ')||'構造';
             const row=document.createElement('div');row.className='st-row';
@@ -6328,7 +6339,7 @@ class GameEngine{
             if(raw){
                 const d=JSON.parse(raw);
                 // Merge only known stats keys (ignore old upgrade level fields)
-                const knownStats=['hp','maxHp','energy','maxEnergy','cargo','maxCargo','thrust','boost','thrusterPow','miningPow','boostCost','laserCost','warpLv','energyRegen'];
+                const knownStats=['hp','maxHp','energy','maxEnergy','cargo','maxCargo','thrust','boost','thrusterPow','miningPow','boostCost','laserCost','warpLv','energyRegen','turnBonus'];
                 if(d.stats) for(const k of knownStats) if(d.stats[k]!=null) this.ship.stats[k]=d.stats[k];
                 Object.assign(this.ship.inventory,d.inventory||{});
                 if(d.credits!=null) this.credits=d.credits;
