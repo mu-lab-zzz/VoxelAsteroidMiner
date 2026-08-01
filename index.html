@@ -4594,7 +4594,7 @@ class GameEngine{
         const s=this.ship.stats;
         s.thrust=14; s.boost=2.0; s.miningPow=0.0; s.boostCost=0; s.turnBonus=0;
         s.maxCargo=20; s.maxEnergy=40; s.energyRegen=2; s.thrusterPow=6;
-        s.scanRange=0; s.scanLevel=0;
+        s.maxHp=100; s.scanRange=0; s.scanLevel=0;
         this._warpSpeed=0;
         for(let l=0;l<this.shipLayout.length;l++) for(let r=0;r<5;r++) for(let c=0;c<5;c++){
             const bid=this.shipLayout[l]?.[r]?.[c]; if(!bid) continue;
@@ -4608,6 +4608,7 @@ class GameEngine{
             if(b.stats.energyRegen)  s.energyRegen  +=b.stats.energyRegen;
             if(b.stats.thrusterPow)  s.thrusterPow  +=b.stats.thrusterPow;
             if(b.stats.turnBonus)    s.turnBonus    +=b.stats.turnBonus;
+            if(b.stats.maxHp)        s.maxHp        +=b.stats.maxHp;
             if(b.stats.warpSpeed)    this._warpSpeed=Math.max(this._warpSpeed,b.stats.warpSpeed);
             if(b.stats.scanRange)    s.scanRange    =Math.max(s.scanRange,b.stats.scanRange);
             if(b.stats.scanLevel)    s.scanLevel    =Math.max(s.scanLevel,b.stats.scanLevel);
@@ -4615,6 +4616,7 @@ class GameEngine{
         s.warpLv=this._warpSpeed>0?1:0;
         s.cargo=Math.min(s.cargo,s.maxCargo);
         s.energy=Math.min(s.energy,s.maxEnergy);
+        s.hp=Math.min(s.hp,s.maxHp);
         const _oldBeams=this.ship.laserBeams?[...this.ship.laserBeams]:[];
         this.ship.rebuildFromLayout(this.shipLayout);
         // Re-register new laser beams with space-only visibility set
@@ -4728,7 +4730,7 @@ class GameEngine{
                 return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
             }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
             const statStr=Object.entries(blk.stats).map(([k,v])=>{
-                const labels={thrust:'推力',boost:'加速倍率',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv',turnBonus:'旋回補助'};
+                const labels={thrust:'推力',boost:'加速倍率',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv',turnBonus:'旋回補助',maxHp:'耐久値'};
                 return `${labels[k]||k}+${v}`;
             }).join(' / ')||'構造';
             const row=document.createElement('div');row.className='st-row';
