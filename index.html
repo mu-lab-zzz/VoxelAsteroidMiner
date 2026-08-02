@@ -1151,52 +1151,28 @@ const SHIP_BLOCKS={
     cockpit_3:   {name:'コクピットMk3',  tier:3,icon:'🪟',shape:'cockpit',
                   stats:{scanRange:1500,scanLevel:2},
                   craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
-    laser_0:     {name:'採掘レーザー',   tier:1,icon:'⚡',shape:'laser',
-                  stats:{miningPow:0.3},
-                  craft:{[VT.COPPER]:2,[VT.IRON]:2}},
     sparkspace_laser:{name:'SS-L1 [Spark Space]',tier:1,icon:'⚡',shape:'laser',
                   stats:{miningPow:0.3},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    hull_1:      {name:'船体ブロック',   tier:1,icon:'🔩',shape:'hull',
-                  stats:{maxCargo:8},
-                  craft:{[VT.IRON]:2}},
     sparkspace_hull:{name:'SS-H1 [Spark Space]', tier:1,icon:'🔩',shape:'hull',
                   stats:{maxCargo:8,maxHp:30},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    engine_1:    {name:'エンジンMk1',    tier:1,icon:'🔥',shape:'engine',
-                  stats:{thrust:8,boostCost:8},
-                  craft:{[VT.IRON]:3,[VT.COPPER]:2}},
     sparkspace_engine:{name:'SS-1 [Spark Space]',tier:1,icon:'🔥',shape:'engine',
                   stats:{thrust:8,boost:0.1,boostCost:20},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    cargo_s:     {name:'貨物ポッドS',    tier:1,icon:'📦',shape:'cargo',
-                  stats:{maxCargo:40},
-                  craft:{[VT.IRON]:4}},
     sparkspace_cargo:{name:'SS-C1 [Spark Space]',tier:1,icon:'📦',shape:'cargo',
                   stats:{maxCargo:70},
                   craft:{[VT.IRON]:10,[VT.COPPER]:10}},
-    reactor_s:   {name:'リアクターS',    tier:1,icon:'🔋',shape:'reactor',
-                  stats:{maxEnergy:50},
-                  craft:{[VT.COPPER]:3,[VT.IRON]:2}},
     sparkspace_reactor:{name:'SS-R1 [Spark Space]',tier:1,icon:'🔋',shape:'reactor',
                   stats:{maxEnergy:100},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    solar_s:     {name:'ソーラーパネルS', tier:1,icon:'☀',shape:'panel',
-                  stats:{energyRegen:8},
-                  craft:{[VT.COPPER]:3,[VT.IRON]:2}},
     sparkspace_solar:{name:'SS-S1 [Spark Space]',tier:1,icon:'☀',shape:'panel',
                   stats:{energyRegen:15},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    thruster_s:  {name:'スラスターS',    tier:1,icon:'↔',shape:'thruster',
-                  stats:{thrusterPow:6},
-                  craft:{[VT.IRON]:2,[VT.COPPER]:2}},
     sparkspace_thruster:{name:'SS-T1 [Spark Space]',tier:1,icon:'↔',shape:'thruster',
                   stats:{thrusterPow:8},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
     // ── Tier 2 ──────────────────────────────────────────────────────────────
-    engine_2:    {name:'エンジンMk2',    tier:2,icon:'🔥',shape:'engine',
-                  stats:{thrust:14,boost:0.3,boostCost:13},
-                  craft:{[VT.TITANIUM]:2,[VT.NICKEL]:2}},
     spicyx_engine:{name:'SX-7 [Spicy X]',    tier:2,icon:'🔥',shape:'engine',
                   stats:{thrust:14,boost:0.6,boostCost:20},
                   craft:{[VT.TITANIUM]:2,[VT.NICKEL]:3}},
@@ -1206,9 +1182,6 @@ const SHIP_BLOCKS={
     rocketlove_engine:{name:'Nimble [Rocket Love]', tier:2,icon:'🔥',shape:'engine',
                   stats:{thrust:8,boost:0.1,boostCost:8,turnBonus:1.0},
                   craft:{[VT.NICKEL]:3,[VT.COPPER]:2}},
-    laser_1:     {name:'採掘レーザーMk1',tier:2,icon:'⚡',shape:'laser',
-                  stats:{miningPow:0.4},
-                  craft:{[VT.COPPER]:4,[VT.NICKEL]:2}},
     spicyx_laser:    {name:'SX-Drill [Spicy X]',     tier:2,icon:'⚡',shape:'laser',
                   stats:{miningPow:1.0},
                   craft:{[VT.TITANIUM]:10,[VT.NICKEL]:10}},
@@ -1218,9 +1191,6 @@ const SHIP_BLOCKS={
     rocketlove_laser:{name:'Precise [Rocket Love]',  tier:2,icon:'⚡',shape:'laser',
                   stats:{miningPow:0.5},
                   craft:{[VT.NICKEL]:3,[VT.COPPER]:2}},
-    cargo_m:     {name:'貨物ポッドM',    tier:2,icon:'📦',shape:'cargo',
-                  stats:{maxCargo:80},
-                  craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
     spicyx_cargo:    {name:'SX-C5 [Spicy X]',      tier:2,icon:'📦',shape:'cargo',
                   stats:{maxCargo:150},
                   craft:{[VT.TITANIUM]:10,[VT.NICKEL]:10}},
@@ -1239,9 +1209,6 @@ const SHIP_BLOCKS={
     rocketlove_hull:{name:'Lite [Rocket Love]',    tier:2,icon:'🔩',shape:'hull',
                   stats:{maxCargo:8,maxHp:50},
                   craft:{[VT.NICKEL]:3,[VT.COPPER]:2}},
-    reactor_m:   {name:'リアクターM',    tier:2,icon:'🔋',shape:'reactor',
-                  stats:{maxEnergy:80},
-                  craft:{[VT.NICKEL]:3,[VT.URANIUM]:1}},
     spicyx_reactor:    {name:'SX-R9 [Spicy X]',      tier:2,icon:'🔋',shape:'reactor',
                   stats:{maxEnergy:300},
                   craft:{[VT.TITANIUM]:10,[VT.NICKEL]:10}},
@@ -1251,9 +1218,6 @@ const SHIP_BLOCKS={
     rocketlove_reactor:{name:'LightCell [Rocket Love]',tier:2,icon:'🔋',shape:'reactor',
                   stats:{maxEnergy:120},
                   craft:{[VT.NICKEL]:3,[VT.COPPER]:2}},
-    thruster_m:  {name:'スラスターM',    tier:2,icon:'↔',shape:'thruster',
-                  stats:{thrusterPow:12},
-                  craft:{[VT.NICKEL]:3,[VT.TITANIUM]:2}},
     spicyx_thruster:    {name:'SX-T3 [Spicy X]',      tier:2,icon:'↔',shape:'thruster',
                   stats:{thrusterPow:16},
                   craft:{[VT.TITANIUM]:10,[VT.NICKEL]:10}},
@@ -1292,9 +1256,6 @@ const SHIP_BLOCKS={
                   stats:{thrusterPow:22},
                   craft:{[VT.TITANIUM]:4,[VT.PLATINUM]:2}},
     // ── Tier 4 ──────────────────────────────────────────────────────────────
-    warp_core:   {name:'ワープコア',     tier:4,icon:'🌀',shape:'warp',
-                  stats:{warpSpeed:2500},
-                  craft:{[VT.PLATINUM]:5,[VT.URANIUM]:4,[VT.CRYSTAL]:5}},
     sparkspace_warp:  {name:'SS-W1 [Spark Space]',   tier:2,icon:'🌀',shape:'warp',
                   stats:{warpSpeed:1000},
                   craft:{[VT.NICKEL]:5,[VT.COPPER]:5}},
@@ -3393,7 +3354,7 @@ class GameEngine{
         this._builtPlanetName=null;
         // Default starting layout: 1 layer (第1層), cockpit front-center, laser, 1 engine rear
         this.shipLayout=[
-            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'laser_0',null,null],[null,null,'engine_1',null,null],[null,null,null,null,null]],
+            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'sparkspace_laser',null,null],[null,null,'sparkspace_engine',null,null],[null,null,null,null,null]],
         ];
         this.blockInventory={};   // {blockId: count} — crafted blocks not yet placed
         this._builderLayer=0;     // active layer in builder UI
@@ -4732,43 +4693,86 @@ class GameEngine{
         craftHead.className='st-section-head';craftHead.textContent='🔧 ブロック製造';
         el.appendChild(craftHead);
 
-        const tierColors=['','#aaddaa','#88aaff','#ffcc66','#ff88cc','#ff6666'];
-        const tierLabels=['','Tier1 基本','Tier2 中級','Tier3 高性能','Tier4 特殊','Tier5 伝説'];
-        let curTier=0;
-        for(const[bid,blk] of Object.entries(SHIP_BLOCKS)){
-            if(Object.keys(blk.craft).length===0) continue;
-            if(blk.tier!==curTier){
-                curTier=blk.tier;
-                const th=document.createElement('div');
-                th.style.cssText=`font-size:10px;color:${tierColors[curTier]};margin:8px 0 4px;font-weight:bold;letter-spacing:1px;`;
-                th.textContent=tierLabels[curTier];
-                el.appendChild(th);
+        const getMaker=bid=>{
+            if(bid.startsWith('sparkspace_')) return 'sparkspace';
+            if(bid.startsWith('spicyx_'))     return 'spicyx';
+            if(bid.startsWith('blueorange_')) return 'blueorange';
+            if(bid.startsWith('rocketlove_')) return 'rocketlove';
+            return 'general';
+        };
+        const makers=[
+            {id:'sparkspace', label:'⚡ Spark Space', color:'#88ccff'},
+            {id:'spicyx',     label:'🔥 Spicy X',     color:'#ff8866'},
+            {id:'blueorange', label:'🔷 Blue Orange',  color:'#66aaff'},
+            {id:'rocketlove', label:'💙 Rocket Love',  color:'#ff88cc'},
+            {id:'general',    label:'🔧 一般',          color:'#aaaaaa'},
+        ];
+
+        // tab state persisted on el
+        if(!el._makerTab) el._makerTab='sparkspace';
+
+        const tabBar=document.createElement('div');
+        tabBar.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;';
+        el.appendChild(tabBar);
+
+        const craftList=document.createElement('div');
+        craftList.id='craft-list';
+        el.appendChild(craftList);
+
+        const renderCraftList=(maker)=>{
+            craftList.innerHTML='';
+            const tierColors=['','#aaddaa','#88aaff','#ffcc66','#ff88cc','#ff6666'];
+            let curTier=0;
+            for(const[bid,blk] of Object.entries(SHIP_BLOCKS)){
+                if(Object.keys(blk.craft).length===0) continue;
+                if(getMaker(bid)!==maker) continue;
+                if(blk.tier!==curTier){
+                    curTier=blk.tier;
+                    const th=document.createElement('div');
+                    th.style.cssText=`font-size:10px;color:${tierColors[curTier]||'#aaa'};margin:8px 0 4px;font-weight:bold;letter-spacing:1px;`;
+                    th.textContent=['','Tier1 基本','Tier2 中級','Tier3 高性能','Tier4 特殊','Tier5 伝説','Tier6 エイリアン'][curTier]||`Tier${curTier}`;
+                    craftList.appendChild(th);
+                }
+                const inv=this.blockInventory[bid]||0;
+                const cost=blk.craft;
+                const canCraft=this.debugMode||Object.entries(cost).every(([vt,n])=>(this.refined[+vt]||0)>=n);
+                const matStr=Object.entries(cost).map(([vt,n])=>{
+                    const have=this.refined[+vt]||0;
+                    const col=(this.debugMode||have>=n)?'#8f8':'#f88';
+                    const rname=REFINE[+vt]?.name??VPROPS[+vt].name;
+                    return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
+                }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
+                const statStr=Object.entries(blk.stats).map(([k,v])=>{
+                    const labels={thrust:'推力',boost:'加速倍率',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv',turnBonus:'旋回補助',maxHp:'耐久値'};
+                    return `${labels[k]||k}+${v}`;
+                }).join(' / ')||'構造';
+                const row=document.createElement('div');row.className='st-row';
+                row.style.cssText='align-items:flex-start;flex-direction:column;gap:4px;';
+                row.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">`+
+                    `<span style="font-size:13px">${blk.icon} ${blk.name} <span style="color:#8af;font-size:11px">${statStr}</span></span>`+
+                    `<span style="display:flex;align-items:center;gap:6px">`+
+                    `<span style="color:#aaa;font-size:11px">在庫: ${inv}</span>`+
+                    `<button class="btn-st upgrade" id="bcraft-${bid}" ${canCraft?'':'disabled'}>製造</button>`+
+                    `</span></div>`+
+                    `<div style="font-size:10px">${matStr}</div>`;
+                craftList.appendChild(row);
+                if(canCraft) craftList.querySelector(`#bcraft-${bid}`).onclick=()=>this._craftBlock(bid);
             }
-            const inv=this.blockInventory[bid]||0;
-            const cost=blk.craft;
-            const canCraft=this.debugMode||Object.entries(cost).every(([vt,n])=>(this.refined[+vt]||0)>=n);
-            const matStr=Object.entries(cost).map(([vt,n])=>{
-                const have=this.refined[+vt]||0;
-                const col=(this.debugMode||have>=n)?'#8f8':'#f88';
-                const rname=REFINE[+vt]?.name??VPROPS[+vt].name;
-                return `<span style="color:${col}">${rname}×${n}(${have})</span>`;
-            }).join(' ')+(this.debugMode?' <span style="color:#ff44aa;font-size:9px">FREE</span>':'');
-            const statStr=Object.entries(blk.stats).map(([k,v])=>{
-                const labels={thrust:'推力',boost:'加速倍率',thrusterPow:'スラスター',miningPow:'採掘',boostCost:'ブースト消費',maxCargo:'荷物',maxEnergy:'エネルギー',energyRegen:'発電',warpSpeed:'ワープ',laserDmg:'攻撃',scanRange:'索敵範囲',scanLevel:'索敵Lv',turnBonus:'旋回補助',maxHp:'耐久値'};
-                return `${labels[k]||k}+${v}`;
-            }).join(' / ')||'構造';
-            const row=document.createElement('div');row.className='st-row';
-            row.style.cssText='align-items:flex-start;flex-direction:column;gap:4px;';
-            row.innerHTML=`<div style="display:flex;justify-content:space-between;width:100%;align-items:center">`+
-                `<span style="font-size:13px">${blk.icon} ${blk.name} <span style="color:#8af;font-size:11px">${statStr}</span></span>`+
-                `<span style="display:flex;align-items:center;gap:6px">`+
-                `<span style="color:#aaa;font-size:11px">在庫: ${inv}</span>`+
-                `<button class="btn-st upgrade" id="bcraft-${bid}" ${canCraft?'':'disabled'}>製造</button>`+
-                `</span></div>`+
-                `<div style="font-size:10px">${matStr}</div>`;
-            el.appendChild(row);
-            if(canCraft) el.querySelector(`#bcraft-${bid}`).onclick=()=>this._craftBlock(bid);
-        }
+        };
+
+        const buildTabs=()=>{
+            tabBar.innerHTML='';
+            for(const m of makers){
+                const btn=document.createElement('button');
+                btn.className='btn-st'+(el._makerTab===m.id?' upgrade':'');
+                btn.style.cssText=`font-size:11px;padding:3px 8px;border:1px solid ${m.color};color:${el._makerTab===m.id?'#fff':m.color};background:${el._makerTab===m.id?m.color+'44':'transparent'};`;
+                btn.textContent=m.label;
+                btn.onclick=()=>{ el._makerTab=m.id; buildTabs(); renderCraftList(m.id); };
+                tabBar.appendChild(btn);
+            }
+        };
+        buildTabs();
+        renderCraftList(el._makerTab);
 
         // ── Station upgrades ──────────────────────────────────────
         const sHead=document.createElement('div');
