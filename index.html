@@ -1142,13 +1142,43 @@ const REFINE=Object.fromEntries(
 // craft values are quantities of REFINED items (this.refined[vt])
 const SHIP_BLOCKS={
     // ── Tier 1 ──────────────────────────────────────────────────────────────
-    cockpit_1:   {name:'コクピットMk1',  tier:1,icon:'🪟',shape:'cockpit',
+    // ── Tier 1 コクピット ────────────────────────────────────────────────────
+    sparkspace_cockpit_1:{name:'SS-Cp1 [Spark Space]',  tier:1,icon:'🔵',shape:'cockpit',
                   stats:{scanRange:0,scanLevel:0},
                   craft:{[VT.IRON]:4,[VT.COPPER]:3}},
-    cockpit_2:   {name:'コクピットMk2',  tier:2,icon:'🪟',shape:'cockpit',
+    spicyx_cockpit_1:    {name:'SX-Pilot [Spicy X]',    tier:1,icon:'🔴',shape:'cockpit',
+                  stats:{scanRange:0,scanLevel:0},
+                  craft:{[VT.IRON]:4,[VT.COPPER]:3}},
+    blueorange_cockpit_1:{name:'Open [Blue Orange]',    tier:1,icon:'🟠',shape:'cockpit',
+                  stats:{scanRange:0,scanLevel:0},
+                  craft:{[VT.IRON]:4,[VT.COPPER]:3}},
+    rocketlove_cockpit_1:{name:'Cozy [Rocket Love]',    tier:1,icon:'💜',shape:'cockpit',
+                  stats:{scanRange:0,scanLevel:0},
+                  craft:{[VT.IRON]:4,[VT.COPPER]:3}},
+    // ── Tier 2 コクピット ────────────────────────────────────────────────────
+    sparkspace_cockpit_2:{name:'SS-Cp2 [Spark Space]',  tier:2,icon:'🔵',shape:'cockpit',
                   stats:{scanRange:600,scanLevel:1},
                   craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
-    cockpit_3:   {name:'コクピットMk3',  tier:3,icon:'🪟',shape:'cockpit',
+    spicyx_cockpit_2:    {name:'SX-Suite [Spicy X]',    tier:2,icon:'🔴',shape:'cockpit',
+                  stats:{scanRange:600,scanLevel:1},
+                  craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
+    blueorange_cockpit_2:{name:'View [Blue Orange]',    tier:2,icon:'🟠',shape:'cockpit',
+                  stats:{scanRange:600,scanLevel:1},
+                  craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
+    rocketlove_cockpit_2:{name:'Slim [Rocket Love]',    tier:2,icon:'💜',shape:'cockpit',
+                  stats:{scanRange:600,scanLevel:1},
+                  craft:{[VT.NICKEL]:4,[VT.TITANIUM]:2}},
+    // ── Tier 3 コクピット ────────────────────────────────────────────────────
+    sparkspace_cockpit_3:{name:'SS-Cp3 [Spark Space]',  tier:3,icon:'🔵',shape:'cockpit',
+                  stats:{scanRange:1500,scanLevel:2},
+                  craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
+    spicyx_cockpit_3:    {name:'SX-Core [Spicy X]',     tier:3,icon:'🔴',shape:'cockpit',
+                  stats:{scanRange:1500,scanLevel:2},
+                  craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
+    blueorange_cockpit_3:{name:'Panorama [Blue Orange]', tier:3,icon:'🟠',shape:'cockpit',
+                  stats:{scanRange:1500,scanLevel:2},
+                  craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
+    rocketlove_cockpit_3:{name:'Micro [Rocket Love]',   tier:3,icon:'💜',shape:'cockpit',
                   stats:{scanRange:1500,scanLevel:2},
                   craft:{[VT.GOLD]:3,[VT.CRYSTAL]:2}},
     sparkspace_laser:{name:'SS-L1 [Spark Space]',tier:1,icon:'⚡',shape:'laser',
@@ -3354,7 +3384,7 @@ class GameEngine{
         this._builtPlanetName=null;
         // Default starting layout: 1 layer (第1層), cockpit front-center, laser, 1 engine rear
         this.shipLayout=[
-            [[null,null,null,null,null],[null,null,'cockpit_1',null,null],[null,null,'sparkspace_laser',null,null],[null,null,'sparkspace_engine',null,null],[null,null,null,null,null]],
+            [[null,null,null,null,null],[null,null,'sparkspace_cockpit_1',null,null],[null,null,'sparkspace_laser',null,null],[null,null,'sparkspace_engine',null,null],[null,null,null,null,null]],
         ];
         this.blockInventory={};   // {blockId: count} — crafted blocks not yet placed
         this._builderLayer=0;     // active layer in builder UI
