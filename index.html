@@ -169,6 +169,11 @@
             background:#ff0055;border-radius:50%;}
         #crosshair.firing::before,#crosshair.firing::after{background:#ff4400;}
         #crosshair.firing .xhair-dot{background:#ffff00;box-shadow:0 0 6px #ffff00;}
+        #xhair-dist{
+            position:absolute;top:28px;left:50%;transform:translateX(-50%);
+            font-size:11px;color:rgba(0,240,255,0.9);font-family:monospace;letter-spacing:1px;
+            white-space:nowrap;pointer-events:none;text-shadow:0 0 8px #00f0ff;display:none;
+        }
 
         .modal-title{font-size:15px;font-weight:700;color:#00f0ff;text-align:center;
             border-bottom:1px solid rgba(0,240,255,0.25);padding-bottom:8px;}
@@ -730,7 +735,7 @@
     <button id="btn-start">▶ ゲームスタート</button>
 </div>
 
-<div id="crosshair"><div class="xhair-dot"></div></div>
+<div id="crosshair"><div class="xhair-dot"></div><span id="xhair-dist"></span></div>
 
 <!-- Compact HUD strip -->
 <div id="hud-strip">
@@ -6725,6 +6730,39 @@ class GameEngine{
                 this.ship.hideLaser();
                 Sound.stopLaser();
                 document.getElementById('crosshair').classList.remove('firing');
+            }
+
+            // Crosshair distance probe (every frame)
+            {
+                const xdEl=document.getElementById('xhair-dist');
+                if(xdEl){
+                    this.camera.getWorldDirection(MP.v1);
+                    MP.ray.set(this.camera.position,MP.v1);
+                    MP.ray.far=300;
+                    let hitDist=null;
+                    for(const ast of targets){
+                        if(!ast.group.visible)continue;
+                        if(ast.group.position.distanceTo(this.ship.pos)-ast.radius>300)continue;
+                        ast.group.updateMatrixWorld();
+                        const hits=MP.ray.intersectObject(ast.mesh,false);
+                        if(hits.length>0){hitDist=hits[0].distance;break;}
+                    }
+                    if(!hitDist&&inSpace&&this.alienArtifacts){
+                        for(const art of this.alienArtifacts){
+                            if(art.collected||!art.mesh.parent)continue;
+                            if(art.mesh.position.distanceTo(this.ship.pos)>300)continue;
+                            art.mesh.updateMatrixWorld();
+                            const hits=MP.ray.intersectObject(art.mesh,false);
+                            if(hits.length>0){hitDist=hits[0].distance;break;}
+                        }
+                    }
+                    if(hitDist!==null){
+                        xdEl.textContent=hitDist.toFixed(1)+' m';
+                        xdEl.style.display='block';
+                    }else{
+                        xdEl.style.display='none';
+                    }
+                }
             }
 
             this.sparks.update(dt);
