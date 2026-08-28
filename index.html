@@ -6539,6 +6539,8 @@ class GameEngine{
             mapMarker:this.mapMarker,
             collectedArtifacts:[...this.collectedArtifacts],
             ultimateShipUnlocked:this.ultimateShipUnlocked,
+            shipPos:{x:this.ship.pos.x,y:this.ship.pos.y,z:this.ship.pos.z},
+            sceneMode:this.sceneMode,
         }));
     }
     _loadSave(){
@@ -6585,6 +6587,9 @@ class GameEngine{
                 if(d.mapMarker) this.mapMarker=d.mapMarker;
                 if(d.collectedArtifacts) this.collectedArtifacts=new Set(d.collectedArtifacts);
                 if(d.ultimateShipUnlocked) this.ultimateShipUnlocked=d.ultimateShipUnlocked;
+                // Restore ship position only when saved in space
+                if(d.shipPos&&d.sceneMode==='space')
+                    this.ship.pos.set(d.shipPos.x,d.shipPos.y,d.shipPos.z);
             }
         }catch(e){}
     }
